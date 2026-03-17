@@ -2,7 +2,7 @@ import { CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { itemsService } from '@/lib/services/items'
+import { supabase } from '@/lib/supabase'
 import type { RequestDetails } from './request-details'
 import type { RequestItem } from './request-items'
 
@@ -34,29 +34,57 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
   const [itemsData, setItemsData] = useState<Record<string, Item>>({})
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [departmentName, setDepartmentName] = useState<string>('')
+  const [destinationDepartmentName, setDestinationDepartmentName] = useState<string>('')
+
+  // Carregar nomes dos departamentos
+  useEffect(() => {
+    async function loadDepartments() {
+      const ids = [details.department, details.destination_department].filter(Boolean)
+      if (ids.length === 0) return
+      try {
+        const { data } = await supabase
+          .from('departments')
+          .select('id, name')
+          .in('id', ids)
+        if (data) {
+          const map = new Map(data.map(d => [d.id, d.name]))
+          setDepartmentName(map.get(details.department) || details.department)
+          if (details.destination_department) {
+            setDestinationDepartmentName(map.get(details.destination_department) || details.destination_department)
+          }
+        }
+      } catch {
+        setDepartmentName(details.department)
+      }
+    }
+    loadDepartments()
+  }, [details.department, details.destination_department])
 
   // Carregar dados completos dos itens
   useEffect(() => {
     async function loadItemsData() {
-      if (!items || items.length === 0) {
-        console.warn('Nenhum item encontrado para carregar dados completos')
-        return
-      }
+      if (!items || items.length === 0) return
 
       try {
         setLoadingItems(true)
         setError(null)
-        
-        const allItems = await itemsService.getAll()
+
+        const table = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
+        const { data: allItems, error: fetchError } = await supabase
+          .from(table)
+          .select('*')
+          .in('id', items.map(i => i.id))
+
+        if (fetchError) throw fetchError
+
         const itemsMap: Record<string, Item> = {}
-        
-        allItems.forEach(item => {
+        ;(allItems || []).forEach(item => {
           itemsMap[item.id] = item
         })
-        
+
         setItemsData(itemsMap)
-        
-        // Verificar se todos os itens foram encontrados
+
         const missingItems = items.filter(item => !itemsMap[item.id])
         if (missingItems.length > 0) {
           console.warn('Alguns itens não foram encontrados:', missingItems)
@@ -71,7 +99,7 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
     }
 
     loadItemsData()
-  }, [items])
+  }, [items, type])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -125,16 +153,22 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
         <div className="bg-white border rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Data da Solicitação</p>
+              <p className="text-sm text-gray-500">Data e Hora da Solicitação</p>
               <p className="font-medium">
-                {format(new Date(details.requestDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                {format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Setor Solicitante</p>
-              <p className="font-medium">{details.department}</p>
+              <p className="font-medium">{departmentName || 'Carregando...'}</p>
             </div>
           </div>
+          {destinationDepartmentName && (
+            <div>
+              <p className="text-sm text-gray-500">Setor de Destino</p>
+              <p className="font-medium">{destinationDepartmentName}</p>
+            </div>
+          )}
           <div>
             <p className="text-sm text-gray-500">Prioridade</p>
             <span className={`inline-block px-2 py-1 text-sm font-medium rounded-full border ${getPriorityColor(details.priority)}`}>

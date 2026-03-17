@@ -14,7 +14,6 @@ import { tvRequestService } from '@/lib/services/tv-requests'
 import { RequestStatusBadge } from '@/components/request-status-badge'
 import { supabase } from '@/lib/supabase'
 import type { TVRequest } from '@/lib/services/tv-requests'
-import { formatRequestNumber } from '@/lib/utils/request'
 
 export default function WarehouseTVDashboard() {
   const navigate = useNavigate()
@@ -198,10 +197,11 @@ export default function WarehouseTVDashboard() {
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="bg-gray-800 rounded-t-xl border-t border-l border-r border-gray-700 p-4">
           <div className="grid grid-cols-12 gap-4 text-gray-400 text-sm font-medium">
-            <div className="col-span-3">Código</div>
-            <div className="col-span-4">Origem (Setor)</div>
+            <div className="col-span-2">Código</div>
+            <div className="col-span-3">Origem (Setor)</div>
+            <div className="col-span-3">Destino (Setor)</div>
             <div className="col-span-2 text-center">Prioridade</div>
-            <div className="col-span-3 text-center">Status</div>
+            <div className="col-span-2 text-center">Status</div>
           </div>
         </div>
 
@@ -230,7 +230,7 @@ export default function WarehouseTVDashboard() {
               {filteredRequests.map((request, index) => (
                 <div
                   key={request.id}
-                  onClick={() => navigate(`/tv/warehouse/${request.id}`)}
+                  onClick={() => navigate(`/requests/${request.id}`)}
                   className={`p-4 cursor-pointer hover:bg-gray-700/50 transition-colors ${
                     request.priority === 'high'
                       ? 'bg-red-900/20 hover:bg-red-900/30'
@@ -240,11 +240,14 @@ export default function WarehouseTVDashboard() {
                   }`}
                 >
                   <div className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-3 font-bold text-white text-lg">
-                      #{request.request_number || formatRequestNumber(request.id)}
+                    <div className="col-span-2 font-bold text-white text-lg">
+                      #{request.request_number || '—'}
                     </div>
-                    <div className="col-span-4 text-gray-200 text-lg">
+                    <div className="col-span-3 text-gray-200 text-lg">
                       {request.department}
+                    </div>
+                    <div className="col-span-3 text-gray-200 text-lg">
+                      {request.destination_department || '—'}
                     </div>
                     <div className="col-span-2 text-center">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -258,7 +261,7 @@ export default function WarehouseTVDashboard() {
                          request.priority === 'medium' ? 'Média' : 'Baixa'}
                       </span>
                     </div>
-                    <div className="col-span-3 text-center">
+                    <div className="col-span-2 text-center">
                       <RequestStatusBadge status={request.status} />
                     </div>
                   </div>

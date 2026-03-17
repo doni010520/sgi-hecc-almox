@@ -81,8 +81,9 @@ export function NewRequest() {
         type: requestType,
         priority: details.priority,
         department: details.department,
-        justification: details.justification_option, // Use the selected option ID as justification
-        created_by: user.id, // Ensure user.id is passed
+        destination_department: details.destination_department,
+        justification: details.justification_option,
+        created_by: user.id,
         items: items.map(item => ({
           item_id: item.id,
           quantity: item.quantity

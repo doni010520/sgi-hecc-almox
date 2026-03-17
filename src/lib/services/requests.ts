@@ -25,6 +25,8 @@ export interface Request {
   priority: Priority
   department: string
   department_id?: string
+  destination_department?: string
+  destination_department_id?: string
   justification?: string
   notes?: string
   request_number?: string
@@ -409,6 +411,7 @@ class RequestService {
     type: RequestType
     priority: Priority
     department: string
+    destination_department?: string
     justification?: string
     created_by: string
     items: Array<{
@@ -464,16 +467,21 @@ class RequestService {
       requestCache.clear()
 
       // First, create the request
+      const insertData: any = {
+        type: data.type,
+        priority: data.priority,
+        department_id: data.department,
+        justification: sanitizeInput(data.justification || ''),
+        requester_id: data.created_by,
+        status: 'pending'
+      }
+      if (data.destination_department) {
+        insertData.destination_department_id = data.destination_department
+      }
+
       const { data: request, error: requestError } = await supabase
         .from('requests')
-        .insert({
-          type: data.type,
-          priority: data.priority,
-          department_id: data.department,
-          justification: sanitizeInput(data.justification || ''),
-          requester_id: data.created_by,
-          status: 'pending'
-        })
+        .insert(insertData)
         .select()
         .single()
 

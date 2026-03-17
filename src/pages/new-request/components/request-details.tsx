@@ -14,6 +14,7 @@ import type { Department } from '@/lib/types/departments'
 // Updated schema to use justification_option instead of justification text
 const detailsSchema = z.object({
   department: z.string().min(1, 'Setor solicitante é obrigatório'),
+  destination_department: z.string().min(1, 'Setor de destino é obrigatório'),
   priority: z.enum(['low', 'medium', 'high']),
   justification_option: z.string().min(1, 'Selecione uma justificativa'),
   requestDate: z.string(),
@@ -41,6 +42,7 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [userDepartment, setUserDepartment] = useState<Department | null>(null)
+  const [allDepartments, setAllDepartments] = useState<Department[]>([])
   const [loadingUserDepartment, setLoadingUserDepartment] = useState(true)
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<RequestDetails>({
@@ -61,13 +63,15 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
       setLoading(true)
       setLoadingUserDepartment(true)
 
+      const departments = await departmentsService.getAll()
+      setAllDepartments(departments)
+
       if (!user?.department_id) {
         setUserDepartment(null)
         return
       }
 
-      const allDepartments = await departmentsService.getAll()
-      const department = allDepartments.find(d => d.id === user.department_id)
+      const department = departments.find(d => d.id === user.department_id)
 
       if (department) {
         setUserDepartment(department)
@@ -148,6 +152,26 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
           
           {errors.department && (
             <p className="text-sm text-red-500 mt-1">{errors.department.message}</p>
+          )}
+        </div>
+
+        {/* Destination Department Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="destination_department">Setor de Destino</Label>
+          <select
+            id="destination_department"
+            {...register('destination_department')}
+            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Selecione o setor de destino...</option>
+            {allDepartments.map(dept => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+          {errors.destination_department && (
+            <p className="text-sm text-red-500 mt-1">{errors.destination_department.message}</p>
           )}
         </div>
 
