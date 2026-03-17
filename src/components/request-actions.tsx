@@ -182,27 +182,20 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     }
   }
 
-  const handleDeliver = async () => {
-    try {
-      setLoading(true)
-      setAction('deliver')
-      setShowDialog(true)
-    } catch (error) {
-      console.error('Error initiating delivery:', error)
-      setLoading(false)
-    }
+  const handleDeliver = () => {
+    setAction('deliver')
+    setMatricula('')
+    setEmployee(null)
+    setEmployeeError('')
+    setShowDialog(true)
   }
 
-  const handleConfirmReceipt = async () => {
-    try {
-      setLoading(true)
-      setAction('confirm_receipt')
-      setShowDialog(true)
-    } catch (error) {
-      console.error('Error initiating receipt confirmation:', error)
-      setLoading(false)
-    }
+  const handleConfirmReceipt = () => {
+    setAction('confirm_receipt')
+    setShowDialog(true)
   }
+
+
 
   const handleComplete = async () => {
     try {
