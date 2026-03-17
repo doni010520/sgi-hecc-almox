@@ -326,7 +326,7 @@ export function RequestDetails() {
                     <th className="text-center py-3 px-2 font-medium text-gray-600 w-20">Saldo</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-600 w-24">Qtd Fornec.</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-600 w-36">Observação</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-12">✓</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-16">Confirmar</th>
                   </tr>
                 </thead>
                 <tbody>
