@@ -60,9 +60,14 @@ export interface Request {
       name: string
       code: string
       category: string
+      unit?: string
+      current_stock?: number
     }
     quantity: number
     approved_quantity?: number
+    supplied_quantity?: number
+    observation?: string
+    is_checked?: boolean
     status: 'available' | 'low_stock'
   }>
   comments: Array<{
@@ -158,16 +163,23 @@ class RequestService {
               id,
               name,
               code,
-              category
+              category,
+              unit,
+              current_stock
             ),
             warehouse_item:warehouse_items(
               id,
               name,
               code,
-              category
+              category,
+              unit,
+              current_stock
             ),
             quantity,
-            approved_quantity
+            approved_quantity,
+            supplied_quantity,
+            observation,
+            is_checked
           ),
           request_comments(
             id,
@@ -232,12 +244,17 @@ class RequestService {
                       id: item.id,
                       quantity: typeof item.quantity !== 'number' ? 0 : Math.max(0, Math.floor(item.quantity)),
                       approved_quantity: item.approved_quantity,
+                      supplied_quantity: item.supplied_quantity,
+                      observation: item.observation,
+                      is_checked: item.is_checked || false,
                       status: 'available' as const,
                       item: {
                         id: sourceItem.id || '',
                         name: sanitizeInput(sourceItem.name || 'Item Desconhecido'),
                         code: sanitizeInput(sourceItem.code || ''),
-                        category: sanitizeInput(sourceItem.category || '')
+                        category: sanitizeInput(sourceItem.category || ''),
+                        unit: sourceItem.unit || 'UN',
+                        current_stock: sourceItem.current_stock || 0
                       }
                     }
                   } catch (itemError) {
@@ -319,16 +336,23 @@ class RequestService {
               id,
               name,
               code,
-              category
+              category,
+              unit,
+              current_stock
             ),
             warehouse_item:warehouse_items(
               id,
               name,
               code,
-              category
+              category,
+              unit,
+              current_stock
             ),
             quantity,
-            approved_quantity
+            approved_quantity,
+            supplied_quantity,
+            observation,
+            is_checked
           ),
           request_comments(
             id,
@@ -362,26 +386,26 @@ class RequestService {
           department: sanitizeInput(request.department?.name || 'Unknown')
         },
         department: sanitizeInput(request.department?.name || 'Unknown'),
-        request_items: request.request_items.map((item: any) => ({
-          id: item.id,
-          quantity: item.quantity,
-          approved_quantity: item.approved_quantity,
-          status: 'available' as const,
-          item: {
-            id: item.item_type === 'pharmacy'
-              ? item.pharmacy_item?.id
-              : item.warehouse_item?.id || '',
-            name: sanitizeInput(item.item_type === 'pharmacy'
-              ? item.pharmacy_item?.name
-              : item.warehouse_item?.name || 'Unknown Item'),
-            code: sanitizeInput(item.item_type === 'pharmacy'
-              ? item.pharmacy_item?.code
-              : item.warehouse_item?.code || ''),
-            category: sanitizeInput(item.item_type === 'pharmacy'
-              ? item.pharmacy_item?.category
-              : item.warehouse_item?.category || '')
+        request_items: request.request_items.map((item: any) => {
+          const source = item.item_type === 'pharmacy' ? item.pharmacy_item : item.warehouse_item
+          return {
+            id: item.id,
+            quantity: item.quantity,
+            approved_quantity: item.approved_quantity,
+            supplied_quantity: item.supplied_quantity,
+            observation: item.observation,
+            is_checked: item.is_checked || false,
+            status: 'available' as const,
+            item: {
+              id: source?.id || '',
+              name: sanitizeInput(source?.name || 'Unknown Item'),
+              code: sanitizeInput(source?.code || ''),
+              category: sanitizeInput(source?.category || ''),
+              unit: source?.unit || 'UN',
+              current_stock: source?.current_stock || 0
+            }
           }
-        })),
+        }),
         comments: request.request_comments.map((comment: any) => ({
           id: comment.id,
           user: sanitizeInput(comment.user?.full_name || 'Unknown User'),

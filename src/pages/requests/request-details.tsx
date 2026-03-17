@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
-import { 
-  ArrowLeft, MessageSquare, AlertCircle, Loader2, 
-  Download, Printer
+import {
+  ArrowLeft, MessageSquare, AlertCircle, Loader2,
+  Download, Printer, CheckCircle2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { requestService } from '@/lib/services/requests'
@@ -16,6 +17,103 @@ import { templatesService } from '@/lib/services/templates'
 import type { Request } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
+import { supabase } from '@/lib/supabase'
+
+const observationOptions = [
+  { value: '', label: 'Selecionar...' },
+  { value: 'opção 1', label: 'Opção 1' },
+  { value: 'opção 2', label: 'Opção 2' },
+  { value: 'opção 3', label: 'Opção 3' },
+  { value: 'opção 4', label: 'Opção 4' },
+  { value: 'opção 5', label: 'Opção 5' },
+]
+
+function ItemRow({ item, canEdit }: { item: Request['request_items'][0], canEdit: boolean }) {
+  const [suppliedQty, setSuppliedQty] = useState(item.supplied_quantity ?? item.quantity)
+  const [observation, setObservation] = useState(item.observation || '')
+  const [checked, setChecked] = useState(item.is_checked || false)
+  const [saving, setSaving] = useState(false)
+
+  const saveField = async (field: string, value: any) => {
+    setSaving(true)
+    try {
+      await supabase
+        .from('request_items')
+        .update({ [field]: value })
+        .eq('id', item.id)
+    } catch (e) {
+      console.error('Error saving field:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <tr className={`border-b border-gray-100 ${checked ? 'bg-green-50' : 'hover:bg-gray-50'} transition-colors`}>
+      <td className="py-3 px-2">
+        <p className="font-medium text-gray-900 text-sm">{item.item.name}</p>
+        <p className="text-xs text-gray-400">{item.item.code}</p>
+      </td>
+      <td className="text-center py-3 px-2 text-gray-600">{item.item.unit || 'UN'}</td>
+      <td className="text-center py-3 px-2 font-medium">{item.quantity}</td>
+      <td className="text-center py-3 px-2">
+        <span className={`font-medium ${(item.item.current_stock || 0) < item.quantity ? 'text-red-600' : 'text-green-600'}`}>
+          {item.item.current_stock ?? 0}
+        </span>
+      </td>
+      <td className="text-center py-3 px-2">
+        {canEdit ? (
+          <Input
+            type="number"
+            min="0"
+            value={suppliedQty}
+            onChange={(e) => {
+              const val = Math.max(0, parseInt(e.target.value) || 0)
+              setSuppliedQty(val)
+            }}
+            onBlur={() => saveField('supplied_quantity', suppliedQty)}
+            className="w-20 text-center mx-auto h-8 text-sm"
+          />
+        ) : (
+          <span>{item.supplied_quantity ?? '—'}</span>
+        )}
+      </td>
+      <td className="text-center py-3 px-2">
+        {canEdit ? (
+          <select
+            value={observation}
+            onChange={(e) => {
+              setObservation(e.target.value)
+              saveField('observation', e.target.value)
+            }}
+            className="w-full h-8 px-2 text-xs border border-gray-300 rounded bg-white"
+          >
+            {observationOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-xs">{item.observation || '—'}</span>
+        )}
+      </td>
+      <td className="text-center py-3 px-2">
+        {canEdit ? (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              setChecked(e.target.checked)
+              saveField('is_checked', e.target.checked)
+            }}
+            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+          />
+        ) : (
+          checked ? <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" /> : <span className="text-gray-300">—</span>
+        )}
+      </td>
+    </tr>
+  )
+}
 
 export function RequestDetails() {
   const navigate = useNavigate()
@@ -216,70 +314,45 @@ export function RequestDetails() {
               </div>
             </div>
 
-            {/* Request Actions - Hide when printing */}
-            <div className="mt-6 pt-6 border-t print:hidden">
-              <RequestActions 
-                request={request} 
-                onUpdate={(updatedRequest) => setRequest(updatedRequest)} 
-              />
-            </div>
           </div>
 
-          {/* Items */}
+          {/* Items - Spreadsheet Table */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 print:p-2 print:border print:border-gray-300 print:shadow-none">
             <h2 className="text-lg font-semibold text-gray-900 mb-6 print:mb-2 print:text-base">
               Itens Solicitados
             </h2>
-            <div className="space-y-4 print:space-y-0 max-h-[60vh] overflow-y-auto pr-2">
-              {/* Table header - Only visible when printing */}
-              <div className="hidden print:grid print:grid-cols-12 print:gap-1 print:border-b print:border-gray-300 print:pb-1 print:mb-1 print:text-xs print:font-medium">
-                <div className="print:col-span-1">Item</div>
-                <div className="print:col-span-2">Código</div>
-                <div className="print:col-span-5">Descrição</div>
-                <div className="print:col-span-1">Unid.</div>
-                <div className="print:col-span-1 print:text-center">Qtd.</div>
-                <div className="print:col-span-1 print:text-center">Aprov.</div>
-                <div className="print:col-span-1 print:text-center">Obs.</div>
-              </div>
-              
-              {/* Items list */}
-              <div className="print:grid print:grid-cols-1 print:gap-0">
-                {request.request_items.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg print:bg-white print:p-1 print:border-b print:border-gray-200 print:rounded-none"
-                  >
-                    {/* Screen view */}
-                    <div className="print:hidden">
-                      <p className="font-medium text-gray-900">{item.item.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">{item.item.code}</span>
-                        <span className="text-xs text-gray-500">{item.item.category}</span>
-                      </div>
-                    </div>
-                    <div className="text-right print:hidden">
-                      <p className="font-medium text-gray-900">Qtd: {item.quantity}</p>
-                      {item.approved_quantity && (
-                        <span className="text-xs text-gray-500">
-                          Aprovado: {item.approved_quantity}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Print view */}
-                    <div className="hidden print:grid print:grid-cols-12 print:gap-1 print:w-full print:text-xs">
-                      <div className="print:col-span-1">{index + 1}</div>
-                      <div className="print:col-span-2 print:truncate">{item.item.code}</div>
-                      <div className="print:col-span-5 print:truncate">{item.item.name}</div>
-                      <div className="print:col-span-1">-</div>
-                      <div className="print:col-span-1 print:text-center">{item.quantity}</div>
-                      <div className="print:col-span-1 print:text-center">{item.approved_quantity || '-'}</div>
-                      <div className="print:col-span-1 print:text-center">-</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Nome</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-16">UF</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-20">Qtd Solic.</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-20">Saldo</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-24">Qtd Fornec.</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-36">Observação</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-12">✓</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {request.request_items.map((item) => (
+                    <ItemRow
+                      key={item.id}
+                      item={item}
+                      canEdit={request.status === 'pending' || request.status === 'approved' || request.status === 'processing'}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </div>
+
+          {/* Request Actions - Below items, hide when printing */}
+          <div className="print:hidden">
+            <RequestActions
+              request={request}
+              onUpdate={(updatedRequest) => setRequest(updatedRequest)}
+            />
           </div>
         </div>
 

@@ -195,9 +195,16 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
             <Button
               size="sm"
               className="bg-green-500 hover:bg-green-600 text-white"
-              onClick={() => {
-                setAction('approve')
-                setShowDialog(true)
+              onClick={async () => {
+                try {
+                  setLoading(true)
+                  const updatedRequest = await requestService.approve(request.id, itemQuantities, '')
+                  onUpdate(updatedRequest)
+                } catch (error) {
+                  console.error('Error approving:', error)
+                } finally {
+                  setLoading(false)
+                }
               }}
               disabled={loading}
             >
@@ -314,71 +321,6 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Item Quantities (only for approval) */}
-            {action === 'approve' && (
-              <div className="space-y-4">
-                <Label className="text-base font-medium text-gray-900">
-                  Quantidades Aprovadas
-                </Label>
-                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
-                  {request.request_items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{item.item.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
-                            {item.item.code}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Quantidade solicitada: {item.quantity}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleQuantityChange(
-                            item.id,
-                            (itemQuantities[item.id] !== undefined ? itemQuantities[item.id] : item.quantity) - 1
-                          )}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </Button>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={itemQuantities[item.id] !== undefined ? itemQuantities[item.id] : item.quantity}
-                          onChange={(e) => handleQuantityChange(
-                            item.id,
-                            parseInt(e.target.value) || 0
-                          )}
-                          className="w-20 text-center bg-white"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleQuantityChange(
-                            item.id,
-                            (itemQuantities[item.id] !== undefined ? itemQuantities[item.id] : item.quantity) + 1
-                          )}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Comments/Reason */}
             <div className="space-y-2">
               <Label className="text-base font-medium text-gray-900">
