@@ -17,10 +17,12 @@ import {
   Settings
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTheme } from '@/contexts/theme'
 
 export function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { mode } = useTheme()
 
   if (!user) {
     return (
@@ -36,17 +38,29 @@ export function Dashboard() {
   const isManager = user?.role === 'gestor'
   const canManageRequests = isAdmin || isManager
 
+  const glass: React.CSSProperties = {
+    background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
+    backdropFilter: 'blur(30px)',
+    WebkitBackdropFilter: 'blur(30px)',
+    border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)'}`,
+    borderRadius: 16,
+    transition: 'background 0.4s, border-color 0.4s',
+  }
+  const txt = mode === 'dark' ? '#fff' : '#0d2e1c'
+  const txtSec = mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
+  const txtMut = mode === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(13,46,28,0.45)'
+
   return (
     <ErrorBoundary>
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="p-6" style={glass}>
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold mb-2" style={{ color: txt }}>
               Sistema de Gestão de Insumos
             </h1>
-            <p className="text-lg text-gray-600 mb-6">
+            <p className="text-lg mb-6" style={{ color: txtSec }}>
               Olá, <span className="font-medium">{user?.full_name}</span>! Este sistema permite gerenciar o estoque e solicitações de insumos do Hospital Estadual Costa dos Coqueiros de forma eficiente.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -68,15 +82,14 @@ export function Dashboard() {
           </div>
           <div className="w-full md:w-auto">
             <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-500 rounded-xl blur opacity-25"></div>
-              <div className="relative bg-white p-6 rounded-xl border border-gray-200">
+              <div className="relative p-6 rounded-xl" style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-emerald-100 rounded-lg">
                     <Lightbulb className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">Dica Rápida</h3>
+                  <h3 className="font-semibold" style={{ color: txt }}>Dica Rápida</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm mb-4" style={{ color: txtSec }}>
                   Você pode acompanhar o status de suas solicitações na seção "Minhas Solicitações" e visualizar detalhes completos clicando em qualquer solicitação.
                 </p>
                 <Button 
@@ -95,18 +108,18 @@ export function Dashboard() {
       </div>
 
       {/* Main Features */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Principais Funcionalidades</h2>
+      <div className="p-6" style={glass}>
+        <h2 className="text-xl font-semibold mb-6" style={{ color: txt }}>Principais Funcionalidades</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Requests */}
-          <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+          <div className="p-5 rounded-xl transition-colors" style={{ border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-emerald-100 rounded-lg">
                 <ClipboardList className="w-5 h-5 text-emerald-600" />
               </div>
-              <h3 className="font-semibold text-gray-900">Solicitações</h3>
+              <h3 className="font-semibold" style={{ color: txt }}>Solicitações</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm mb-4" style={{ color: txtSec }}>
               Crie e acompanhe solicitações de materiais e medicamentos para seu setor. Visualize o histórico completo e status de cada pedido.
             </p>
             <Button 
@@ -122,14 +135,14 @@ export function Dashboard() {
 
           {/* Inventory */}
           {(isManager || isAdmin) && (
-            <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+            <div className="p-5 rounded-xl transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Package2 className="w-5 h-5 text-green-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900">Estoque</h3>
+                <h3 className="font-semibold" style={{ color: txt }}>Estoque</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Gerencie o estoque de materiais e medicamentos. Acompanhe níveis de estoque, adicione novos itens e registre movimentações.
               </p>
               <div className="flex gap-2">
@@ -157,14 +170,14 @@ export function Dashboard() {
 
           {/* Reports */}
           {(isManager || isAdmin) && (
-            <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+            <div className="p-5 rounded-xl transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <BarChart3 className="w-5 h-5 text-purple-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900">Relatórios</h3>
+                <h3 className="font-semibold" style={{ color: txt }}>Relatórios</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Visualize relatórios detalhados de consumo, estoque e solicitações. Exporte dados para análise e tomada de decisões.
               </p>
               <div className="flex gap-2">
@@ -190,14 +203,14 @@ export function Dashboard() {
 
           {/* Request Management */}
           {canManageRequests && (
-            <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+            <div className="p-5 rounded-xl transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-amber-100 rounded-lg">
                   <CheckSquare className="w-5 h-5 text-amber-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900">Gestão de Solicitações</h3>
+                <h3 className="font-semibold" style={{ color: txt }}>Gestão de Solicitações</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Aprove, rejeite e processe solicitações. Acompanhe o fluxo completo desde a criação até a entrega.
               </p>
               <Button 
@@ -214,14 +227,14 @@ export function Dashboard() {
 
           {/* User Management */}
           {isAdmin && (
-            <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+            <div className="p-5 rounded-xl transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <Users className="w-5 h-5 text-indigo-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900">Gestão de Usuários</h3>
+                <h3 className="font-semibold" style={{ color: txt }}>Gestão de Usuários</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Gerencie usuários do sistema, defina permissões e controle o acesso às funcionalidades.
               </p>
               <Button 
@@ -237,14 +250,14 @@ export function Dashboard() {
           )}
 
           {/* Settings */}
-          <div className="p-5 border border-gray-200 rounded-xl hover:border-primary-200 hover:bg-primary-50/20 transition-colors">
+          <div className="p-5 rounded-xl transition-colors">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-gray-100 rounded-lg">
                 <Settings className="w-5 h-5 text-gray-600" />
               </div>
-              <h3 className="font-semibold text-gray-900">Configurações</h3>
+              <h3 className="font-semibold" style={{ color: txt }}>Configurações</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm mb-4" style={{ color: txtSec }}>
               Personalize suas preferências, gerencie seu perfil e configure notificações do sistema.
             </p>
             <Button 
@@ -261,54 +274,54 @@ export function Dashboard() {
       </div>
 
       {/* Quick Guide */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="p-6" style={glass}>
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-emerald-100 rounded-lg">
             <BookOpen className="w-5 h-5 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">Guia Rápido</h2>
+          <h2 className="text-xl font-semibold" style={{ color: txt }}>Guia Rápido</h2>
         </div>
         
         <div className="space-y-4">
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+          <div className="p-4 rounded-lg">
+            <h3 className="font-medium mb-2 flex items-center gap-2" style={{ color: txt }}>
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm font-semibold">1</span>
               Como criar uma nova solicitação
             </h3>
-            <p className="text-sm text-gray-600 ml-8">
+            <p className="text-sm ml-8" style={{ color: txtSec }}>
               Acesse o menu "Nova Solicitação", selecione o tipo (Farmácia ou Almoxarifado), preencha os detalhes, adicione os itens desejados e confirme o pedido.
             </p>
           </div>
           
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+          <div className="p-4 rounded-lg">
+            <h3 className="font-medium mb-2 flex items-center gap-2" style={{ color: txt }}>
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm font-semibold">2</span>
               Como acompanhar suas solicitações
             </h3>
-            <p className="text-sm text-gray-600 ml-8">
+            <p className="text-sm ml-8" style={{ color: txtSec }}>
               Acesse "Minhas Solicitações" para ver todas as suas solicitações. Você pode filtrar por status (pendente, aprovada, rejeitada, etc.) e visualizar detalhes completos.
             </p>
           </div>
           
           {canManageRequests && (
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-lg">
+              <h3 className="font-medium mb-2 flex items-center gap-2" style={{ color: txt }}>
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm font-semibold">3</span>
                 Como aprovar ou rejeitar solicitações
               </h3>
-              <p className="text-sm text-gray-600 ml-8">
+              <p className="text-sm ml-8" style={{ color: txtSec }}>
                 Acesse "Caixa de Entrada", selecione a solicitação desejada e utilize os botões de ação para aprovar ou rejeitar. Você pode ajustar as quantidades aprovadas e adicionar comentários.
               </p>
             </div>
           )}
           
           {(isManager || isAdmin) && (
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-lg">
+              <h3 className="font-medium mb-2 flex items-center gap-2" style={{ color: txt }}>
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-sm font-semibold">4</span>
                 Como gerenciar o estoque
               </h3>
-              <p className="text-sm text-gray-600 ml-8">
+              <p className="text-sm ml-8" style={{ color: txtSec }}>
                 Acesse "Farmácia" ou "Almoxarifado" no menu de Estoque. Você pode adicionar novos itens, atualizar quantidades, configurar níveis mínimos e registrar movimentações.
               </p>
             </div>
@@ -317,21 +330,21 @@ export function Dashboard() {
       </div>
 
       {/* Video Tutorial Section */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="p-6" style={glass}>
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-red-100 rounded-lg">
             <PlayCircle className="w-5 h-5 text-red-600" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">Tutorial em Vídeo</h2>
+          <h2 className="text-xl font-semibold" style={{ color: txt }}>Tutorial em Vídeo</h2>
         </div>
-        <p className="text-gray-600 mb-4">
+        <p className="mb-4" style={{ color: txtSec }}>
           Assista ao nosso tutorial completo para aprender a utilizar todas as funcionalidades do sistema de forma eficiente.
         </p>
-        <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-4 border border-gray-200">
+        <div className="aspect-video rounded-lg flex items-center justify-center mb-4" style={{ background: mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.04)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
           <div className="text-center">
             <PlayCircle className="w-16 h-16 text-red-500 mx-auto mb-3" />
-            <p className="text-gray-700 font-medium">Tutorial do Sistema de Gestão de Insumos</p>
-            <p className="text-gray-500 text-sm">Duração: 10:25</p>
+            <p className="font-medium" style={{ color: txt }}>Tutorial do Sistema de Gestão de Insumos</p>
+            <p className="text-sm" style={{ color: txtMut }}>Duração: 10:25</p>
           </div>
         </div>
         <div className="flex justify-center">
@@ -346,12 +359,12 @@ export function Dashboard() {
       </div>
 
       {/* Help & Support */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="p-6" style={glass}>
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-green-100 rounded-lg">
             <HelpCircle className="w-5 h-5 text-green-600" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">Ajuda e Suporte</h2>
+          <h2 className="text-xl font-semibold" style={{ color: txt }}>Ajuda e Suporte</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

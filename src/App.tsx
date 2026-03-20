@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/contexts/auth'
+import { ThemeProvider } from '@/contexts/theme'
 import { ProtectedRoute } from '@/components/protected-route'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Suspense } from 'react'
@@ -54,6 +55,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <Suspense fallback={<LoadingFallback />}>
           <BrowserRouter>
+            <ThemeProvider>
             <AuthProvider>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -264,6 +266,7 @@ export default function App() {
               } />
               </Routes>
             </AuthProvider>
+            </ThemeProvider>
           </BrowserRouter>
         </Suspense>
       </QueryClientProvider>
