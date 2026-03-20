@@ -1,19 +1,124 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Pill,
   AlertCircle,
   RefreshCw,
-  Filter,
   Home,
   History
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { tvRequestService } from '@/lib/services/tv-requests'
-import { RequestStatusBadge } from '@/components/request-status-badge'
 import { supabase } from '@/lib/supabase'
 import type { TVRequest } from '@/lib/services/tv-requests'
+
+const THEME_A = {
+  gradient: 'linear-gradient(135deg, #b0f5d0 0%, #78d8a0 25%, #50b87a 50%, #3a9a68 75%, #2e7d52 100%)',
+  glass: 'rgba(10,15,20,0.65)',
+  glassBorder: 'rgba(255,255,255,0.12)',
+  glassRow: 'rgba(10,15,20,0.6)',
+  glassRowBorder: 'rgba(255,255,255,0.08)',
+  text: '#fff',
+  textSecondary: 'rgba(255,255,255,0.75)',
+  textMuted: 'rgba(255,255,255,0.5)',
+  textHeader: 'rgba(255,255,255,0.9)',
+  dest: '#ffd166',
+  totalNum: '#fff',
+  pendingNum: '#ffcc00',
+  approvedNum: '#00e676',
+  processingNum: '#448aff',
+  pendingGlow: '0 0 12px rgba(255,204,0,0.4)',
+  approvedGlow: '0 0 12px rgba(0,230,118,0.4)',
+  processingGlow: '0 0 12px rgba(68,138,255,0.4)',
+  btnBg: 'rgba(0,0,0,0.25)',
+  btnBorder: 'rgba(255,255,255,0.15)',
+  btnText: '#fff',
+  footerText: 'rgba(255,255,255,0.35)',
+  footerBorder: 'rgba(255,255,255,0.05)',
+  priorityHigh: { bg: 'rgba(239,68,68,0.3)', color: '#fff', border: 'rgba(239,68,68,0.5)' },
+  priorityMedium: { bg: 'rgba(251,191,36,0.3)', color: '#fff', border: 'rgba(251,191,36,0.5)' },
+  priorityLow: { bg: 'rgba(34,197,94,0.3)', color: '#fff', border: 'rgba(34,197,94,0.5)' },
+  statusPending: { bg: 'rgba(251,191,36,0.2)', color: '#fff', border: 'rgba(251,191,36,0.4)', dot: '#fbbf24' },
+  statusApproved: { bg: 'rgba(34,197,94,0.2)', color: '#fff', border: 'rgba(34,197,94,0.4)', dot: '#22c55e' },
+  statusProcessing: { bg: 'rgba(59,130,246,0.2)', color: '#fff', border: 'rgba(59,130,246,0.4)', dot: '#3b82f6' },
+}
+
+const THEME_B = {
+  gradient: 'linear-gradient(135deg, #e0fff0 0%, #c8ffe8 20%, #a8f0d0 40%, #88e8b8 60%, #70d8a5 80%, #60c898 100%)',
+  glass: 'rgba(255,255,255,0.55)',
+  glassBorder: 'rgba(255,255,255,0.7)',
+  glassRow: 'rgba(255,255,255,0.45)',
+  glassRowBorder: 'rgba(255,255,255,0.6)',
+  text: '#0d2e1c',
+  textSecondary: 'rgba(13,46,28,0.7)',
+  textMuted: 'rgba(13,46,28,0.65)',
+  textHeader: 'rgba(13,46,28,0.8)',
+  dest: '#0d5a30',
+  totalNum: '#0d2e1c',
+  pendingNum: '#8a6800',
+  approvedNum: '#0d6a35',
+  processingNum: '#1a4eaa',
+  pendingGlow: 'none',
+  approvedGlow: 'none',
+  processingGlow: 'none',
+  btnBg: 'rgba(255,255,255,0.5)',
+  btnBorder: 'rgba(255,255,255,0.6)',
+  btnText: '#0d2e1c',
+  footerText: 'rgba(13,46,28,0.5)',
+  footerBorder: 'rgba(0,0,0,0.1)',
+  priorityHigh: { bg: 'rgba(239,68,68,0.2)', color: '#a11', border: 'rgba(239,68,68,0.4)' },
+  priorityMedium: { bg: 'rgba(251,191,36,0.25)', color: '#7a5500', border: 'rgba(251,191,36,0.5)' },
+  priorityLow: { bg: 'rgba(34,197,94,0.25)', color: '#0d5a2a', border: 'rgba(34,197,94,0.5)' },
+  statusPending: { bg: 'rgba(251,191,36,0.2)', color: '#7a5500', border: 'rgba(251,191,36,0.45)', dot: '#d4a017' },
+  statusApproved: { bg: 'rgba(34,197,94,0.2)', color: '#0d5a2a', border: 'rgba(34,197,94,0.45)', dot: '#1a8a50' },
+  statusProcessing: { bg: 'rgba(59,130,246,0.2)', color: '#1a4eaa', border: 'rgba(59,130,246,0.45)', dot: '#2060cc' },
+}
+
+function TVStatusBadge({ status, theme }: { status: string; theme: typeof THEME_A }) {
+  const config = status === 'approved' ? theme.statusApproved
+    : status === 'processing' ? theme.statusProcessing
+    : theme.statusPending
+  const label = status === 'approved' ? 'Aprovada'
+    : status === 'processing' ? 'Em Processamento'
+    : 'Pendente'
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+      width: 180, padding: '7px 0', borderRadius: 10,
+      fontSize: 13, fontWeight: 600,
+      background: config.bg, color: config.color,
+      border: `1px solid ${config.border}`,
+    }}>
+      <span style={{
+        width: 8, height: 8, borderRadius: '50%',
+        background: config.dot,
+        boxShadow: `0 0 8px ${config.dot}`,
+        animation: 'pulse 2s ease-in-out infinite',
+      }} />
+      {label}
+    </span>
+  )
+}
+
+function TVPriorityBadge({ priority, theme }: { priority: string; theme: typeof THEME_A }) {
+  const config = priority === 'high' ? theme.priorityHigh
+    : priority === 'medium' ? theme.priorityMedium
+    : theme.priorityLow
+  const label = priority === 'high' ? 'Alta' : priority === 'medium' ? 'Média' : 'Baixa'
+
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 90, padding: '7px 0', borderRadius: 8,
+      fontSize: 12, fontWeight: 700,
+      background: config.bg, color: config.color,
+      border: `1px solid ${config.border}`,
+    }}>
+      {label}
+    </span>
+  )
+}
 
 export default function PharmacyTVDashboard() {
   const navigate = useNavigate()
@@ -22,46 +127,39 @@ export default function PharmacyTVDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved' | 'processing'>('all')
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [autoRefresh] = useState(true)
   const [refreshInterval] = useState(60)
   const [connectionError, setConnectionError] = useState(false)
+  const [themeMode, setThemeMode] = useState<'a' | 'b'>('a')
 
-  // Check Supabase connection on mount
+  const theme = themeMode === 'a' ? THEME_A : THEME_B
+
   useEffect(() => {
     async function checkConnection() {
       try {
         const { error } = await supabase.from('requests').select('id').limit(1)
         if (error) {
-          console.error('Supabase connection error:', error)
           setConnectionError(true)
-          setError('Erro de conexão com o banco de dados. Por favor, verifique sua conexão.')
+          setError('Erro de conexão com o banco de dados.')
         } else {
           setConnectionError(false)
         }
-      } catch (err) {
-        console.error('Connection check error:', err)
+      } catch {
         setConnectionError(true)
-        setError('Erro de conexão com o banco de dados. Por favor, verifique sua conexão.')
+        setError('Erro de conexão com o banco de dados.')
       }
     }
     checkConnection()
   }, [])
 
-  // Load requests on component mount and set up auto-refresh
   useEffect(() => {
     if (!connectionError) {
       loadRequests()
-
       let intervalId: number | undefined
       if (autoRefresh) {
-        intervalId = window.setInterval(() => {
-          loadRequests()
-        }, refreshInterval * 1000)
+        intervalId = window.setInterval(() => loadRequests(), refreshInterval * 1000)
       }
-
-      return () => {
-        if (intervalId) clearInterval(intervalId)
-      }
+      return () => { if (intervalId) clearInterval(intervalId) }
     }
   }, [autoRefresh, refreshInterval, connectionError])
 
@@ -69,217 +167,252 @@ export default function PharmacyTVDashboard() {
     try {
       setLoading(true)
       setError(null)
-
       const data = await tvRequestService.getAll('pharmacy')
-
-      // Filter only active requests (pending, approved, processing)
-      const activeRequests = data.filter(r =>
-        ['pending', 'approved', 'processing'].includes(r.status)
-      )
-
+      const activeRequests = data.filter(r => ['pending', 'approved', 'processing'].includes(r.status))
       setRequests(activeRequests)
       setLastUpdated(new Date())
     } catch (error) {
-      console.error('Error loading requests:', error)
       if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch')) {
-          setError('Erro de conexão com o servidor.')
-        } else {
-          setError(`Erro ao carregar solicitações: ${error.message}`)
-        }
+        setError(error.message.includes('Failed to fetch') ? 'Erro de conexão com o servidor.' : `Erro: ${error.message}`)
       } else {
-        setError('Erro ao carregar solicitações. Tente novamente.')
+        setError('Erro ao carregar solicitações.')
       }
     } finally {
       setLoading(false)
     }
   }
 
-  // Filter requests
-  const filteredRequests = requests.filter(request => {
-    if (activeFilter === 'all') return true
-    return request.status === activeFilter
-  })
+  const filteredRequests = requests.filter(r => activeFilter === 'all' || r.status === activeFilter)
+  const counts = {
+    all: requests.length,
+    pending: requests.filter(r => r.status === 'pending').length,
+    approved: requests.filter(r => r.status === 'approved').length,
+    processing: requests.filter(r => r.status === 'processing').length,
+  }
 
   return (
-    <div className="h-screen bg-gray-900 text-white p-6 overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-900 rounded-lg">
-            <Pill className="w-8 h-8 text-blue-300" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Painel de Solicitações - Farmácia</h1>
-            <p className="text-gray-400">
-              Atualizado em {format(lastUpdated, "dd 'de' MMMM 'de' yyyy 'às' HH:mm:ss", { locale: ptBR })}
-            </p>
-          </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @keyframes pulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+          50% { opacity: 0.5; box-shadow: 0 0 2px currentColor; }
+        }
+      `}</style>
+      <div style={{
+        fontFamily: "'Inter', sans-serif",
+        background: theme.gradient,
+        minHeight: '100vh',
+        padding: 32,
+        transition: 'background 0.6s ease',
+      }}>
+
+        {/* Theme Switcher */}
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 100,
+          display: 'flex', gap: 0,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(20px)',
+          borderRadius: 14, padding: 4,
+          border: '1px solid rgba(255,255,255,0.15)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        }}>
+          <button onClick={() => setThemeMode('a')} style={{
+            padding: '10px 22px', border: 'none', borderRadius: 10,
+            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: themeMode === 'a' ? 'rgba(255,255,255,0.15)' : 'transparent',
+            color: themeMode === 'a' ? '#fff' : 'rgba(255,255,255,0.5)',
+            boxShadow: themeMode === 'a' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none',
+          }}>Menta + Verde</button>
+          <button onClick={() => setThemeMode('b')} style={{
+            padding: '10px 22px', border: 'none', borderRadius: 10,
+            fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: themeMode === 'b' ? 'rgba(255,255,255,0.15)' : 'transparent',
+            color: themeMode === 'b' ? '#fff' : 'rgba(255,255,255,0.5)',
+            boxShadow: themeMode === 'b' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none',
+          }}>Só Menta</button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(`/tv/pharmacy/history`)}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors"
-            title="Histórico"
-          >
-            <History className="w-5 h-5" />
-            <span>Histórico</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white transition-colors"
-            title="Voltar ao Menu"
-          >
-            <Home className="w-5 h-5" />
-            <span>Menu</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400">Auto:</span>
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoRefresh ? 'bg-green-600' : 'bg-gray-600'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoRefresh ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          <button
-            onClick={loadRequests}
-            className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-colors"
-            title="Atualizar Agora"
-          >
-            <RefreshCw className="w-5 h-5 text-gray-300" />
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="text-gray-400 flex items-center gap-2">
-          <Filter className="w-5 h-5" />
-          <span>Filtrar:</span>
-        </div>
-
-        {[
-          { key: 'all' as const, label: 'Todas', color: 'bg-blue-700' },
-          { key: 'pending' as const, label: 'Aguardando', color: 'bg-yellow-700' },
-          { key: 'approved' as const, label: 'Aprovadas', color: 'bg-green-700' },
-          { key: 'processing' as const, label: 'Em Processamento', color: 'bg-blue-700' }
-        ].map(filter => (
-          <button
-            key={filter.key}
-            onClick={() => setActiveFilter(filter.key)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              activeFilter === filter.key
-                ? `${filter.color} text-white`
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-
-        <span className="ml-auto text-gray-500 text-sm">
-          {filteredRequests.length} solicitações
-        </span>
-      </div>
-
-      {/* Requests Table */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="bg-gray-800 rounded-t-xl border-t border-l border-r border-gray-700 p-4">
-          <div className="grid grid-cols-12 gap-3 text-gray-400 text-sm font-medium">
-            <div className="col-span-1">Código</div>
-            <div className="col-span-2">Data/Hora</div>
-            <div className="col-span-2">Solicitante</div>
-            <div className="col-span-2">Setor Origem</div>
-            <div className="col-span-2">Setor Destino</div>
-            <div className="col-span-1 text-center">Prioridade</div>
-            <div className="col-span-2 text-center">Status</div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto bg-gray-800 rounded-b-xl border-b border-l border-r border-gray-700">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              paddingRight: 20,
+              borderRight: `1px solid ${themeMode === 'a' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: 'linear-gradient(135deg, #2db48c, #38bdaa)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 20, fontWeight: 800, color: '#fff',
+                boxShadow: '0 4px 15px rgba(45, 180, 140, 0.3)',
+              }}>H</div>
+              <div style={{
+                fontSize: 11, fontWeight: 600, color: theme.text,
+                textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.4,
+                transition: 'color 0.4s',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 800 }}>HECC</span><br />
+                Hospital Estadual<br />Costa dos Coqueiros
+              </div>
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full text-red-400 p-4">
-              <AlertCircle className="w-12 h-12 mb-2" />
-              <p className="text-center">{error}</p>
-              <button
-                onClick={loadRequests}
-                className="mt-4 px-4 py-2 bg-red-900 text-red-100 rounded-lg hover:bg-red-800 transition-colors"
+            <div>
+              <h1 style={{ fontSize: 24, fontWeight: 700, color: theme.text, letterSpacing: -0.5, transition: 'color 0.4s' }}>
+                Painel de Solicitações — Farmácia
+              </h1>
+              <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 4, transition: 'color 0.4s' }}>
+                Atualizado em {format(lastUpdated, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {[
+              { label: 'Histórico', icon: <History size={16} />, action: () => navigate('/tv/pharmacy/history') },
+              { label: 'Menu', icon: <Home size={16} />, action: () => navigate('/') },
+              { label: 'Atualizar', icon: <RefreshCw size={16} />, action: loadRequests },
+            ].map(btn => (
+              <button key={btn.label} onClick={btn.action} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 20px', borderRadius: 12,
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                color: theme.btnText, background: theme.btnBg,
+                backdropFilter: 'blur(20px)',
+                border: `1px solid ${theme.btnBorder}`,
+                transition: 'all 0.4s',
+              }}>{btn.icon} {btn.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats Cards as Filters */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 28 }}>
+          {[
+            { key: 'all' as const, label: 'TODAS', num: counts.all, numColor: theme.totalNum, glow: 'none' },
+            { key: 'pending' as const, label: 'PENDENTES', num: counts.pending, numColor: theme.pendingNum, glow: theme.pendingGlow },
+            { key: 'approved' as const, label: 'APROVADAS', num: counts.approved, numColor: theme.approvedNum, glow: theme.approvedGlow },
+            { key: 'processing' as const, label: 'PROCESSANDO', num: counts.processing, numColor: theme.processingNum, glow: theme.processingGlow },
+          ].map(card => (
+            <div key={card.key} onClick={() => setActiveFilter(card.key)} style={{
+              flex: 1, padding: '20px 24px', borderRadius: 16, cursor: 'pointer',
+              background: activeFilter === card.key
+                ? (themeMode === 'a' ? 'rgba(10,15,20,0.75)' : 'rgba(255,255,255,0.7)')
+                : theme.glass,
+              backdropFilter: 'blur(30px)',
+              border: `1px solid ${activeFilter === card.key
+                ? (themeMode === 'a' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.8)')
+                : theme.glassBorder}`,
+              boxShadow: activeFilter === card.key ? '0 8px 30px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.15)',
+              transition: 'all 0.3s',
+            }}>
+              <div style={{
+                fontSize: 36, fontWeight: 800, lineHeight: 1, marginBottom: 6,
+                color: card.numColor, textShadow: card.glow,
+                transition: 'color 0.4s',
+              }}>{card.num}</div>
+              <div style={{
+                fontSize: 12, fontWeight: 600, textTransform: 'uppercase',
+                letterSpacing: 1.5, color: theme.text,
+                transition: 'color 0.4s',
+              }}>{card.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div>
+          {/* Header row */}
+          <div style={{ display: 'flex', padding: '14px 20px' }}>
+            {['CÓDIGO', 'DATA/HORA', 'SOLICITANTE', 'SETOR ORIGEM', 'SETOR DESTINO', 'PRIORIDADE', 'STATUS'].map((h, i) => (
+              <div key={h} style={{
+                flex: i === 0 ? '0 0 100px' : i === 5 || i === 6 ? '0 0 180px' : 1,
+                fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: 1.2, color: theme.textHeader,
+                textAlign: i >= 5 ? 'center' : 'left',
+                transition: 'color 0.4s',
+              }}>{h}</div>
+            ))}
+          </div>
+
+          {/* Rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  border: '3px solid rgba(255,255,255,0.2)',
+                  borderTopColor: '#fff',
+                  animation: 'spin 1s linear infinite',
+                }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : error ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 60 }}>
+                <AlertCircle size={48} color="#ef4444" />
+                <p style={{ color: '#ef4444', marginTop: 12 }}>{error}</p>
+                <button onClick={loadRequests} style={{
+                  marginTop: 16, padding: '10px 24px', borderRadius: 12,
+                  background: 'rgba(239,68,68,0.2)', color: '#fff',
+                  border: '1px solid rgba(239,68,68,0.4)', cursor: 'pointer',
+                }}>Tentar Novamente</button>
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              <div style={{
+                textAlign: 'center', padding: 60,
+                color: theme.textSecondary, fontSize: 16,
+              }}>Nenhuma solicitação encontrada</div>
+            ) : filteredRequests.map(request => (
+              <div key={request.id} onClick={() => navigate(`/requests/${request.id}`)} style={{
+                display: 'flex', alignItems: 'center', padding: 20,
+                borderRadius: 14, cursor: 'pointer',
+                background: theme.glassRow,
+                backdropFilter: 'blur(30px)',
+                border: `1px solid ${theme.glassRowBorder}`,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                transition: 'all 0.3s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
               >
-                Tentar Novamente
-              </button>
-            </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              Nenhuma solicitação encontrada
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-700">
-              {filteredRequests.map((request, index) => (
-                <div
-                  key={request.id}
-                  onClick={() => navigate(`/requests/${request.id}`)}
-                  className={`p-4 cursor-pointer hover:bg-gray-700/50 transition-colors ${
-                    request.priority === 'high'
-                      ? 'bg-red-900/20 hover:bg-red-900/30'
-                      : index % 2 === 0
-                        ? 'bg-gray-800'
-                        : 'bg-gray-800/50'
-                  }`}
-                >
-                  <div className="grid grid-cols-12 gap-3 items-center">
-                    <div className="col-span-1 font-bold text-white">
-                      #{request.request_number || '—'}
-                    </div>
-                    <div className="col-span-2 text-gray-300 text-sm">
-                      {format(new Date(request.created_at), "dd/MM/yyyy HH:mm")}
-                    </div>
-                    <div className="col-span-2 text-gray-200 truncate">
-                      {request.requester_name}
-                    </div>
-                    <div className="col-span-2 text-gray-200 truncate">
-                      {request.department}
-                    </div>
-                    <div className="col-span-2 text-gray-200 truncate">
-                      {request.destination_department || '—'}
-                    </div>
-                    <div className="col-span-1 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        request.priority === 'high'
-                          ? 'bg-red-900 text-red-200 border border-red-700'
-                          : request.priority === 'medium'
-                            ? 'bg-yellow-900 text-yellow-200 border border-yellow-700'
-                            : 'bg-green-900 text-green-200 border border-green-700'
-                      }`}>
-                        {request.priority === 'high' ? 'Alta' :
-                         request.priority === 'medium' ? 'Média' : 'Baixa'}
-                      </span>
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <RequestStatusBadge status={request.status} />
-                    </div>
-                  </div>
+                <div style={{ flex: '0 0 100px', fontWeight: 700, fontSize: 15, color: theme.text, transition: 'color 0.4s' }}>
+                  #{request.request_number || '—'}
                 </div>
-              ))}
-            </div>
-          )}
+                <div style={{ flex: 1, color: theme.textSecondary, fontWeight: 400, fontSize: 13, transition: 'color 0.4s' }}>
+                  {format(new Date(request.created_at), "dd/MM/yyyy HH:mm")}
+                </div>
+                <div style={{ flex: 1, fontWeight: 600, color: theme.text, fontSize: 14, transition: 'color 0.4s' }}>
+                  {request.requester_name}
+                </div>
+                <div style={{ flex: 1, color: theme.textSecondary, fontWeight: 500, transition: 'color 0.4s' }}>
+                  {request.department}
+                </div>
+                <div style={{ flex: 1, color: theme.dest, fontWeight: 700, transition: 'color 0.4s' }}>
+                  {request.destination_department || '—'}
+                </div>
+                <div style={{ flex: '0 0 180px', textAlign: 'center' }}>
+                  <TVPriorityBadge priority={request.priority} theme={theme} />
+                </div>
+                <div style={{ flex: '0 0 180px', textAlign: 'center' }}>
+                  <TVStatusBadge status={request.status} theme={theme} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          marginTop: 24, padding: '12px 0',
+          borderTop: `1px solid ${theme.footerBorder}`,
+          display: 'flex', justifyContent: 'space-between',
+          fontSize: 11, color: theme.footerText, letterSpacing: 0.5,
+          transition: 'all 0.4s',
+        }}>
+          <span>HECC — Hospital Estadual Costa dos Coqueiros - FESF-SUS</span>
+          <span>Sistema de Gestão de Insumos v1.0</span>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
