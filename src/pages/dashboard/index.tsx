@@ -44,7 +44,7 @@ export function Dashboard() {
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Bem-vindo ao Sistema de Gestão de Insumos
+              Sistema de Gestão de Insumos
             </h1>
             <p className="text-lg text-gray-600 mb-6">
               Olá, <span className="font-medium">{user?.full_name}</span>! Este sistema permite gerenciar o estoque e solicitações de insumos do Hospital Estadual Costa dos Coqueiros de forma eficiente.
@@ -91,35 +91,6 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Video Tutorial Section */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <PlayCircle className="w-5 h-5 text-red-600" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Tutorial em Vídeo</h2>
-        </div>
-        <p className="text-gray-600 mb-4">
-          Assista ao nosso tutorial completo para aprender a utilizar todas as funcionalidades do sistema de forma eficiente.
-        </p>
-        <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-4 border border-gray-200">
-          <div className="text-center">
-            <PlayCircle className="w-16 h-16 text-red-500 mx-auto mb-3" />
-            <p className="text-gray-700 font-medium">Tutorial do Sistema de Gestão de Insumos</p>
-            <p className="text-gray-500 text-sm">Duração: 10:25</p>
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <Button 
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
-          >
-            <PlayCircle className="w-4 h-4 mr-2" />
-            Assistir no YouTube
-          </Button>
         </div>
       </div>
 
@@ -342,6 +313,35 @@ export function Dashboard() {
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Video Tutorial Section */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-red-100 rounded-lg">
+            <PlayCircle className="w-5 h-5 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900">Tutorial em Vídeo</h2>
+        </div>
+        <p className="text-gray-600 mb-4">
+          Assista ao nosso tutorial completo para aprender a utilizar todas as funcionalidades do sistema de forma eficiente.
+        </p>
+        <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-4 border border-gray-200">
+          <div className="text-center">
+            <PlayCircle className="w-16 h-16 text-red-500 mx-auto mb-3" />
+            <p className="text-gray-700 font-medium">Tutorial do Sistema de Gestão de Insumos</p>
+            <p className="text-gray-500 text-sm">Duração: 10:25</p>
+          </div>
+        </div>
+        <div className="flex justify-center">
+          <Button
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
+          >
+            <PlayCircle className="w-4 h-4 mr-2" />
+            Assistir no YouTube
+          </Button>
         </div>
       </div>
 
