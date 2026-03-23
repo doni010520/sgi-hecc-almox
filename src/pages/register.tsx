@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Building2, Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle, ShieldAlert } from 'lucide-react'
-import type { UserRole } from '@/lib/types'
 
 export function Register() {
   const navigate = useNavigate()
@@ -24,10 +23,10 @@ export function Register() {
       const password = formData.get('password') as string
       const confirmPassword = formData.get('confirmPassword') as string
       const fullName = formData.get('fullName') as string
-      const role = formData.get('role') as UserRole
+      const role = 'solicitante'
 
       // Basic validation
-      if (!email || !password || !confirmPassword || !fullName || !role) {
+      if (!email || !password || !confirmPassword || !fullName) {
         throw new Error('Por favor, preencha todos os campos')
       }
 
@@ -68,7 +67,7 @@ export function Register() {
   return (
     <div className="min-h-screen flex">
       {/* Left Section */}
-      <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-blue-600 to-cyan-600 text-white p-8 lg:p-12 flex-col justify-center overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-emerald-600 to-teal-500 text-white p-8 lg:p-12 flex-col justify-center overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-10"></div>
         <div className="relative">
           <div className="flex items-center space-x-3 mb-12">
@@ -83,7 +82,7 @@ export function Register() {
           <h2 className="text-5xl font-bold mb-6 leading-tight">
             Sistema de<br />Gestão de Insumos
           </h2>
-          <p className="text-xl text-blue-50 mb-8 leading-relaxed max-w-lg">
+          <p className="text-xl text-emerald-50 mb-8 leading-relaxed max-w-lg">
             Controle eficiente e seguro do estoque hospitalar. Gerencie insumos, 
             medicamentos e equipamentos do Hospital Estadual Costa dos Coqueiros em um só lugar.
           </p>
@@ -116,18 +115,18 @@ export function Register() {
           )}
 
           {/* Password Requirements */}
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <ShieldAlert className="w-5 h-5 text-blue-600" />
-              <h3 className="font-medium text-blue-900">Requisitos de Senha</h3>
+              <ShieldAlert className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-medium text-emerald-900">Requisitos de Senha</h3>
             </div>
-            <ul className="space-y-1 text-sm text-blue-700">
+            <ul className="space-y-1 text-sm text-emerald-700">
               <li>• Mínimo de 8 caracteres</li>
               <li>• Pelo menos uma letra maiúscula</li>
               <li>• Pelo menos uma letra minúscula</li>
               <li>• Pelo menos um número</li>
             </ul>
-            <p className="text-xs text-blue-600 mt-2">
+            <p className="text-xs text-emerald-600 mt-2">
               Exemplo de senha válida: MinhaSenh@123
             </p>
           </div>
@@ -206,28 +205,13 @@ export function Register() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="role" className="text-gray-700">
-                  Função
-                </Label>
-                <select
-                  id="role"
-                  name="role"
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md bg-white"
-                  required
-                >
-                  <option value="">Selecione sua função</option>
-                  <option value="solicitante">Solicitante</option>
-                  <option value="gestor">Gestor</option>
-                  <option value="administrador">Administrador</option>
-                </select>
-              </div>
+              {/* Role é definido automaticamente como 'solicitante' — somente ADM pode alterar */}
             </div>
 
             <div className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white group shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white group shadow-lg hover:shadow-xl transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (

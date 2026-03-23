@@ -137,7 +137,7 @@ class UsersService {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ status: 'inactive' })
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
 
       if (error) throw error
@@ -151,7 +151,7 @@ class UsersService {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ status: 'active' })
+        .update({ deleted_at: null })
         .eq('id', id)
 
       if (error) throw error

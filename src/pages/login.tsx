@@ -86,7 +86,7 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left Section */}
-      <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-blue-600 to-cyan-600 text-white p-8 lg:p-12 flex-col justify-center overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-emerald-600 to-teal-500 text-white p-8 lg:p-12 flex-col justify-center overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxkZWZzPjxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPjxwYXRoIGQ9Ik0gNDAgMCBMIDAgMCAwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-10"></div>
         <div className="relative">
           <div className="flex items-center space-x-3 mb-12">
@@ -101,7 +101,7 @@ export function Login() {
           <h2 className="text-5xl font-bold mb-6 leading-tight">
             Sistema de<br />Gestão de Insumos
           </h2>
-          <p className="text-xl text-blue-50 mb-8 leading-relaxed max-w-lg">
+          <p className="text-xl text-emerald-50 mb-8 leading-relaxed max-w-lg">
             Controle eficiente e seguro do estoque hospitalar. Gerencie insumos, 
             medicamentos e equipamentos do Hospital Estadual Costa dos Coqueiros em um só lugar.
           </p>
@@ -182,7 +182,7 @@ export function Login() {
             <div className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white group shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white group shadow-lg hover:shadow-xl transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
