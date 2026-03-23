@@ -39,6 +39,7 @@ export function Dashboard() {
   const isManager = user?.role === 'gestor'
   const canManageRequests = isAdmin || isManager
   const [showGuide, setShowGuide] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
 
   const glass: React.CSSProperties = {
     background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
@@ -301,33 +302,44 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Video Tutorial Section */}
-      <div className="p-6" style={glass}>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <PlayCircle className="w-5 h-5 text-red-600" />
+      {/* Video Tutorial - Collapsible */}
+      <div style={glass}>
+        <button
+          onClick={() => setShowVideo(!showVideo)}
+          className="w-full p-4 flex items-center justify-between cursor-pointer"
+          style={{ background: 'transparent', border: 'none' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <PlayCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <span className="text-base font-semibold" style={{ color: txt }}>Tutorial em Video</span>
           </div>
-          <h2 className="text-xl font-semibold" style={{ color: txt }}>Tutorial em Vídeo</h2>
-        </div>
-        <p className="mb-4" style={{ color: txtSec }}>
-          Assista ao nosso tutorial completo para aprender a utilizar todas as funcionalidades do sistema de forma eficiente.
-        </p>
-        <div className="aspect-video rounded-lg flex items-center justify-center mb-4" style={{ background: mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.04)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
-          <div className="text-center">
-            <PlayCircle className="w-16 h-16 text-red-500 mx-auto mb-3" />
-            <p className="font-medium" style={{ color: txt }}>Tutorial do Sistema de Gestão de Insumos</p>
-            <p className="text-sm" style={{ color: txtMut }}>Duração: 10:25</p>
+          <ChevronDown size={20} style={{ color: txtMut, transform: showVideo ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.3s' }} />
+        </button>
+        {showVideo && (
+          <div className="px-6 pb-6">
+            <p className="mb-4 text-sm" style={{ color: txtSec }}>
+              Assista ao tutorial completo para aprender a utilizar o sistema.
+            </p>
+            <div className="aspect-video rounded-lg flex items-center justify-center mb-4" style={{ background: mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.04)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
+              <div className="text-center">
+                <PlayCircle className="w-16 h-16 text-red-500 mx-auto mb-3" />
+                <p className="font-medium" style={{ color: txt }}>Tutorial do Sistema de Gestao de Insumos</p>
+                <p className="text-sm" style={{ color: txtMut }}>Duracao: 10:25</p>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
+              >
+                <PlayCircle className="w-4 h-4 mr-2" />
+                Assistir no YouTube
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex justify-center">
-          <Button
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={() => window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank')}
-          >
-            <PlayCircle className="w-4 h-4 mr-2" />
-            Assistir no YouTube
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* Help & Support */}
