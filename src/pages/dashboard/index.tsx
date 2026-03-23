@@ -51,6 +51,27 @@ export function Dashboard() {
   const txtSec = mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
   const txtMut = mode === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(13,46,28,0.45)'
 
+  const cardStyle: React.CSSProperties = {
+    background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+    border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+    transition: 'background 0.3s',
+  }
+  const iconBg: React.CSSProperties = {
+    background: mode === 'dark' ? 'rgba(45,180,140,0.15)' : 'rgba(16,185,129,0.12)',
+  }
+  const iconColor: React.CSSProperties = {
+    color: mode === 'dark' ? '#5ee8b8' : '#059669',
+  }
+  const btnStyle: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '8px 16px', fontSize: 13, fontWeight: 600,
+    borderRadius: 8, cursor: 'pointer',
+    background: mode === 'dark' ? 'rgba(45,180,140,0.15)' : 'rgba(16,185,129,0.1)',
+    color: mode === 'dark' ? '#5ee8b8' : '#059669',
+    border: `1px solid ${mode === 'dark' ? 'rgba(45,180,140,0.3)' : 'rgba(16,185,129,0.25)'}`,
+    transition: 'all 0.2s',
+  }
+
   return (
     <ErrorBoundary>
     <div className="space-y-8">
@@ -76,157 +97,111 @@ export function Dashboard() {
       {/* Main Features */}
       <div className="p-6" style={glass}>
         <h2 className="text-xl font-semibold mb-6" style={{ color: txt }}>Principais Funcionalidades</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {/* Requests */}
-          <div className="p-5 rounded-xl transition-colors" style={{ border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
+          <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <ClipboardList className="w-5 h-5 text-emerald-600" />
-              </div>
-              <h3 className="font-semibold" style={{ color: txt }}>Solicitações</h3>
+              <div className="p-2 rounded-lg" style={iconBg}><ClipboardList className="w-5 h-5" style={iconColor} /></div>
+              <h3 className="font-semibold" style={{ color: txt }}>Solicitacoes</h3>
             </div>
-            <p className="text-sm mb-4" style={{ color: txtSec }}>
-              Crie e acompanhe solicitações de materiais e medicamentos para seu setor. Visualize o histórico completo e status de cada pedido.
+            <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+              Crie e acompanhe solicitacoes de materiais e medicamentos para seu setor.
             </p>
-            <Button 
-              size="sm"
-              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
-              onClick={() => navigate('/requests')}
-            >
-              Acessar Solicitações
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+            <div>
+              <button onClick={() => navigate('/requests')} style={btnStyle}>
+                Acessar <ArrowRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
 
           {/* Inventory */}
           {(isManager || isAdmin) && (
-            <div className="p-5 rounded-xl transition-colors">
+            <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Package2 className="w-5 h-5 text-green-600" />
-                </div>
+                <div className="p-2 rounded-lg" style={iconBg}><Package2 className="w-5 h-5" style={iconColor} /></div>
                 <h3 className="font-semibold" style={{ color: txt }}>Estoque</h3>
               </div>
-              <p className="text-sm mb-4" style={{ color: txtSec }}>
-                Gerencie o estoque de materiais e medicamentos. Acompanhe níveis de estoque, adicione novos itens e registre movimentações.
+              <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+                Gerencie o estoque de materiais e medicamentos. Acompanhe niveis e movimentacoes.
               </p>
               <div className="flex gap-2">
-                <Button 
-                  size="sm"
-                  className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
-                  onClick={() => navigate('/inventory/pharmacy')}
-                >
-                  <Pill className="w-4 h-4 mr-1" />
-                  Farmácia
-                </Button>
-                <Button 
-                  size="sm"
-                  className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
-                  onClick={() => navigate('/inventory/warehouse')}
-                >
-                  <Package2 className="w-4 h-4 mr-1" />
-                  Almoxarifado
-                </Button>
+                <button onClick={() => navigate('/inventory/pharmacy')} style={btnStyle}>
+                  <Pill className="w-4 h-4 mr-1" /> Farmacia
+                </button>
+                <button onClick={() => navigate('/inventory/warehouse')} style={btnStyle}>
+                  <Package2 className="w-4 h-4 mr-1" /> Almoxarifado
+                </button>
               </div>
             </div>
           )}
 
           {/* Reports */}
           {(isManager || isAdmin) && (
-            <div className="p-5 rounded-xl transition-colors">
+            <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <BarChart3 className="w-5 h-5 text-purple-600" />
-                </div>
-                <h3 className="font-semibold" style={{ color: txt }}>Relatórios</h3>
+                <div className="p-2 rounded-lg" style={iconBg}><BarChart3 className="w-5 h-5" style={iconColor} /></div>
+                <h3 className="font-semibold" style={{ color: txt }}>Relatorios</h3>
               </div>
-              <p className="text-sm mb-4" style={{ color: txtSec }}>
-                Visualize relatórios detalhados de consumo, estoque e solicitações. Exporte dados para análise e tomada de decisões.
+              <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+                Visualize relatorios de consumo, estoque e solicitacoes. Exporte dados.
               </p>
               <div className="flex gap-2">
-                <Button 
-                  size="sm"
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
-                  onClick={() => navigate('/reports/pharmacy-consumption')}
-                >
-                  Farmácia
-                </Button>
-                <Button 
-                  size="sm"
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
-                  onClick={() => navigate('/reports/warehouse-consumption')}
-                >
-                  Almoxarifado
-                </Button>
+                <button onClick={() => navigate('/reports/pharmacy-consumption')} style={btnStyle}>Farmacia</button>
+                <button onClick={() => navigate('/reports/warehouse-consumption')} style={btnStyle}>Almoxarifado</button>
               </div>
             </div>
           )}
 
           {/* Request Management */}
           {canManageRequests && (
-            <div className="p-5 rounded-xl transition-colors">
+            <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <CheckSquare className="w-5 h-5 text-amber-600" />
-                </div>
-                <h3 className="font-semibold" style={{ color: txt }}>Gestão de Solicitações</h3>
+                <div className="p-2 rounded-lg" style={iconBg}><CheckSquare className="w-5 h-5" style={iconColor} /></div>
+                <h3 className="font-semibold" style={{ color: txt }}>Gestao de Solicitacoes</h3>
               </div>
-              <p className="text-sm mb-4" style={{ color: txtSec }}>
-                Aprove, rejeite e processe solicitações. Acompanhe o fluxo completo desde a criação até a entrega.
+              <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+                Aprove, rejeite e processe solicitacoes. Acompanhe o fluxo completo.
               </p>
-              <Button
-                size="sm"
-                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
-                onClick={() => navigate('/requests/inbox')}
-              >
-                Acessar Caixa de Entrada
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div>
+                <button onClick={() => navigate('/requests/inbox')} style={btnStyle}>
+                  Caixa de Entrada <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
             </div>
           )}
 
           {/* User Management */}
           {isAdmin && (
-            <div className="p-5 rounded-xl transition-colors">
+            <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <Users className="w-5 h-5 text-indigo-600" />
-                </div>
-                <h3 className="font-semibold" style={{ color: txt }}>Gestão de Usuários</h3>
+                <div className="p-2 rounded-lg" style={iconBg}><Users className="w-5 h-5" style={iconColor} /></div>
+                <h3 className="font-semibold" style={{ color: txt }}>Gestao de Usuarios</h3>
               </div>
-              <p className="text-sm mb-4" style={{ color: txtSec }}>
-                Gerencie usuários do sistema, defina permissões e controle o acesso às funcionalidades.
+              <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+                Gerencie usuarios, defina permissoes e controle acessos.
               </p>
-              <Button
-                size="sm"
-                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200"
-                onClick={() => navigate('/users-advanced')}
-              >
-                Gerenciar Usuários
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div>
+                <button onClick={() => navigate('/users-advanced')} style={btnStyle}>
+                  Gerenciar <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
             </div>
           )}
 
           {/* Settings */}
-          <div className="p-5 rounded-xl transition-colors">
+          <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Settings className="w-5 h-5 text-gray-600" />
-              </div>
-              <h3 className="font-semibold" style={{ color: txt }}>Configurações</h3>
+              <div className="p-2 rounded-lg" style={iconBg}><Settings className="w-5 h-5" style={iconColor} /></div>
+              <h3 className="font-semibold" style={{ color: txt }}>Configuracoes</h3>
             </div>
-            <p className="text-sm mb-4" style={{ color: txtSec }}>
-              Personalize suas preferências, gerencie seu perfil e configure notificações do sistema.
+            <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
+              Personalize preferencias, perfil e notificacoes.
             </p>
-            <Button
-              size="sm"
-              className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
-              onClick={() => navigate('/settings')}
-            >
-              Acessar Configurações
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
+            <div>
+              <button onClick={() => navigate('/settings')} style={btnStyle}>
+                Acessar <ArrowRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
