@@ -96,18 +96,18 @@ export function Login() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/80 via-emerald-800/40 to-emerald-700/30"></div>
         <div className="relative z-10">
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="flex items-center space-x-3 mb-1">
             <div className="relative bg-white/15 p-3 rounded-lg backdrop-blur-sm">
               <Building2 className="w-10 h-10" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">HECC</h1>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">HECC</h1>
+              <p className="text-sm text-white/70">Hospital Estadual Costa dos Coqueiros</p>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold mb-2 leading-tight">
+          <h2 className="text-3xl font-bold mt-4 leading-tight">
             Sistema de Gestao de Insumos
           </h2>
-          <p className="text-base text-white/80">
-            Hospital Estadual Costa dos Coqueiros
-          </p>
         </div>
         <div className="relative z-10"></div>
       </div>
