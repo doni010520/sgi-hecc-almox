@@ -87,27 +87,29 @@ export function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left Section - Hospital Image with Green Overlay */}
-      <div className="hidden md:flex md:w-1/2 relative text-white p-8 lg:p-12 flex-col justify-end overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 relative text-white p-8 lg:p-12 flex-col justify-between overflow-hidden">
         <img
           src={hospitalImg}
           alt="Hospital Estadual Costa dos Coqueiros"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'cover', objectPosition: 'center top' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/90 via-emerald-800/60 to-emerald-700/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/80 via-emerald-800/40 to-emerald-700/30"></div>
         <div className="relative z-10">
-          <div className="flex items-center space-x-3 mb-6">
+          <div className="flex items-center space-x-3 mb-4">
             <div className="relative bg-white/15 p-3 rounded-lg backdrop-blur-sm">
               <Building2 className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight">HECC</h1>
           </div>
-          <h2 className="text-4xl font-bold mb-3 leading-tight">
-            Sistema de Gestao<br />de Insumos
+          <h2 className="text-3xl font-bold mb-2 leading-tight">
+            Sistema de Gestao de Insumos
           </h2>
-          <p className="text-lg text-white/80 max-w-lg">
+          <p className="text-base text-white/80">
             Hospital Estadual Costa dos Coqueiros
           </p>
         </div>
+        <div className="relative z-10"></div>
       </div>
 
       {/* Right Section */}
