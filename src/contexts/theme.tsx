@@ -25,16 +25,16 @@ const DARK = {
 }
 
 const LIGHT = {
-  gradient: 'linear-gradient(135deg, #e0fff0 0%, #c8ffe8 20%, #a8f0d0 40%, #88e8b8 60%, #70d8a5 80%, #60c898 100%)',
-  sidebarBg: 'rgba(255,255,255,0.65)',
-  sidebarBorder: 'rgba(255,255,255,0.5)',
+  gradient: 'linear-gradient(135deg, #f8fffe 0%, #f0faf6 25%, #e8f5f0 50%, #e0f0ea 75%, #d8ebe4 100%)',
+  sidebarBg: 'rgba(255,255,255,0.8)',
+  sidebarBorder: 'rgba(0,0,0,0.06)',
   sidebarText: '#0d2e1c',
   sidebarTextMuted: 'rgba(13,46,28,0.5)',
   sidebarActive: 'rgba(13,46,28,0.1)',
   sidebarActiveText: '#0a3320',
   sidebarHover: 'rgba(13,46,28,0.05)',
   sidebarLogo: '#0a3320',
-  headerBg: 'rgba(255,255,255,0.65)',
+  headerBg: 'rgba(255,255,255,0.85)',
   headerBorder: 'rgba(0,0,0,0.06)',
   headerText: '#0d2e1c',
   contentBg: 'transparent',
