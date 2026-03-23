@@ -91,9 +91,8 @@ export function Dashboard() {
               Crie e acompanhe solicitações de materiais e medicamentos para seu setor. Visualize o histórico completo e status de cada pedido.
             </p>
             <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-emerald-600"
+              size="sm"
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
               onClick={() => navigate('/requests')}
             >
               Acessar Solicitações
@@ -115,18 +114,16 @@ export function Dashboard() {
               </p>
               <div className="flex gap-2">
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-green-600"
+                  size="sm"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
                   onClick={() => navigate('/inventory/pharmacy')}
                 >
                   <Pill className="w-4 h-4 mr-1" />
                   Farmácia
                 </Button>
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-green-600"
+                  size="sm"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
                   onClick={() => navigate('/inventory/warehouse')}
                 >
                   <Package2 className="w-4 h-4 mr-1" />
@@ -150,17 +147,15 @@ export function Dashboard() {
               </p>
               <div className="flex gap-2">
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-purple-600"
+                  size="sm"
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
                   onClick={() => navigate('/reports/pharmacy-consumption')}
                 >
                   Farmácia
                 </Button>
                 <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-purple-600"
+                  size="sm"
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200"
                   onClick={() => navigate('/reports/warehouse-consumption')}
                 >
                   Almoxarifado
@@ -181,10 +176,9 @@ export function Dashboard() {
               <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Aprove, rejeite e processe solicitações. Acompanhe o fluxo completo desde a criação até a entrega.
               </p>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-amber-600"
+              <Button
+                size="sm"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
                 onClick={() => navigate('/requests/inbox')}
               >
                 Acessar Caixa de Entrada
@@ -205,10 +199,9 @@ export function Dashboard() {
               <p className="text-sm mb-4" style={{ color: txtSec }}>
                 Gerencie usuários do sistema, defina permissões e controle o acesso às funcionalidades.
               </p>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-indigo-600"
+              <Button
+                size="sm"
+                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200"
                 onClick={() => navigate('/users-advanced')}
               >
                 Gerenciar Usuários
@@ -228,10 +221,9 @@ export function Dashboard() {
             <p className="text-sm mb-4" style={{ color: txtSec }}>
               Personalize suas preferências, gerencie seu perfil e configure notificações do sistema.
             </p>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-gray-600"
+            <Button
+              size="sm"
+              className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
               onClick={() => navigate('/settings')}
             >
               Acessar Configurações
