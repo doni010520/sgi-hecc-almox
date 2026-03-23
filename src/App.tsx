@@ -34,6 +34,9 @@ import { PharmacyTVDashboard } from '@/pages/dashboard/pharmacy-tv-dashboard'
 import { TVRequestDetail } from '@/pages/dashboard/tv-request-detail'
 import { TVHistory } from '@/pages/dashboard/tv-history'
 import { Dashboard } from '@/pages/dashboard'
+import { DispensationList } from '@/pages/dispensacao/index'
+import { NewDispensation } from '@/pages/dispensacao/new'
+import { DispensationDetails } from '@/pages/dispensacao/details'
 
 const queryClient = new QueryClient()
 
@@ -256,6 +259,29 @@ export default function App() {
                 </ProtectedRoute>
               } />
               
+              {/* Dispensacao Routes */}
+              <Route path="/dispensacao" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <DispensationList />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/new" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NewDispensation />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/:id" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <DispensationDetails />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
               {/* Settings Routes */}
               <Route path="/settings" element={
                 <ProtectedRoute>

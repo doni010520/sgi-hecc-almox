@@ -21,7 +21,8 @@ import {
   Pill,
   Package2,
   X,
-  Tv
+  Tv,
+  Syringe
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -50,6 +51,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: true },
         { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: true }
+      ]
+    },
+    {
+      title: 'Dispensação',
+      items: [
+        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: canManageRequests },
+        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/new', show: canManageRequests }
       ]
     },
     {
