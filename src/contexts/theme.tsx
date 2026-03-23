@@ -9,18 +9,18 @@ interface ThemeContextType {
 }
 
 const DARK = {
-  gradient: 'linear-gradient(135deg, #b0f5d0 0%, #78d8a0 25%, #50b87a 50%, #3a9a68 75%, #2e7d52 100%)',
-  sidebarBg: 'rgba(10,15,20,0.75)',
-  sidebarBorder: 'rgba(255,255,255,0.08)',
-  sidebarText: '#fff',
-  sidebarTextMuted: 'rgba(255,255,255,0.5)',
-  sidebarActive: 'rgba(255,255,255,0.12)',
-  sidebarActiveText: '#fff',
-  sidebarHover: 'rgba(255,255,255,0.06)',
-  sidebarLogo: '#fff',
-  headerBg: 'rgba(10,15,20,0.65)',
-  headerBorder: 'rgba(255,255,255,0.08)',
-  headerText: '#fff',
+  gradient: 'linear-gradient(135deg, #1a2a22 0%, #1e2e26 25%, #212f28 50%, #1c2b23 75%, #182720 100%)',
+  sidebarBg: 'rgba(18,28,22,0.95)',
+  sidebarBorder: 'rgba(255,255,255,0.06)',
+  sidebarText: '#e8f0ec',
+  sidebarTextMuted: 'rgba(255,255,255,0.45)',
+  sidebarActive: 'rgba(45,180,140,0.2)',
+  sidebarActiveText: '#5ee8b8',
+  sidebarHover: 'rgba(255,255,255,0.05)',
+  sidebarLogo: '#5ee8b8',
+  headerBg: 'rgba(18,28,22,0.9)',
+  headerBorder: 'rgba(255,255,255,0.06)',
+  headerText: '#e8f0ec',
   contentBg: 'transparent',
 }
 
