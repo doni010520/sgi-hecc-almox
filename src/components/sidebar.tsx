@@ -79,10 +79,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     {
       title: 'Relatórios',
       items: [
-        { name: 'Consumo da Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin },
-        { name: 'Consumo do Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin },
-        { name: 'Gestão de Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
-        { name: 'Gestão de Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin }
+        { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin },
+        { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: isManager || isAdmin },
+        { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin },
+        { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin },
+        { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
+        { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin }
       ]
     },
     {

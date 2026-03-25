@@ -34,6 +34,7 @@ import { PharmacyTVDashboard } from '@/pages/dashboard/pharmacy-tv-dashboard'
 import { TVRequestDetail } from '@/pages/dashboard/tv-request-detail'
 import { TVHistory } from '@/pages/dashboard/tv-history'
 import { Dashboard } from '@/pages/dashboard'
+import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock-report'
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
@@ -259,6 +260,22 @@ export default function App() {
                 </ProtectedRoute>
               } />
               
+              {/* Stock Report Routes */}
+              <Route path="/reports/pharmacy-stock" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PharmacyStockReport />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/reports/warehouse-stock" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <WarehouseStockReport />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
               {/* Dispensacao Routes */}
               <Route path="/dispensacao" element={
                 <ProtectedRoute>
