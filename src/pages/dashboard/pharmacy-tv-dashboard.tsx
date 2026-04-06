@@ -5,8 +5,7 @@ import {
   RefreshCw,
   Home,
   History,
-  Sun,
-  Moon
+  Volume2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -47,37 +46,28 @@ const THEME_A = {
   statusProcessing: { bg: 'rgba(59,130,246,0.2)', color: '#fff', border: 'rgba(59,130,246,0.4)', dot: '#3b82f6' },
 }
 
-const THEME_B = {
-  gradient: 'linear-gradient(135deg, #e0fff0 0%, #c8ffe8 20%, #a8f0d0 40%, #88e8b8 60%, #70d8a5 80%, #60c898 100%)',
-  glass: 'rgba(255,255,255,0.55)',
-  glassBorder: 'rgba(255,255,255,0.7)',
-  glassRow: 'rgba(255,255,255,0.45)',
-  glassRowBorder: 'rgba(255,255,255,0.6)',
-  text: '#0d2e1c',
-  textSecondary: 'rgba(13,46,28,0.7)',
-  textMuted: 'rgba(13,46,28,0.65)',
-  textHeader: 'rgba(13,46,28,0.8)',
-  headerText: '#0d2e1c',
-  headerMuted: 'rgba(13,46,28,0.5)',
-  dest: '#0d5a30',
-  totalNum: '#0d2e1c',
-  pendingNum: '#8a6800',
-  approvedNum: '#0d6a35',
-  processingNum: '#1a4eaa',
-  pendingGlow: 'none',
-  approvedGlow: 'none',
-  processingGlow: 'none',
-  btnBg: 'rgba(255,255,255,0.5)',
-  btnBorder: 'rgba(255,255,255,0.6)',
-  btnText: '#0d2e1c',
-  footerText: 'rgba(13,46,28,0.5)',
-  footerBorder: 'rgba(0,0,0,0.1)',
-  priorityHigh: { bg: 'rgba(239,68,68,0.2)', color: '#a11', border: 'rgba(239,68,68,0.4)' },
-  priorityMedium: { bg: 'rgba(251,191,36,0.25)', color: '#7a5500', border: 'rgba(251,191,36,0.5)' },
-  priorityLow: { bg: 'rgba(34,197,94,0.25)', color: '#0d5a2a', border: 'rgba(34,197,94,0.5)' },
-  statusPending: { bg: 'rgba(251,191,36,0.2)', color: '#7a5500', border: 'rgba(251,191,36,0.45)', dot: '#d4a017' },
-  statusApproved: { bg: 'rgba(34,197,94,0.2)', color: '#0d5a2a', border: 'rgba(34,197,94,0.45)', dot: '#1a8a50' },
-  statusProcessing: { bg: 'rgba(59,130,246,0.2)', color: '#1a4eaa', border: 'rgba(59,130,246,0.45)', dot: '#2060cc' },
+// Alert sound using Web Audio API
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // Two-tone notification beep
+    const playTone = (freq: number, start: number, duration: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + start)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + duration)
+      osc.start(ctx.currentTime + start)
+      osc.stop(ctx.currentTime + start + duration)
+    }
+    playTone(880, 0, 0.15)
+    playTone(1100, 0.18, 0.2)
+  } catch (e) {
+    console.log('Audio not available')
+  }
 }
 
 function TVStatusBadge({ status, theme }: { status: string; theme: typeof THEME_A }) {
@@ -136,9 +126,9 @@ export default function PharmacyTVDashboard() {
   const [autoRefresh] = useState(true)
   const [refreshInterval] = useState(60)
   const [connectionError, setConnectionError] = useState(false)
-  const [themeMode, setThemeMode] = useState<'a' | 'b'>('a')
+  const [prevCount, setPrevCount] = useState<number | null>(null)
 
-  const theme = themeMode === 'a' ? THEME_A : THEME_B
+  const theme = THEME_A
 
   useEffect(() => {
     async function checkConnection() {
@@ -175,6 +165,11 @@ export default function PharmacyTVDashboard() {
       setError(null)
       const data = await tvRequestService.getAll('pharmacy')
       const activeRequests = data.filter(r => ['pending', 'approved', 'processing'].includes(r.status))
+      // Play alert if new requests arrived
+      if (prevCount !== null && activeRequests.length > prevCount) {
+        playAlertSound()
+      }
+      setPrevCount(activeRequests.length)
       setRequests(activeRequests)
       setLastUpdated(new Date())
     } catch (error) {
@@ -219,7 +214,7 @@ export default function PharmacyTVDashboard() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 14,
               paddingRight: 20,
-              borderRight: `1px solid ${themeMode === 'a' ? 'rgba(10,51,32,0.15)' : 'rgba(0,0,0,0.1)'}`,
+              borderRight: '1px solid rgba(255,255,255,0.1)',
             }}>
               <div style={{
                 width: 48, height: 48, borderRadius: 12,
@@ -248,15 +243,15 @@ export default function PharmacyTVDashboard() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button onClick={() => setThemeMode(themeMode === 'a' ? 'b' : 'a')} style={{
+            <button onClick={playAlertSound} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 42, height: 42, borderRadius: 12, cursor: 'pointer',
               color: theme.btnText, background: theme.btnBg,
               backdropFilter: 'blur(20px)',
               border: `1px solid ${theme.btnBorder}`,
               transition: 'all 0.4s',
-            }} title={themeMode === 'a' ? 'Tema claro' : 'Tema escuro'}>
-              {themeMode === 'a' ? <Sun size={18} /> : <Moon size={18} />}
+            }} title="Testar alerta sonoro">
+              <Volume2 size={18} />
             </button>
             {[
               { label: 'Histórico', icon: <History size={16} />, action: () => navigate('/tv/pharmacy/history') },
@@ -287,11 +282,11 @@ export default function PharmacyTVDashboard() {
             <div key={card.key} onClick={() => setActiveFilter(card.key)} style={{
               flex: 1, padding: '20px 24px', borderRadius: 16, cursor: 'pointer',
               background: activeFilter === card.key
-                ? (themeMode === 'a' ? 'rgba(10,15,20,0.75)' : 'rgba(255,255,255,0.7)')
+                ? 'rgba(255,255,255,0.1)'
                 : theme.glass,
               backdropFilter: 'blur(30px)',
               border: `1px solid ${activeFilter === card.key
-                ? (themeMode === 'a' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.8)')
+                ? 'rgba(255,255,255,0.2)'
                 : theme.glassBorder}`,
               boxShadow: activeFilter === card.key ? '0 8px 30px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.15)',
               transition: 'all 0.3s',
