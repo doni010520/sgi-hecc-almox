@@ -162,7 +162,7 @@ export function Login() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="login" className="text-gray-700">
-                  CPF ou E-mail
+                  Usuário
                 </Label>
                 <div className="relative mt-1">
                   <Input
