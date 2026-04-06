@@ -70,7 +70,8 @@ export function Login() {
       await signIn(email, password)
 
       // Check if user must change password
-      const { data: profile } = await (await import('@/lib/supabase')).supabase
+      const { supabase } = await import('@/lib/supabase')
+      const { data: profile } = await supabase
         .from('users')
         .select('must_change_password')
         .eq('email', email)

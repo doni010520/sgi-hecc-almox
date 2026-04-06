@@ -8,29 +8,58 @@ class EmployeesService {
         return null
       }
 
+      const mat = matricula.trim()
+
+      // First try employees table
       const { data, error } = await supabase
         .from('employees')
         .select(`
           *,
           department:departments(name)
         `)
-        .eq('matricula', matricula.trim())
+        .eq('matricula', mat)
         .eq('is_active', true)
         .single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned
-          return null
-        }
-        console.error('Error fetching employee by matricula:', error)
-        return null
+      if (!error && data) {
+        return {
+          ...data,
+          department_name: data.department?.name || undefined
+        } as Employee
       }
 
-      return {
-        ...data,
-        department_name: data.department?.name || undefined
-      } as Employee
+      // Fallback: try users table (matricula field)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, matricula, role, department_id')
+        .eq('matricula', mat)
+        .maybeSingle()
+
+      if (!userError && userData) {
+        // Get department name if exists
+        let deptName = ''
+        if (userData.department_id) {
+          const { data: dept } = await supabase
+            .from('departments')
+            .select('name')
+            .eq('id', userData.department_id)
+            .single()
+          deptName = dept?.name || ''
+        }
+
+        return {
+          id: userData.id,
+          matricula: userData.matricula || mat,
+          full_name: userData.full_name,
+          cargo: userData.role,
+          is_active: true,
+          department_name: deptName,
+          created_at: '',
+          updated_at: '',
+        } as Employee
+      }
+
+      return null
     } catch (error) {
       console.error('EmployeesService: Error fetching employee:', error)
       return null
