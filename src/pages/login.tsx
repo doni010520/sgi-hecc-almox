@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Building2, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Building2, User, Lock, ArrowRight, CheckCircle2 } from 'lucide-react'
 import hospitalImg from '@/assets/hospital-hecc.jpg.jpeg'
 
 export function Login() {
@@ -49,21 +49,41 @@ export function Login() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      const email = formData.get('email') as string
+      const login = (formData.get('login') as string).trim()
       const password = formData.get('password') as string
 
       // Basic validation
-      if (!email || !password) {
+      if (!login || !password) {
         setError('Por favor, preencha todos os campos')
         setLoading(false)
         return
       }
 
+      // Determine if input is email or CPF
+      let email = login
+      if (!login.includes('@')) {
+        // CPF - remove dots and dashes, convert to email format
+        const cpfClean = login.replace(/[.\-\s]/g, '')
+        email = `${cpfClean}@hecc.local`
+      }
+
       await signIn(email, password)
-      navigate('/')
+
+      // Check if user must change password
+      const { data: profile } = await (await import('@/lib/supabase')).supabase
+        .from('users')
+        .select('must_change_password')
+        .eq('email', email)
+        .maybeSingle()
+
+      if (profile?.must_change_password) {
+        navigate('/change-password')
+      } else {
+        navigate('/')
+      }
     } catch (error) {
       console.error('Login error:', error)
-      setError('Email ou senha inválidos')
+      setError('CPF/Email ou senha invalidos')
     } finally {
       setLoading(false)
     }
@@ -140,20 +160,20 @@ export function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="email" className="text-gray-700">
-                  E-mail
+                <Label htmlFor="login" className="text-gray-700">
+                  CPF ou E-mail
                 </Label>
                 <div className="relative mt-1">
                   <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
+                    id="login"
+                    name="login"
+                    type="text"
+                    autoComplete="username"
                     required
                     className="pl-10 bg-white border-gray-300"
-                    placeholder="Digite seu e-mail"
+                    placeholder="Digite seu CPF ou e-mail"
                   />
-                  <Mail className="w-5 h-5 text-gray-400 absolute left-3 top-2" />
+                  <User className="w-5 h-5 text-gray-400 absolute left-3 top-2" />
                 </div>
               </div>
 

@@ -38,6 +38,7 @@ import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
+import { ChangePassword } from '@/pages/change-password'
 
 const queryClient = new QueryClient()
 
@@ -64,6 +65,7 @@ export default function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/change-password" element={<ChangePassword />} />
                 <Route path="/tv/warehouse" element={<WarehouseTVDashboard />} />
                 <Route path="/tv/warehouse/history" element={<TVHistory type="warehouse" />} />
                 <Route path="/tv/warehouse/:id" element={<TVRequestDetail type="warehouse" />} />
