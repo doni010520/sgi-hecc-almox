@@ -213,7 +213,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     setEmployeeError('')
     setSearchResults([])
     setShowResults(false)
-    setShowDialog(true)
+    // No dialog - uses inline form
   }
 
   const handleConfirmReceipt = () => {
@@ -350,109 +350,118 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
         )}
       </div>
 
-      {/* Action Dialog */}
+      {/* Inline Delivery Form (no dialog - works on mobile) */}
+      {action === 'deliver' && !showDialog && (
+        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-4">
+          <h3 className="font-semibold text-orange-700 text-lg">Marcar como Entregue</h3>
+
+          <div className="space-y-2">
+            <Label className="font-medium text-gray-900">Recebedor</Label>
+            <div className="flex gap-2">
+              <Input
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setEmployee(null)
+                  setEmployeeError('')
+                  setSearchResults([])
+                  setShowResults(false)
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && searchEmployee()}
+                placeholder="Digite matricula ou nome..."
+                className="flex-1 bg-white"
+              />
+              <Button type="button" variant="outline" onClick={searchEmployee} disabled={searchingEmployee}>
+                {searchingEmployee ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+            {employeeError && <p className="text-sm text-red-600">{employeeError}</p>}
+            {showResults && searchResults.length > 0 && (
+              <select
+                className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm bg-white"
+                defaultValue=""
+                onChange={(e) => {
+                  const selected = searchResults.find(emp => emp.id === e.target.value)
+                  if (selected) {
+                    setEmployee(selected)
+                    setShowResults(false)
+                    setSearchResults([])
+                    setSearchQuery(selected.full_name)
+                  }
+                }}
+              >
+                <option value="" disabled>Selecione o recebedor...</option>
+                {searchResults.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.full_name}{emp.matricula ? ` (Mat: ${emp.matricula})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {employee && (
+              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <User className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-gray-900">{employee.full_name}</p>
+                  <p className="text-sm text-gray-500">
+                    {employee.matricula && `Mat: ${employee.matricula}`}
+                    {employee.department_name && ` • ${employee.department_name}`}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="font-medium text-gray-900">Observações (opcional)</Label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full min-h-[80px] p-3 rounded-lg border border-gray-200 text-sm bg-white"
+              placeholder="Adicione observações sobre a entrega..."
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => { setAction(null); setReason(''); setEmployee(null); setSearchQuery('') }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAction}
+              disabled={loading || !employee}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Truck className="w-4 h-4 mr-2" />}
+              Confirmar Entrega
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Action Dialog (for non-delivery actions) */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl bg-white">
           <DialogHeader className="border-b pb-4">
             <DialogTitle className={`text-xl font-semibold ${
               action === 'approve' ? 'text-green-600' :
               action === 'reject' ? 'text-red-600' :
-              action === 'deliver' ? 'text-orange-600' :
               action === 'confirm_receipt' ? 'text-emerald-600' :
               'text-gray-600'
             }`}>
               {action === 'approve' && 'Aprovar Solicitação'}
               {action === 'reject' && 'Rejeitar Solicitação'}
               {action === 'cancel' && 'Cancelar Solicitação'}
-              {action === 'deliver' && 'Marcar como Entregue'}
               {action === 'confirm_receipt' && 'Confirmar Recebimento'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Employee Matricula (only for delivery) */}
-            {action === 'deliver' && (
-              <div className="space-y-3">
-                <Label className="text-base font-medium text-gray-900">
-                  Recebedor
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value)
-                      setEmployee(null)
-                      setEmployeeError('')
-                      setSearchResults([])
-                      setShowResults(false)
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && searchEmployee()}
-                    placeholder="Digite matricula ou nome..."
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={searchEmployee}
-                    disabled={searchingEmployee}
-                  >
-                    {searchingEmployee ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-                {employeeError && (
-                  <p className="text-sm text-red-600">{employeeError}</p>
-                )}
-                {showResults && searchResults.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500">{searchResults.length} encontrados — selecione:</p>
-                    <select
-                      className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm bg-white"
-                      defaultValue=""
-                      onChange={(e) => {
-                        const selected = searchResults.find(emp => emp.id === e.target.value)
-                        if (selected) {
-                          setEmployee(selected)
-                          setShowResults(false)
-                          setSearchResults([])
-                          setSearchQuery(selected.full_name)
-                        }
-                      }}
-                    >
-                      <option value="" disabled>Selecione o recebedor...</option>
-                      {searchResults.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.full_name}{emp.matricula ? ` (Mat: ${emp.matricula})` : ''}{emp.department_name ? ` - ${emp.department_name}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {employee && (
-                  <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <User className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">{employee.full_name}</p>
-                      <p className="text-sm text-gray-500">
-                        {employee.matricula && `Matricula: ${employee.matricula}`}
-                        {employee.department_name && ` • ${employee.department_name}`}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Comments/Reason */}
             <div className="space-y-2">
               <Label className="text-base font-medium text-gray-900">
                 {action === 'approve' && 'Comentários (opcional)'}
                 {action === 'reject' && 'Motivo da Rejeição'}
                 {action === 'cancel' && 'Motivo do Cancelamento'}
-                {action === 'deliver' && 'Observações sobre a Entrega (opcional)'}
                 {action === 'confirm_receipt' && 'Observações sobre o Recebimento (opcional)'}
               </Label>
               <textarea
@@ -462,8 +471,6 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                 placeholder={
                   action === 'approve'
                     ? 'Adicione um comentário...'
-                    : action === 'deliver'
-                    ? 'Adicione observações sobre a entrega...'
                     : action === 'confirm_receipt'
                     ? 'Adicione observações sobre o recebimento...'
                     : 'Descreva o motivo...'
@@ -486,7 +493,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
             </Button>
             <Button
               onClick={handleAction}
-              disabled={loading || (['reject', 'cancel'].includes(action || '') && !reason.trim()) || (action === 'deliver' && !employee)}
+              disabled={loading || (['reject', 'cancel'].includes(action || '') && !reason.trim())}
               className={`px-6 ${
                 action === 'approve'
                   ? 'bg-green-500 hover:bg-green-600 text-white'
