@@ -407,13 +407,16 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                   <p className="text-sm text-red-600">{employeeError}</p>
                 )}
                 {showResults && searchResults.length > 0 && (
-                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto z-50 relative bg-white shadow-lg">
                     {searchResults.map(emp => (
-                      <button
+                      <div
                         key={emp.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                        onClick={() => {
+                        role="button"
+                        tabIndex={0}
+                        className="w-full text-left px-3 py-2 hover:bg-emerald-50 border-b border-gray-100 last:border-0 cursor-pointer"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
                           setEmployee(emp)
                           setShowResults(false)
                           setSearchResults([])
@@ -425,7 +428,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                           {emp.matricula && `Mat: ${emp.matricula}`}
                           {emp.department_name && ` • ${emp.department_name}`}
                         </p>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}
