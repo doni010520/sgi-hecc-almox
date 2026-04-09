@@ -407,32 +407,28 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                   <p className="text-sm text-red-600">{employeeError}</p>
                 )}
                 {showResults && searchResults.length > 0 && (
-                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-white shadow-lg">
-                    {searchResults.map((emp) => (
-                      <label
-                        key={emp.id}
-                        className="flex items-center gap-3 px-3 py-2 hover:bg-emerald-50 border-b border-gray-100 last:border-0 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="employee-select"
-                          className="w-4 h-4 text-emerald-600"
-                          onChange={() => {
-                            setEmployee(emp)
-                            setShowResults(false)
-                            setSearchResults([])
-                            setSearchQuery(emp.full_name)
-                          }}
-                        />
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{emp.full_name}</p>
-                          <p className="text-xs text-gray-500">
-                            {emp.matricula && `Mat: ${emp.matricula}`}
-                            {emp.department_name && ` • ${emp.department_name}`}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500">{searchResults.length} encontrados — selecione:</p>
+                    <select
+                      className="w-full h-9 px-3 rounded-lg border border-gray-200 text-sm bg-white"
+                      defaultValue=""
+                      onChange={(e) => {
+                        const selected = searchResults.find(emp => emp.id === e.target.value)
+                        if (selected) {
+                          setEmployee(selected)
+                          setShowResults(false)
+                          setSearchResults([])
+                          setSearchQuery(selected.full_name)
+                        }
+                      }}
+                    >
+                      <option value="" disabled>Selecione o recebedor...</option>
+                      {searchResults.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.full_name}{emp.matricula ? ` (Mat: ${emp.matricula})` : ''}{emp.department_name ? ` - ${emp.department_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
                 {employee && (

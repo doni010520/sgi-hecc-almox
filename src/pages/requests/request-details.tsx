@@ -20,7 +20,7 @@ import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
 function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean }) {
-  const [suppliedQty, setSuppliedQty] = useState(item.supplied_quantity ?? 0)
+  const [suppliedQty, setSuppliedQty] = useState<number | ''>(item.supplied_quantity ?? '')
   // Observations stored as lines separated by \n
   const [observations, setObservations] = useState<string[]>(() => {
     const raw = item.observation || ''
