@@ -28,7 +28,7 @@ export function MyRequests() {
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'delivered' | 'cancelled'>('pending')
   const [showPeriodDialog, setShowPeriodDialog] = useState(false)
   const [dateRange, setDateRange] = useState(getDefaultDateRange())
 
@@ -66,10 +66,10 @@ export function MyRequests() {
     const pending = requests.filter(r => r.status === 'pending').length
     const approved = requests.filter(r => r.status === 'approved' || r.status === 'processing').length
     const rejected = requests.filter(r => r.status === 'rejected').length
-    const completed = requests.filter(r => r.status === 'completed').length
+    const delivered = requests.filter(r => r.status === 'delivered' || r.status === 'completed').length
     const cancelled = requests.filter(r => r.status === 'cancelled').length
 
-    return { total, pending, approved, rejected, completed, cancelled }
+    return { total, pending, approved, rejected, delivered, cancelled }
   }
 
   const handlePeriodFilter = (startDate: Date, endDate: Date) => {
@@ -84,11 +84,12 @@ export function MyRequests() {
         item.item.code.toLowerCase().includes(searchTerm.toLowerCase())
       )
     
-    const matchesTab = activeTab === 'all' || 
+    const matchesTab = activeTab === 'all' ||
       (activeTab === 'pending' && request.status === 'pending') ||
       (activeTab === 'approved' && (request.status === 'approved' || request.status === 'processing')) ||
       (activeTab === 'rejected' && request.status === 'rejected') ||
-      (activeTab === 'completed' && request.status === 'completed')
+      (activeTab === 'delivered' && (request.status === 'delivered' || request.status === 'completed')) ||
+      (activeTab === 'cancelled' && request.status === 'cancelled')
     
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
 
@@ -306,8 +307,8 @@ export function MyRequests() {
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Concluídas</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.completed}</p>
+                <p className="text-sm text-gray-500">Entregues</p>
+                <p className="text-lg font-semibold text-gray-900">{stats.delivered}</p>
               </div>
             </div>
           </div>
@@ -341,7 +342,7 @@ export function MyRequests() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
           <div className="p-6 border-b border-gray-100">
-            <TabsList className="grid grid-cols-5 gap-4">
+            <TabsList className="grid grid-cols-6 gap-4">
               <TabsTrigger value="all" className="flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 Todas ({stats.total})
@@ -358,9 +359,13 @@ export function MyRequests() {
                 <XCircle className="w-4 h-4" />
                 Rejeitadas ({stats.rejected})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="flex items-center gap-2">
+              <TabsTrigger value="delivered" className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
-                Concluídas ({stats.completed})
+                Entregues ({stats.delivered})
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="flex items-center gap-2">
+                <Ban className="w-4 h-4" />
+                Canceladas ({stats.cancelled})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -426,13 +431,25 @@ export function MyRequests() {
             </div>
           </TabsContent>
 
-          <TabsContent value="completed" className="p-0">
+          <TabsContent value="delivered" className="p-0">
             <div className="divide-y divide-gray-100">
               {filteredRequests.length > 0 ? (
                 filteredRequests.map((request, index) => renderRequestCard(request, index))
               ) : (
                 <div className="p-8 text-center">
-                  <p className="text-gray-500">Nenhuma solicitação concluída</p>
+                  <p className="text-gray-500">Nenhuma solicitação entregue</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="cancelled" className="p-0">
+            <div className="divide-y divide-gray-100">
+              {filteredRequests.length > 0 ? (
+                filteredRequests.map((request, index) => renderRequestCard(request, index))
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">Nenhuma solicitação cancelada</p>
                 </div>
               )}
             </div>
