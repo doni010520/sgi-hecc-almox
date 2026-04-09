@@ -177,6 +177,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
           return
       }
 
+      requestService.clearCache()
       onUpdate(updatedRequest)
       setShowDialog(false)
       setReason('')
@@ -196,6 +197,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     try {
       setLoading(true)
       const updatedRequest = await requestService.startProcessing(request.id)
+      requestService.clearCache()
       onUpdate(updatedRequest)
     } catch (error) {
       console.error('Error starting processing:', error)

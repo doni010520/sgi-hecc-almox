@@ -128,6 +128,10 @@ class RequestService {
     return cached.data
   }
 
+  clearCache(): void {
+    requestCache.clear()
+  }
+
   private setCachedData(key: string, data: any): void {
     requestCache.set(key, { data, timestamp: Date.now() })
   }

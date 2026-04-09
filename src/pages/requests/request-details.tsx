@@ -389,11 +389,11 @@ export function RequestDetails() {
                   onClick={async () => {
                     if (!comment.trim() || !user) return
                     try {
-                      const updatedRequest = await requestService.addComment(
+                      await requestService.addComment(
                         request.id,
                         comment
                       )
-                      setRequest(updatedRequest)
+                      if (id) await loadRequest(id)
                       setCommenting(false)
                       setComment('')
                     } catch (error) {
@@ -447,7 +447,7 @@ export function RequestDetails() {
       <div className="print:hidden">
         <RequestActions
           request={request}
-          onUpdate={(updatedRequest) => setRequest(updatedRequest)}
+          onUpdate={() => { if (id) loadRequest(id) }}
         />
       </div>
 
