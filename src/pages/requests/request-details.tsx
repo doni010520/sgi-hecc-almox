@@ -21,11 +21,13 @@ import { supabase } from '@/lib/supabase'
 
 function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean }) {
   const [suppliedQty, setSuppliedQty] = useState(item.supplied_quantity ?? item.quantity)
-  const [observation, setObservation] = useState(item.observation || '')
+  // Observations stored as lines separated by \n
+  const [observations, setObservations] = useState<string[]>(() => {
+    const raw = item.observation || ''
+    return raw ? raw.split('\n').filter(Boolean) : []
+  })
   const [newNote, setNewNote] = useState('')
   const [checked, setChecked] = useState(item.is_checked || false)
-  const hasObservation = !!observation.trim()
-  const canEditObservation = !hasObservation || isAdmin
   const saveField = async (field: string, value: any) => {
     try {
       await supabase
@@ -68,19 +70,27 @@ function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0]
         )}
       </td>
       <td className="py-3 px-2">
-        {hasObservation && (
-          <div className="flex items-center gap-1 mb-1">
-            <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 px-2 py-1 rounded flex-1">{observation}</span>
-            {isAdmin && (
-              <button
-                onClick={() => { setObservation(''); saveField('observation', '') }}
-                className="text-red-400 hover:text-red-600 text-xs px-1"
-                title="Apagar observação"
-              >✕</button>
-            )}
+        {observations.length > 0 && (
+          <div className="space-y-1 mb-1">
+            {observations.map((obs, idx) => (
+              <div key={idx} className="flex items-center gap-1">
+                <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 px-2 py-1 rounded flex-1">{obs}</span>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      const updated = observations.filter((_, i) => i !== idx)
+                      setObservations(updated)
+                      saveField('observation', updated.join('\n'))
+                    }}
+                    className="text-red-400 hover:text-red-600 text-xs px-1"
+                    title="Apagar"
+                  >✕</button>
+                )}
+              </div>
+            ))}
           </div>
         )}
-        {canEdit && canEditObservation && !hasObservation && (
+        {canEdit && (
           <div className="flex gap-1">
             <input
               type="text"
@@ -88,8 +98,9 @@ function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0]
               onChange={(e) => setNewNote(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newNote.trim()) {
-                  setObservation(newNote.trim())
-                  saveField('observation', newNote.trim())
+                  const updated = [...observations, newNote.trim()]
+                  setObservations(updated)
+                  saveField('observation', updated.join('\n'))
                   setNewNote('')
                 }
               }}
@@ -99,16 +110,17 @@ function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0]
             <button
               onClick={() => {
                 if (newNote.trim()) {
-                  setObservation(newNote.trim())
-                  saveField('observation', newNote.trim())
+                  const updated = [...observations, newNote.trim()]
+                  setObservations(updated)
+                  saveField('observation', updated.join('\n'))
                   setNewNote('')
                 }
               }}
               className="text-xs bg-emerald-500 text-white px-2 rounded hover:bg-emerald-600"
-            >Salvar</button>
+            >+</button>
           </div>
         )}
-        {!canEdit && !hasObservation && <span className="text-xs text-gray-300">—</span>}
+        {!canEdit && observations.length === 0 && <span className="text-xs text-gray-300">—</span>}
       </td>
       <td className="text-center py-3 px-2">
         {canEdit ? (
