@@ -19,14 +19,7 @@ import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
-const observationOptions = [
-  { value: '', label: 'Selecionar...' },
-  { value: 'opção 1', label: 'Opção 1' },
-  { value: 'opção 2', label: 'Opção 2' },
-  { value: 'opção 3', label: 'Opção 3' },
-  { value: 'opção 4', label: 'Opção 4' },
-  { value: 'opção 5', label: 'Opção 5' },
-]
+// Observation is now a free text field
 
 function ItemRow({ item, canEdit }: { item: Request['request_items'][0], canEdit: boolean }) {
   const [suppliedQty, setSuppliedQty] = useState(item.supplied_quantity ?? item.quantity)
@@ -75,18 +68,15 @@ function ItemRow({ item, canEdit }: { item: Request['request_items'][0], canEdit
       </td>
       <td className="text-center py-3 px-2">
         {canEdit ? (
-          <select
+          <input
+            type="text"
             value={observation}
-            onChange={(e) => {
-              setObservation(e.target.value)
-              saveField('observation', e.target.value)
-            }}
+            onChange={(e) => setObservation(e.target.value)}
+            onBlur={() => saveField('observation', observation)}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveField('observation', observation) }}
+            placeholder="Observação..."
             className="w-full h-8 px-2 text-xs border border-gray-300 rounded bg-white"
-          >
-            {observationOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          />
         ) : (
           <span className="text-xs">{item.observation || '—'}</span>
         )}
