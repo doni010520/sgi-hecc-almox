@@ -780,13 +780,12 @@ class RequestService {
   async markAsDelivered(id: string, deliveryNotes?: string, receivedByEmployeeId?: string): Promise<Request> {
     try {
       if (!validateUUID(id)) {
-        throw new Error('Invalid request ID format')
+        throw new Error('ID da solicitação inválido')
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      await this.checkRateLimit()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('Erro de autenticação: ' + authError.message)
+      if (!user) throw new Error('Usuário não autenticado')
 
       requestCache.clear()
 
@@ -794,27 +793,45 @@ class RequestService {
         status: 'delivered',
         delivered_at: new Date().toISOString(),
         delivered_by: user.id,
-        delivery_notes: deliveryNotes ? sanitizeInput(deliveryNotes) : null
+      }
+
+      if (deliveryNotes) {
+        updateData.delivery_notes = sanitizeInput(deliveryNotes)
       }
 
       if (receivedByEmployeeId) {
         updateData.received_by_employee_id = receivedByEmployeeId
       }
 
+      console.log('markAsDelivered: updating request', id, 'with', updateData)
+
       const { data: updatedRequest, error } = await supabase
         .from('requests')
         .update(updateData)
         .eq('id', id)
-        .select()
-        .single()
+        .select('id, status')
+        .maybeSingle()
 
-      if (error) throw error
+      if (error) {
+        console.error('markAsDelivered: update error', error)
+        throw new Error('Erro ao atualizar: ' + error.message)
+      }
 
-      const message = deliveryNotes
-        ? `Itens entregues. Observações: ${sanitizeInput(deliveryNotes)}`
-        : 'Itens entregues. Aguardando confirmação de recebimento do solicitante.'
+      if (!updatedRequest) {
+        throw new Error('Solicitação não encontrada ou sem permissão')
+      }
 
-      await this.addComment(id, message)
+      console.log('markAsDelivered: update OK, status =', updatedRequest.status)
+
+      // Add comment (non-blocking)
+      try {
+        const message = deliveryNotes
+          ? `Itens entregues. Obs: ${sanitizeInput(deliveryNotes)}`
+          : 'Itens entregues.'
+        await this.addComment(id, message)
+      } catch (commentErr) {
+        console.warn('Comment failed but delivery was successful:', commentErr)
+      }
 
       return this.getById(updatedRequest.id)
     } catch (error) {
