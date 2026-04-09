@@ -407,28 +407,31 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                   <p className="text-sm text-red-600">{employeeError}</p>
                 )}
                 {showResults && searchResults.length > 0 && (
-                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto z-50 relative bg-white shadow-lg">
-                    {searchResults.map(emp => (
-                      <div
+                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-white shadow-lg">
+                    {searchResults.map((emp) => (
+                      <label
                         key={emp.id}
-                        role="button"
-                        tabIndex={0}
-                        className="w-full text-left px-3 py-2 hover:bg-emerald-50 border-b border-gray-100 last:border-0 cursor-pointer"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setEmployee(emp)
-                          setShowResults(false)
-                          setSearchResults([])
-                          setSearchQuery(emp.full_name)
-                        }}
+                        className="flex items-center gap-3 px-3 py-2 hover:bg-emerald-50 border-b border-gray-100 last:border-0 cursor-pointer"
                       >
-                        <p className="font-medium text-gray-900 text-sm">{emp.full_name}</p>
-                        <p className="text-xs text-gray-500">
-                          {emp.matricula && `Mat: ${emp.matricula}`}
-                          {emp.department_name && ` • ${emp.department_name}`}
-                        </p>
-                      </div>
+                        <input
+                          type="radio"
+                          name="employee-select"
+                          className="w-4 h-4 text-emerald-600"
+                          onChange={() => {
+                            setEmployee(emp)
+                            setShowResults(false)
+                            setSearchResults([])
+                            setSearchQuery(emp.full_name)
+                          }}
+                        />
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{emp.full_name}</p>
+                          <p className="text-xs text-gray-500">
+                            {emp.matricula && `Mat: ${emp.matricula}`}
+                            {emp.department_name && ` • ${emp.department_name}`}
+                          </p>
+                        </div>
+                      </label>
                     ))}
                   </div>
                 )}
