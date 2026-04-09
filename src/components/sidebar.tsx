@@ -35,15 +35,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { colors } = useTheme()
   const isAdmin = user?.role === 'administrador'
   const isManager = user?.role === 'gestor'
-  const canManageRequests = isAdmin || isManager
+  const isAtendente = user?.role === 'atendente'
+  const canManageRequests = isAdmin || isManager || isAtendente
 
   const menuItems = [
     {
       title: 'Principal',
       items: [
         { name: 'Dashboard', icon: LayoutDashboard, href: '/', show: true },
-        { name: 'Painel TV - Almoxarifado', icon: Tv, href: '/tv/warehouse', show: isManager || isAdmin },
-        { name: 'Painel TV - Farmácia', icon: Tv, href: '/tv/pharmacy', show: isManager || isAdmin }
+        { name: 'Painel TV - Almoxarifado', icon: Tv, href: '/tv/warehouse', show: isManager || isAdmin || isAtendente },
+        { name: 'Painel TV - Farmácia', icon: Tv, href: '/tv/pharmacy', show: isManager || isAdmin || isAtendente }
       ]
     },
     {
@@ -72,17 +73,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     {
       title: 'Estoque',
       items: [
-        { name: 'Farmácia', icon: Pill, href: '/inventory/pharmacy', show: isManager || isAdmin },
-        { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: isManager || isAdmin }
+        { name: 'Farmácia', icon: Pill, href: '/inventory/pharmacy', show: isManager || isAdmin || isAtendente },
+        { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: isManager || isAdmin || isAtendente }
       ]
     },
     {
       title: 'Relatórios',
       items: [
-        { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin },
-        { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: isManager || isAdmin },
-        { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin },
-        { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin },
+        { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin || isAtendente },
+        { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: isManager || isAdmin || isAtendente },
+        { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin || isAtendente },
+        { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
         { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin }
       ]

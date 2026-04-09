@@ -89,7 +89,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     }
   }, [request])
 
-  const isManager = user?.role === 'gestor' || user?.role === 'administrador'
+  const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
   const isRequester = user?.id === request?.requester_id
   const canManage = isManager && request?.status === 'pending'
   const canProcess = isManager && request?.status === 'approved'

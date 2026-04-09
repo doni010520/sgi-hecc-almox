@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Degradês Verdes - Hospital</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #111; color: #fff; padding: 30px; }
+  h1 { text-align: center; margin-bottom: 10px; font-size: 24px; color: #ccc; }
+  p.sub { text-align: center; color: #666; font-size: 13px; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1200px; margin: 0 auto; }
+  .card {
+    border-radius: 20px;
+    height: 220px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+  .card .label {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.7);
+  }
+  .card .name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  .sample-row {
+    background: rgba(10,15,20,0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+  .sample-row .code { font-weight: 700; }
+  .sample-row .status {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(251,191,36,0.25);
+    color: #fff;
+    border: 1px solid rgba(251,191,36,0.4);
+  }
+
+  .g1  { background: linear-gradient(135deg, #2d8f5e, #45c98a, #80e8b4, #b0f5d0); }
+  .g2  { background: linear-gradient(135deg, #1a6b40, #38a865, #60d090, #95e8b8); }
+  .g3  { background: linear-gradient(135deg, #1a8a5c, #3db880, #6de0aa, #a5f0cc); }
+  .g4  { background: linear-gradient(135deg, #2d6a4f, #52b788, #7dd8a8, #a8eac8); }
+  .g5  { background: linear-gradient(135deg, #3a8a6a, #5cb88a, #88d8aa, #b8f0cc); }
+  .g6  { background: linear-gradient(135deg, #1a7a6a, #35b09a, #60d8c0, #95f0dd); }
+  .g7  { background: linear-gradient(135deg, #2e7d52, #50b87a, #78d8a0, #a8f0c4, #d0fce0); }
+  .g8  { background: linear-gradient(135deg, #20805a, #40b080, #68d8a5, #98f0c8); }
+  .g9  { background: linear-gradient(135deg, #40916c, #60b88a, #88d8aa, #b0f0cc, #d5fce5); }
+  .g10 { background: linear-gradient(135deg, #1a8a70, #3dbba0, #68e0c0, #a0f5dd, #c8ffee); }
+  .g11 { background: linear-gradient(135deg, #3a7a3a, #5aaa5a, #80d080, #a8e8a8, #d0f8d0); }
+  .g12 { background: linear-gradient(135deg, #2a8868, #48b890, #70d8b0, #a0f0d0, #c8ffe8); }
+</style>
+</head>
+<body>
+
+<h1>Degradês Verdes — Painel TV Hospital</h1>
+<p class="sub">Tons claros que remetem a saúde, calma, segurança e tranquilidade</p>
+
+<div class="grid">
+  <div class="card g1">
+    <div>
+      <div class="label">Opção 1 — Emerald Bright</div>
+      <div class="name">Esmeralda → Verde Claro</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g2">
+    <div>
+      <div class="label">Opção 2 — Green Vitality</div>
+      <div class="name">Verde Médio → Menta</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g3">
+    <div>
+      <div class="label">Opção 3 — Teal Fresh</div>
+      <div class="name">Teal → Menta Suave</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g4">
+    <div>
+      <div class="label">Opção 4 — Clinical Hope</div>
+      <div class="name">Verde Cirúrgico → Esperança</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g5">
+    <div>
+      <div class="label">Opção 5 — Sage Garden</div>
+      <div class="name">Sage → Verde Pastel</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g6">
+    <div>
+      <div class="label">Opção 6 — Ocean Health</div>
+      <div class="name">Teal Oceano → Turquesa Clara</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g7">
+    <div>
+      <div class="label">Opção 7 — Green Breath</div>
+      <div class="name">Verde → Menta → Quase Branco (5 tons)</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g8">
+    <div>
+      <div class="label">Opção 8 — Pharmacy Green</div>
+      <div class="name">Verde Farmácia → Menta</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g9">
+    <div>
+      <div class="label">Opção 9 — SUS Palette</div>
+      <div class="name">Verde SUS → Sage → Menta Pastel (5 tons)</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g10">
+    <div>
+      <div class="label">Opção 10 — Aqua Medical</div>
+      <div class="name">Teal → Água Viva → Cristal (5 tons)</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g11">
+    <div>
+      <div class="label">Opção 11 — Nature Pure</div>
+      <div class="name">Verde Folha → Verde Pastel (5 tons)</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+
+  <div class="card g12">
+    <div>
+      <div class="label">Opção 12 — Jade Mint</div>
+      <div class="name">Jade → Menta → Quase Branco (5 tons)</div>
+    </div>
+    <div class="sample-row">
+      <span class="code">#48592</span><span>Maria Aparecida</span><span>Administrativo</span><span class="status">Pendente</span>
+    </div>
+  </div>
+</div>
+
+<div style="height:40px"></div>
+</body>
+</html>

@@ -190,7 +190,7 @@ export function ItemDetails() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(user?.role === 'gestor' || user?.role === 'administrador') && (
+            {(user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente') && (
               <>
                 <Button 
                   variant="outline" 

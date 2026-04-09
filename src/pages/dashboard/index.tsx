@@ -35,7 +35,8 @@ export function Dashboard() {
 
   const isAdmin = user?.role === 'administrador'
   const isManager = user?.role === 'gestor'
-  const canManageRequests = isAdmin || isManager
+  const isAtendente = user?.role === 'atendente'
+  const canManageRequests = isAdmin || isManager || isAtendente
   const [showGuide, setShowGuide] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
 
@@ -115,7 +116,7 @@ export function Dashboard() {
           </div>
 
           {/* Inventory */}
-          {(isManager || isAdmin) && (
+          {(isManager || isAdmin || isAtendente) && (
             <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg" style={iconBg}><Package2 className="w-5 h-5" style={iconColor} /></div>
@@ -136,7 +137,7 @@ export function Dashboard() {
           )}
 
           {/* Reports */}
-          {(isManager || isAdmin) && (
+          {(isManager || isAdmin || isAtendente) && (
             <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 rounded-lg" style={iconBg}><BarChart3 className="w-5 h-5" style={iconColor} /></div>
@@ -252,7 +253,7 @@ export function Dashboard() {
                 </p>
               </div>
             )}
-            {(isManager || isAdmin) && (
+            {(isManager || isAdmin || isAtendente) && (
               <div className="p-4 rounded-lg" style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)' }}>
                 <h3 className="font-medium mb-1 flex items-center gap-2 text-sm" style={{ color: txt }}>
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs font-semibold">4</span>

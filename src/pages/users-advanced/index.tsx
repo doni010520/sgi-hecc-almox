@@ -83,9 +83,10 @@ export function UsersAdvanced() {
     const inactive = users.filter(u => u.deleted_at).length
     const admins = users.filter(u => u.role === 'administrador' && !u.deleted_at).length
     const managers = users.filter(u => u.role === 'gestor' && !u.deleted_at).length
+    const atendentes = users.filter(u => u.role === 'atendente' && !u.deleted_at).length
     const requesters = users.filter(u => u.role === 'solicitante' && !u.deleted_at).length
 
-    return { total, active, inactive, admins, managers, requesters }
+    return { total, active, inactive, admins, managers, atendentes, requesters }
   }
 
   const filteredUsers = users.filter(user => {
@@ -276,6 +277,7 @@ export function UsersAdvanced() {
             <option value="all">Todas as funções</option>
             <option value="administrador">Administradores</option>
             <option value="gestor">Gestores</option>
+            <option value="atendente">Atendentes</option>
             <option value="solicitante">Solicitantes</option>
           </select>
 
