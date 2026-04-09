@@ -878,7 +878,7 @@ class ItemsService {
       const { data, error } = await supabase
         .from(this.getTableName(type))
         .select('*')
-        .or(`name.ilike.${searchPattern},code.ilike.${searchPattern}`)
+        .or(`name.ilike."${searchPattern}",code.ilike."${searchPattern}"`)
         .order('name')
 
       if (error) {
