@@ -185,9 +185,9 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
       setSearchResults([])
       setShowResults(false)
       setEmployee(null)
-    } catch (error) {
-      console.error('Error performing action:', error)
-      const msg = error instanceof Error ? error.message : 'Erro desconhecido'
+    } catch (error: any) {
+      console.error('Error performing action:', JSON.stringify(error))
+      const msg = error?.message || error?.error_description || error?.msg || JSON.stringify(error) || 'Erro desconhecido'
       setEmployeeError(`Erro: ${msg}`)
     } finally {
       setLoading(false)
