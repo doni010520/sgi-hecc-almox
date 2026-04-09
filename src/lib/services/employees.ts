@@ -66,6 +66,50 @@ class EmployeesService {
     }
   }
 
+  async searchByName(name: string): Promise<Employee[]> {
+    try {
+      if (!name || name.trim().length < 2) return []
+
+      const q = name.trim()
+
+      // Search in users table
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, matricula, role, department_id')
+        .ilike('full_name', `%${q}%`)
+        .limit(10)
+
+      if (error || !data) return []
+
+      // Get department names
+      const deptIds = [...new Set(data.filter(u => u.department_id).map(u => u.department_id))]
+      let deptMap: Record<string, string> = {}
+      if (deptIds.length > 0) {
+        const { data: depts } = await supabase
+          .from('departments')
+          .select('id, name')
+          .in('id', deptIds)
+        if (depts) {
+          deptMap = Object.fromEntries(depts.map(d => [d.id, d.name]))
+        }
+      }
+
+      return data.map(u => ({
+        id: u.id,
+        matricula: u.matricula || '',
+        full_name: u.full_name,
+        cargo: u.role,
+        is_active: true,
+        department_name: u.department_id ? deptMap[u.department_id] || '' : '',
+        created_at: '',
+        updated_at: '',
+      })) as Employee[]
+    } catch (error) {
+      console.error('EmployeesService: Error searching by name:', error)
+      return []
+    }
+  }
+
   async getAll(): Promise<Employee[]> {
     try {
       const { data, error } = await supabase

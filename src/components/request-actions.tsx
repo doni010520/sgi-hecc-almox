@@ -31,10 +31,12 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   const [showDialog, setShowDialog] = useState(false)
   const [action, setAction] = useState<'approve' | 'reject' | 'cancel' | 'deliver' | 'confirm_receipt' | null>(null)
   const [reason, setReason] = useState('')
-  const [matricula, setMatricula] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [employee, setEmployee] = useState<Employee | null>(null)
+  const [searchResults, setSearchResults] = useState<Employee[]>([])
   const [searchingEmployee, setSearchingEmployee] = useState(false)
   const [employeeError, setEmployeeError] = useState('')
+  const [showResults, setShowResults] = useState(false)
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>(() => {
     // Initialize with current quantities or approved quantities if they exist
     if (!request?.request_items?.length) {
@@ -98,20 +100,38 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     ['pending', 'approved'].includes(request.status)
 
   const searchEmployee = async () => {
-    if (!matricula.trim()) {
-      setEmployeeError('Digite a matrícula')
+    if (!searchQuery.trim()) {
+      setEmployeeError('Digite a matricula ou nome')
       return
     }
     setSearchingEmployee(true)
     setEmployeeError('')
     setEmployee(null)
+    setSearchResults([])
+    setShowResults(false)
     try {
-      const found = await employeesService.getByMatricula(matricula.trim())
-      if (found) {
-        setEmployee(found)
-        setEmployeeError('')
+      const query = searchQuery.trim()
+      // Check if it looks like a matricula (only numbers)
+      const isMatricula = /^\d+$/.test(query)
+
+      if (isMatricula) {
+        const found = await employeesService.getByMatricula(query)
+        if (found) {
+          setEmployee(found)
+        } else {
+          setEmployeeError('Colaborador nao encontrado')
+        }
       } else {
-        setEmployeeError('Colaborador não encontrado')
+        // Search by name
+        const results = await employeesService.searchByName(query)
+        if (results.length === 1) {
+          setEmployee(results[0])
+        } else if (results.length > 1) {
+          setSearchResults(results)
+          setShowResults(true)
+        } else {
+          setEmployeeError('Nenhum colaborador encontrado')
+        }
       }
     } catch {
       setEmployeeError('Erro ao buscar colaborador')
@@ -160,7 +180,9 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
       onUpdate(updatedRequest)
       setShowDialog(false)
       setReason('')
-      setMatricula('')
+      setSearchQuery('')
+      setSearchResults([])
+      setShowResults(false)
       setEmployee(null)
     } catch (error) {
       console.error('Error performing action:', error)
@@ -184,9 +206,11 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
 
   const handleDeliver = () => {
     setAction('deliver')
-    setMatricula('')
+    setSearchQuery('')
     setEmployee(null)
     setEmployeeError('')
+    setSearchResults([])
+    setShowResults(false)
     setShowDialog(true)
   }
 
@@ -348,18 +372,20 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
             {action === 'deliver' && (
               <div className="space-y-3">
                 <Label className="text-base font-medium text-gray-900">
-                  Matrícula do Recebedor
+                  Recebedor
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    value={matricula}
+                    value={searchQuery}
                     onChange={(e) => {
-                      setMatricula(e.target.value)
+                      setSearchQuery(e.target.value)
                       setEmployee(null)
                       setEmployeeError('')
+                      setSearchResults([])
+                      setShowResults(false)
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && searchEmployee()}
-                    placeholder="Digite a matrícula..."
+                    placeholder="Digite matricula ou nome..."
                     className="flex-1"
                   />
                   <Button
@@ -378,15 +404,37 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                 {employeeError && (
                   <p className="text-sm text-red-600">{employeeError}</p>
                 )}
+                {showResults && searchResults.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                    {searchResults.map(emp => (
+                      <button
+                        key={emp.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                        onClick={() => {
+                          setEmployee(emp)
+                          setShowResults(false)
+                          setSearchResults([])
+                          setSearchQuery(emp.full_name)
+                        }}
+                      >
+                        <p className="font-medium text-gray-900 text-sm">{emp.full_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {emp.matricula && `Mat: ${emp.matricula}`}
+                          {emp.department_name && ` • ${emp.department_name}`}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {employee && (
                   <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <User className="w-5 h-5 text-green-600" />
                     <div>
                       <p className="font-medium text-gray-900">{employee.full_name}</p>
                       <p className="text-sm text-gray-500">
-                        Matrícula: {employee.matricula}
+                        {employee.matricula && `Matricula: ${employee.matricula}`}
                         {employee.department_name && ` • ${employee.department_name}`}
-                        {employee.cargo && ` • ${employee.cargo}`}
                       </p>
                     </div>
                   </div>
