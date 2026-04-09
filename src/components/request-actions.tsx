@@ -187,9 +187,11 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
       setEmployee(null)
     } catch (error) {
       console.error('Error performing action:', error)
+      const msg = error instanceof Error ? error.message : 'Erro desconhecido'
+      setEmployeeError(`Erro: ${msg}`)
     } finally {
       setLoading(false)
-      setAction(null)
+      if (action !== 'deliver') setAction(null)
     }
   }
 
@@ -438,8 +440,8 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
         </div>
       )}
 
-      {/* Action Dialog (for non-delivery actions) */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      {/* Action Dialog (for non-delivery actions only) */}
+      <Dialog open={showDialog && action !== 'deliver'} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl bg-white">
           <DialogHeader className="border-b pb-4">
             <DialogTitle className={`text-xl font-semibold ${
@@ -510,7 +512,6 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
               {action === 'approve' && 'Aprovar'}
               {action === 'reject' && 'Rejeitar'}
               {action === 'cancel' && 'Cancelar'}
-              {action === 'deliver' && 'Marcar como Entregue'}
               {action === 'confirm_receipt' && 'Confirmar Recebimento'}
             </Button>
           </DialogFooter>
