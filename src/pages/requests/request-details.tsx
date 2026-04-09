@@ -19,12 +19,13 @@ import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
-// Observation is now a free text field
-
-function ItemRow({ item, canEdit }: { item: Request['request_items'][0], canEdit: boolean }) {
+function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean }) {
   const [suppliedQty, setSuppliedQty] = useState(item.supplied_quantity ?? item.quantity)
   const [observation, setObservation] = useState(item.observation || '')
+  const [newNote, setNewNote] = useState('')
   const [checked, setChecked] = useState(item.is_checked || false)
+  const hasObservation = !!observation.trim()
+  const canEditObservation = !hasObservation || isAdmin
   const saveField = async (field: string, value: any) => {
     try {
       await supabase
@@ -66,20 +67,48 @@ function ItemRow({ item, canEdit }: { item: Request['request_items'][0], canEdit
           <span>{item.supplied_quantity ?? '—'}</span>
         )}
       </td>
-      <td className="text-center py-3 px-2">
-        {canEdit ? (
-          <input
-            type="text"
-            value={observation}
-            onChange={(e) => setObservation(e.target.value)}
-            onBlur={() => saveField('observation', observation)}
-            onKeyDown={(e) => { if (e.key === 'Enter') saveField('observation', observation) }}
-            placeholder="Observação..."
-            className="w-full h-8 px-2 text-xs border border-gray-300 rounded bg-white"
-          />
-        ) : (
-          <span className="text-xs">{item.observation || '—'}</span>
+      <td className="py-3 px-2">
+        {hasObservation && (
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-800 px-2 py-1 rounded flex-1">{observation}</span>
+            {isAdmin && (
+              <button
+                onClick={() => { setObservation(''); saveField('observation', '') }}
+                className="text-red-400 hover:text-red-600 text-xs px-1"
+                title="Apagar observação"
+              >✕</button>
+            )}
+          </div>
         )}
+        {canEdit && canEditObservation && !hasObservation && (
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newNote.trim()) {
+                  setObservation(newNote.trim())
+                  saveField('observation', newNote.trim())
+                  setNewNote('')
+                }
+              }}
+              placeholder="Anotar..."
+              className="flex-1 h-7 px-2 text-xs border border-gray-300 rounded bg-white"
+            />
+            <button
+              onClick={() => {
+                if (newNote.trim()) {
+                  setObservation(newNote.trim())
+                  saveField('observation', newNote.trim())
+                  setNewNote('')
+                }
+              }}
+              className="text-xs bg-emerald-500 text-white px-2 rounded hover:bg-emerald-600"
+            >Salvar</button>
+          </div>
+        )}
+        {!canEdit && !hasObservation && <span className="text-xs text-gray-300">—</span>}
       </td>
       <td className="text-center py-3 px-2">
         {canEdit ? (
@@ -394,6 +423,7 @@ export function RequestDetails() {
                   key={item.id}
                   item={item}
                   canEdit={request.status === 'pending' || request.status === 'approved' || request.status === 'processing'}
+                  isAdmin={user?.role === 'administrador'}
                 />
               ))}
             </tbody>
