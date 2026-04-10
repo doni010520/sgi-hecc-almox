@@ -186,7 +186,121 @@ export function RequestDetails() {
   }
 
   const handlePrint = () => {
-    window.print()
+    if (!request) { window.print(); return }
+    const win = window.open('', '_blank', 'width=900,height=700')
+    if (!win) { window.print(); return }
+
+    const items = request.request_items || []
+    const totalItems = items.length
+    const totalQtd = items.reduce((sum, it) => sum + (it.approved_quantity ?? it.quantity), 0)
+
+    const reqNumber = request.request_number ? '#' + request.request_number : request.id.substring(0, 8)
+    const createdDate = new Date(request.created_at).toLocaleString('pt-BR')
+    const deptName = (request as any).department?.name || request.department || '-'
+    const requesterName = (request as any).requester?.full_name || '-'
+
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Lista de Separação - ${reqNumber}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; padding: 20px; color: #000; font-size: 11pt; }
+  .header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+  .header h1 { font-size: 16pt; margin-bottom: 4px; }
+  .header .sub { font-size: 10pt; color: #444; }
+  .info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; font-size: 10pt; }
+  .info div { padding: 4px; }
+  .info strong { display: inline-block; min-width: 100px; }
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 15px; }
+  thead { background: #f0f0f0; }
+  th, td { border: 1px solid #888; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { font-weight: bold; font-size: 9pt; text-transform: uppercase; }
+  .col-num { width: 28px; text-align: center; }
+  .col-code { width: 120px; font-family: monospace; font-size: 9pt; }
+  .col-qty { width: 60px; text-align: center; font-weight: bold; }
+  .col-check { width: 40px; text-align: center; }
+  .qty-fornec { background: #fffacd; font-size: 14pt; }
+  .checkbox { display: inline-block; width: 16px; height: 16px; border: 2px solid #000; }
+  .totals { margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #888; font-size: 10pt; }
+  .totals strong { margin-right: 20px; }
+  .signature { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; font-size: 10pt; }
+  .signature div { border-top: 1px solid #000; padding-top: 4px; text-align: center; }
+  .item-name { font-weight: 600; line-height: 1.3; }
+  .item-code { font-size: 8pt; color: #666; margin-top: 2px; }
+  @page { size: A4; margin: 1cm; }
+  @media print {
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>LISTA DE SEPARAÇÃO DE ITENS</h1>
+    <div class="sub">HECC — Hospital Estadual Costa dos Coqueiros • Sistema de Gestão de Insumos</div>
+  </div>
+
+  <div class="info">
+    <div><strong>Solicitação:</strong> ${reqNumber}</div>
+    <div><strong>Data:</strong> ${createdDate}</div>
+    <div><strong>Setor:</strong> ${deptName}</div>
+    <div><strong>Solicitante:</strong> ${requesterName}</div>
+    <div><strong>Prioridade:</strong> ${request.priority === 'high' ? 'Alta' : request.priority === 'medium' ? 'Média' : 'Baixa'}</div>
+    <div><strong>Status:</strong> ${request.status}</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th>Item</th>
+        <th class="col-qty">Qtd Sol.</th>
+        <th class="col-qty qty-fornec">Qtd Fornec.</th>
+        <th class="col-check">✓</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map((it, idx) => {
+        const qtd = it.approved_quantity ?? it.quantity
+        const fornec = it.supplied_quantity ?? ''
+        return `
+        <tr>
+          <td class="col-num">${idx + 1}</td>
+          <td>
+            <div class="item-name">${(it.item?.name || '').replace(/</g, '&lt;')}</div>
+            <div class="item-code">Código: ${it.item?.code || '-'} • Unidade: ${it.item?.unit || 'UN'}</div>
+          </td>
+          <td class="col-qty">${qtd}</td>
+          <td class="col-qty qty-fornec">${fornec}</td>
+          <td class="col-check"><span class="checkbox"></span></td>
+        </tr>`
+      }).join('')}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <strong>Total de Itens:</strong> ${totalItems}
+    <strong>Quantidade Total Aprovada:</strong> ${totalQtd}
+  </div>
+
+  <div class="signature">
+    <div>Assinatura de quem separou</div>
+    <div>Assinatura de quem recebeu</div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 300);
+    };
+  </script>
+</body>
+</html>
+    `
+
+    win.document.write(html)
+    win.document.close()
   }
 
   const handleExportTemplate = async () => {
