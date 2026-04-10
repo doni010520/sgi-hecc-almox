@@ -544,14 +544,18 @@ export function RequestDetails() {
               </tr>
             </thead>
             <tbody>
-              {request.request_items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  canEdit={request.status === 'pending' || request.status === 'approved' || request.status === 'processing'}
-                  isAdmin={user?.role === 'administrador'}
-                />
-              ))}
+              {request.request_items.map((item) => {
+                const isStaff = user?.role === 'administrador' || user?.role === 'gestor' || user?.role === 'atendente'
+                const statusAllowsEdit = request.status === 'pending' || request.status === 'approved' || request.status === 'processing'
+                return (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    canEdit={isStaff && statusAllowsEdit}
+                    isAdmin={user?.role === 'administrador'}
+                  />
+                )
+              })}
             </tbody>
           </table>
         </div>
