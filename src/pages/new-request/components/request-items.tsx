@@ -1,15 +1,29 @@
 import { useState, useEffect } from 'react'
-import { Search, Plus, Minus, Loader2 } from 'lucide-react'
+import { Search, Plus, Minus, Loader2, Bed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import type { Item } from '@/lib/services/items'
 import { supabase } from '@/lib/supabase'
 import { z } from 'zod'
 
+// Item that requires special patient info
+const COLCHAO_CASCA_OVO_CODE = '65.30.19.00114671-8'
+
 const itemSchema = z.object({
   id: z.string().uuid('ID inválido'),
   quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
+  patient_name: z.string().optional(),
+  patient_bed: z.string().optional(),
+  patient_ward: z.string().optional(),
+  nurse_name: z.string().optional(),
 })
 
 export type RequestItem = z.infer<typeof itemSchema>
@@ -26,6 +40,14 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   const [selectedItems, setSelectedItems] = useState<RequestItem[]>(defaultValues)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+
+  // Colchao casca de ovo modal
+  const [showPatientModal, setShowPatientModal] = useState(false)
+  const [pendingItem, setPendingItem] = useState<Item | null>(null)
+  const [patientName, setPatientName] = useState('')
+  const [patientBed, setPatientBed] = useState('')
+  const [patientWard, setPatientWard] = useState('')
+  const [nurseName, setNurseName] = useState('')
 
   useEffect(() => {
     loadItems()
@@ -57,9 +79,34 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   })
 
   const handleAddItem = (item: Item) => {
-    if (!selectedItems.some(i => i.id === item.id)) {
-      setSelectedItems([...selectedItems, { id: item.id, quantity: 1 }])
+    if (selectedItems.some(i => i.id === item.id)) return
+
+    // Check if item requires patient info (colchao casca de ovo)
+    if (item.code === COLCHAO_CASCA_OVO_CODE) {
+      setPendingItem(item)
+      setPatientName('')
+      setPatientBed('')
+      setPatientWard('')
+      setNurseName('')
+      setShowPatientModal(true)
+      return
     }
+
+    setSelectedItems([...selectedItems, { id: item.id, quantity: 1 }])
+  }
+
+  const handleConfirmPatientItem = () => {
+    if (!pendingItem || !patientName.trim() || !patientBed.trim() || !patientWard.trim() || !nurseName.trim()) return
+    setSelectedItems([...selectedItems, {
+      id: pendingItem.id,
+      quantity: 1,
+      patient_name: patientName.trim(),
+      patient_bed: patientBed.trim(),
+      patient_ward: patientWard.trim(),
+      nurse_name: nurseName.trim(),
+    }])
+    setShowPatientModal(false)
+    setPendingItem(null)
   }
 
   const handleRemoveItem = (itemId: string) => {
@@ -171,6 +218,11 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
                   <p className="text-sm text-gray-500">
                     {item.code} • {item.category} • {item.unit}
                   </p>
+                  {selectedItem.patient_name && (
+                    <div className="mt-1 text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1 text-blue-800">
+                      <strong>Paciente:</strong> {selectedItem.patient_name} | <strong>Leito:</strong> {selectedItem.patient_bed} | <strong>Posto:</strong> {selectedItem.patient_ward} | <strong>Enf:</strong> {selectedItem.nurse_name}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
@@ -239,6 +291,49 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
         {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Confirmar Seleção
       </Button>
+
+      {/* Patient Info Modal for Colchao Casca de Ovo */}
+      <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bed className="w-5 h-5 text-blue-600" />
+              Dados do Paciente
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 mb-2">
+            Este item requer informacoes do paciente para ser solicitado.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <Label>Nome do Paciente *</Label>
+              <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Nome completo do paciente" className="mt-1" />
+            </div>
+            <div>
+              <Label>Leito *</Label>
+              <Input value={patientBed} onChange={(e) => setPatientBed(e.target.value)} placeholder="Ex: 201, 302-A" className="mt-1" />
+            </div>
+            <div>
+              <Label>Posto *</Label>
+              <Input value={patientWard} onChange={(e) => setPatientWard(e.target.value)} placeholder="Ex: Posto 1, Posto 2, UTI" className="mt-1" />
+            </div>
+            <div>
+              <Label>Enfermeira de Plantao *</Label>
+              <Input value={nurseName} onChange={(e) => setNurseName(e.target.value)} placeholder="Nome da enfermeira" className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowPatientModal(false)}>Cancelar</Button>
+            <Button
+              onClick={handleConfirmPatientItem}
+              disabled={!patientName.trim() || !patientBed.trim() || !patientWard.trim() || !nurseName.trim()}
+              className="bg-primary-500 hover:bg-primary-600 text-white"
+            >
+              Adicionar Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

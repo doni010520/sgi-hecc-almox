@@ -491,6 +491,7 @@ class RequestService {
     department: string
     destination_department?: string
     justification?: string
+    notes?: string
     created_by: string
     items: Array<{
       item_id: string
@@ -555,6 +556,9 @@ class RequestService {
       }
       if (data.destination_department) {
         insertData.destination_department_id = data.destination_department
+      }
+      if (data.notes) {
+        insertData.notes = sanitizeInput(data.notes)
       }
 
       const { data: request, error: requestError } = await supabase

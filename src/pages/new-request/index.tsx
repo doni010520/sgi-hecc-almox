@@ -45,6 +45,11 @@ export function NewRequest() {
   const [recentRequests, setRecentRequests] = useState<any[]>([])
   const [showRecent, setShowRecent] = useState(false)
 
+  // Check if within service hours (8h-14h)
+  const now = new Date()
+  const currentHour = now.getHours()
+  const isOutsideServiceHours = currentHour < 8 || currentHour >= 14
+
   useEffect(() => {
     if (user?.department_id) {
       requestService.getRecentByDepartment(user.department_id).then(setRecentRequests)
@@ -99,13 +104,22 @@ export function NewRequest() {
       setLoading(true)
       setError(null)
       
-      // Use the selected justification option as the justification text
+      // Build patient notes if any items have patient info
+      const patientItems = items.filter(i => i.patient_name)
+      let notes = ''
+      if (patientItems.length > 0) {
+        notes = patientItems.map(i =>
+          `[Dados do Paciente] Nome: ${i.patient_name} | Leito: ${i.patient_bed} | Posto: ${i.patient_ward} | Enfermeira: ${i.nurse_name}`
+        ).join('\n')
+      }
+
       const request = await requestService.create({
         type: requestType,
         priority: details.priority,
         department: details.department,
         destination_department: details.destination_department,
         justification: details.justification_option,
+        notes: notes || undefined,
         created_by: user.id,
         items: items.map(item => ({
           item_id: item.id,
@@ -135,6 +149,19 @@ export function NewRequest() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {/* Service Hours Warning */}
+      {isOutsideServiceHours && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-amber-800">Fora do horario de atendimento</p>
+            <p className="text-sm text-amber-700">
+              Solicitacoes sao atendidas das <strong>8h as 14h</strong>. Sua solicitacao sera atendida no proximo dia util.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <Button
