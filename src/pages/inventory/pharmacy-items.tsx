@@ -36,7 +36,7 @@ export function PharmacyItems() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
 
   const isAdmin = user?.role === 'administrador'
-  const canEdit = user?.role === 'administrador' || user?.role === 'gestor' || user?.role === 'atendente'
+  const canEdit = user?.role === 'administrador' || user?.role === 'gestor'
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<Item>>({})
   const [saving, setSaving] = useState(false)
