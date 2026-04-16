@@ -66,8 +66,9 @@ export function PharmacyItems() {
       setEditingId(null)
       setEditData({})
       loadItems()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving item:', error)
+      alert('Erro ao salvar: ' + (error?.message || 'Erro desconhecido'))
     } finally {
       setSaving(false)
     }
