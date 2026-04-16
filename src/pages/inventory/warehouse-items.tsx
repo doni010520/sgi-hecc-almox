@@ -41,10 +41,7 @@ export function WarehouseItems() {
       setLoading(true)
       setError(null)
       const data = await itemsService.getAll(filters)
-      // Filter only warehouse items
-      setItems(data.filter(item => 
-        ['Material de Escritório', 'Material de Limpeza', 'Equipamentos', 'Outros'].includes(item.category)
-      ))
+      setItems(data)
     } catch (error) {
       console.error('Error loading items:', error)
       setError('Erro ao carregar itens. Por favor, tente novamente.')

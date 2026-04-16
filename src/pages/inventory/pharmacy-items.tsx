@@ -45,12 +45,7 @@ export function PharmacyItems() {
       setLoading(true)
       setError(null)
       const data = await itemsService.getAll(filters)
-      
-      // Filter only pharmacy items
-      const pharmacyItems = data.filter(item => 
-        item.category === 'Medicamentos' || 
-        item.category === 'Material Hospitalar'
-      )
+      const pharmacyItems = data
       
       setItems(pharmacyItems)
     } catch (error) {
