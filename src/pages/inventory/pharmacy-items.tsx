@@ -82,8 +82,7 @@ export function PharmacyItems() {
     try {
       setLoading(true)
       setError(null)
-      const data = await itemsService.getAll(filters)
-      const pharmacyItems = data
+      const pharmacyItems = await itemsService.getByType('pharmacy', filters)
       
       setItems(pharmacyItems)
     } catch (error) {

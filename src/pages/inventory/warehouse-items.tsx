@@ -77,7 +77,7 @@ export function WarehouseItems() {
     try {
       setLoading(true)
       setError(null)
-      const data = await itemsService.getAll(filters)
+      const data = await itemsService.getByType('warehouse', filters)
       setItems(data)
     } catch (error) {
       console.error('Error loading items:', error)

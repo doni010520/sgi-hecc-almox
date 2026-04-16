@@ -217,6 +217,11 @@ class ItemsService {
     }
   }
 
+  async getByType(type: 'pharmacy' | 'warehouse', filters?: FilterOptions, pagination?: PaginationOptions) {
+    const table = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
+    return this.getAllFromTable(table, filters, pagination)
+  }
+
   private async getAllFromTable(table: string, filters?: FilterOptions, pagination?: PaginationOptions) {
     try {
       let query = supabase
