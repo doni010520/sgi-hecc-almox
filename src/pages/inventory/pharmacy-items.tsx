@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Pill, FileSpreadsheet,
-  Eye, Plus, Edit, Trash2
+  Eye, Plus, Edit, Trash2, Check, X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,43 @@ export function PharmacyItems() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
 
   const isAdmin = user?.role === 'administrador'
+  const canEdit = user?.role === 'administrador' || user?.role === 'gestor' || user?.role === 'atendente'
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editData, setEditData] = useState<Partial<Item>>({})
+  const [saving, setSaving] = useState(false)
+
+  const startEditing = (item: Item) => {
+    setEditingId(item.id)
+    setEditData({
+      code: item.code,
+      name: item.name,
+      category: item.category,
+      unit: item.unit,
+      current_stock: item.current_stock,
+      min_stock: item.min_stock,
+    })
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditData({})
+  }
+
+  const saveEditing = async () => {
+    if (!editingId) return
+    try {
+      setSaving(true)
+      await itemsService.update(editingId, editData as any, 'pharmacy')
+      setEditingId(null)
+      setEditData({})
+      loadItems()
+    } catch (error) {
+      console.error('Error saving item:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   useEffect(() => {
     loadItems()
   }, [])
@@ -68,10 +105,7 @@ export function PharmacyItems() {
     }
   }
 
-  const handleEditStock = (item: Item) => {
-    setSelectedItem(item)
-    setShowEditStockDialog(true)
-  }
+  void setShowEditStockDialog // keep reference
 
   const handleDelete = (item: Item) => {
     setSelectedItem(item)
@@ -281,19 +315,41 @@ export function PharmacyItems() {
                   (avgConsumption / 30) * (item.lead_time_days || 7) * 1.5
                 )
                 
+                const isEditing = editingId === item.id
+
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.code}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
+                  <tr key={item.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {isEditing ? (
+                        <input value={editData.code || ''} onChange={(e) => setEditData({ ...editData, code: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
+                      ) : item.code}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {isEditing ? (
+                        <input value={editData.name || ''} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
+                      ) : item.name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {isEditing ? (
+                        <input value={editData.category || ''} onChange={(e) => setEditData({ ...editData, category: e.target.value as any })} className="w-full px-2 py-1 text-sm border rounded" />
+                      ) : item.category}
+                    </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-medium">
-                      {item.current_stock} {item.unit}
+                      {isEditing ? (
+                        <input type="number" min="0" value={editData.current_stock ?? 0} onChange={(e) => setEditData({ ...editData, current_stock: parseInt(e.target.value) || 0 })} className="w-20 px-2 py-1 text-sm border rounded text-right" />
+                      ) : (
+                        <>{item.current_stock} {item.unit}</>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {item.min_stock} {item.unit}
+                      {isEditing ? (
+                        <input type="number" min="0" value={editData.min_stock ?? 0} onChange={(e) => setEditData({ ...editData, min_stock: parseInt(e.target.value) || 0 })} className="w-20 px-2 py-1 text-sm border rounded text-right" />
+                      ) : (
+                        <>{item.min_stock} {item.unit}</>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {supplyPoint} {item.unit}
@@ -301,55 +357,43 @@ export function PharmacyItems() {
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         {item.current_stock === 0 ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200">
-                            Sem Estoque
-                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200">Sem Estoque</span>
                         ) : item.current_stock <= item.min_stock ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200">
-                            Estoque Baixo
-                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200">Estoque Baixo</span>
                         ) : item.current_stock <= supplyPoint ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                            Ponto de Pedido
-                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">Ponto de Pedido</span>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-600 border border-green-200">
-                            Normal
-                          </span>
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/inventory/pharmacy/${item.id}`)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Detalhes
-                          </Button>
-                          {isAdmin && (
+                        <div className="flex items-center gap-1">
+                          {isEditing ? (
                             <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditStock(item)}
-                                className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                              >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Editar Estoque
+                              <Button size="sm" onClick={saveEditing} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-2">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(item)}
-                                className="text-red-600 border-red-200 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
+                              <Button size="sm" variant="outline" onClick={cancelEditing} className="h-8 px-2">
+                                <X className="w-4 h-4" />
                               </Button>
+                            </>
+                          ) : (
+                            <>
+                              {canEdit && (
+                                <Button variant="outline" size="sm" onClick={() => startEditing(item)} className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/pharmacy/${item.id}`)} className="h-8 px-2">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {isAdmin && (
+                                <Button variant="outline" size="sm" onClick={() => handleDelete(item)} className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
