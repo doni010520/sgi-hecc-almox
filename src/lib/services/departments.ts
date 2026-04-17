@@ -7,6 +7,7 @@ class DepartmentsService {
       const { data, error } = await supabase
         .from('departments')
         .select('*')
+        .eq('is_active', true)
         .order('name', { ascending: true });
 
       if (error) {

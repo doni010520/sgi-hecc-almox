@@ -24,9 +24,14 @@ const itemSchema = z.object({
   patient_bed: z.string().optional(),
   patient_ward: z.string().optional(),
   nurse_name: z.string().optional(),
+  _uid: z.string().optional(),
 })
 
 export type RequestItem = z.infer<typeof itemSchema>
+
+// ID único por linha no cliente — permite múltiplas entradas do mesmo item
+// (ex: Colchão Casca de Ovo, uma entrada por paciente)
+const makeUid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`
 
 interface RequestItemsProps {
   type: 'pharmacy' | 'warehouse'
@@ -37,7 +42,9 @@ interface RequestItemsProps {
 export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItemsProps) {
   const [items, setItems] = useState<Item[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedItems, setSelectedItems] = useState<RequestItem[]>(defaultValues)
+  const [selectedItems, setSelectedItems] = useState<RequestItem[]>(
+    defaultValues.map(v => (v._uid ? v : { ...v, _uid: makeUid() }))
+  )
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -48,6 +55,7 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   const [patientBed, setPatientBed] = useState('')
   const [patientWard, setPatientWard] = useState('')
   const [nurseName, setNurseName] = useState('')
+  const [patientError, setPatientError] = useState<string | null>(null)
 
   useEffect(() => {
     loadItems()
@@ -79,24 +87,39 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   })
 
   const handleAddItem = (item: Item) => {
-    if (selectedItems.some(i => i.id === item.id)) return
-
-    // Check if item requires patient info (colchao casca de ovo)
+    // Colchão Casca de Ovo: permite múltiplas entradas (uma por paciente).
+    // Sempre abre o modal — a checagem de paciente duplicado ocorre ao confirmar.
     if (item.code === COLCHAO_CASCA_OVO_CODE) {
       setPendingItem(item)
       setPatientName('')
       setPatientBed('')
       setPatientWard('')
       setNurseName('')
+      setPatientError(null)
       setShowPatientModal(true)
       return
     }
 
-    setSelectedItems([...selectedItems, { id: item.id, quantity: 1 }])
+    // Demais itens: não permite duplicar no mesmo pedido
+    if (selectedItems.some(i => i.id === item.id)) return
+    setSelectedItems([...selectedItems, { id: item.id, quantity: 1, _uid: makeUid() }])
   }
 
   const handleConfirmPatientItem = () => {
     if (!pendingItem || !patientName.trim() || !patientBed.trim() || !patientWard.trim() || !nurseName.trim()) return
+
+    // Regra: um item individual por paciente — não permite mesmo paciente duas vezes
+    const normalizedName = patientName.trim().toLowerCase()
+    const duplicate = selectedItems.some(
+      i => i.id === pendingItem.id && i.patient_name?.trim().toLowerCase() === normalizedName
+    )
+    if (duplicate) {
+      setPatientError(
+        `Já existe um "${pendingItem.name}" solicitado para o paciente "${patientName.trim()}". Cada item é individual — informe um paciente diferente ou cancele.`
+      )
+      return
+    }
+
     setSelectedItems([...selectedItems, {
       id: pendingItem.id,
       quantity: 1,
@@ -104,18 +127,20 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
       patient_bed: patientBed.trim(),
       patient_ward: patientWard.trim(),
       nurse_name: nurseName.trim(),
+      _uid: makeUid(),
     }])
     setShowPatientModal(false)
     setPendingItem(null)
+    setPatientError(null)
   }
 
-  const handleRemoveItem = (itemId: string) => {
-    setSelectedItems(selectedItems.filter(item => item.id !== itemId))
+  const handleRemoveItem = (uid: string) => {
+    setSelectedItems(selectedItems.filter(item => item._uid !== uid))
   }
 
-  const handleQuantityChange = (itemId: string, quantity: number) => {
-    setSelectedItems(selectedItems.map(item => 
-      item.id === itemId ? { ...item, quantity } : item
+  const handleQuantityChange = (uid: string, quantity: number) => {
+    setSelectedItems(selectedItems.map(item =>
+      item._uid === uid ? { ...item, quantity } : item
     ))
   }
 
@@ -188,7 +213,7 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
                 variant="outline"
                 size="sm"
                 onClick={() => handleAddItem(item)}
-                disabled={selectedItems.some(i => i.id === item.id)}
+                disabled={item.code !== COLCHAO_CASCA_OVO_CODE && selectedItems.some(i => i.id === item.id)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar
@@ -206,13 +231,16 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
       {/* Selected Items */}
       <div className="space-y-2">
         <Label>Itens Selecionados</Label>
-        <div className="border rounded-lg divide-y">
+        <div className="border-2 border-emerald-200 rounded-lg divide-y divide-emerald-100 bg-emerald-50/60">
           {selectedItems.map(selectedItem => {
             const item = items.find(i => i.id === selectedItem.id)
             if (!item) return null
 
+            const isColchao = item.code === COLCHAO_CASCA_OVO_CODE
+            const rowKey = selectedItem._uid || item.id
+
             return (
-              <div key={item.id} className="p-4 flex items-center justify-between">
+              <div key={rowKey} className="p-4 flex items-center justify-between hover:bg-emerald-100/50 transition-colors">
                 <div>
                   <p className="font-medium">{item.name}</p>
                   <p className="text-sm text-gray-500">
@@ -225,48 +253,68 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleQuantityChange(
-                        item.id,
-                        Math.max(1, selectedItem.quantity - 1)
-                      )}
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={selectedItem.quantity}
-                      onChange={(e) => handleQuantityChange(
-                        item.id,
-                        Math.max(1, parseInt(e.target.value) || 1)
-                      )}
-                      className="w-20 text-center"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleQuantityChange(
-                        item.id,
-                        selectedItem.quantity + 1
-                      )}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  {isColchao ? (
+                    <span className="text-sm text-gray-700 px-2">
+                      <strong>1 {item.unit}</strong>
+                      <span className="ml-2 text-xs text-gray-500">(item individual por paciente)</span>
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleQuantityChange(
+                          selectedItem._uid!,
+                          Math.max(1, selectedItem.quantity - 1)
+                        )}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={selectedItem.quantity === 0 ? '' : selectedItem.quantity}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          if (raw === '') {
+                            handleQuantityChange(selectedItem._uid!, 0)
+                            return
+                          }
+                          const n = parseInt(raw, 10)
+                          if (!isNaN(n)) {
+                            handleQuantityChange(selectedItem._uid!, n)
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const n = parseInt(e.target.value, 10)
+                          if (isNaN(n) || n < 1) {
+                            handleQuantityChange(selectedItem._uid!, 1)
+                          }
+                        }}
+                        className="w-20 text-center"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleQuantityChange(
+                          selectedItem._uid!,
+                          selectedItem.quantity + 1
+                        )}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="text-red-500 hover:text-red-600"
-                    onClick={() => handleRemoveItem(item.id)}
+                    onClick={() => handleRemoveItem(selectedItem._uid!)}
                   >
                     Remover
                   </Button>
@@ -293,7 +341,7 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
       </Button>
 
       {/* Patient Info Modal for Colchao Casca de Ovo */}
-      <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
+      <Dialog open={showPatientModal} onOpenChange={(open) => { setShowPatientModal(open); if (!open) setPatientError(null) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -302,12 +350,12 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-500 mb-2">
-            Este item requer informacoes do paciente para ser solicitado.
+            Este item é individual por paciente. Para solicitar mais de um, adicione o item novamente para cada paciente diferente.
           </p>
           <div className="space-y-3">
             <div>
               <Label>Nome do Paciente *</Label>
-              <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Nome completo do paciente" className="mt-1" />
+              <Input value={patientName} onChange={(e) => { setPatientName(e.target.value); if (patientError) setPatientError(null) }} placeholder="Nome completo do paciente" className="mt-1" />
             </div>
             <div>
               <Label>Leito *</Label>
@@ -322,8 +370,13 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
               <Input value={nurseName} onChange={(e) => setNurseName(e.target.value)} placeholder="Nome da enfermeira" className="mt-1" />
             </div>
           </div>
+          {patientError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+              {patientError}
+            </div>
+          )}
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowPatientModal(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setShowPatientModal(false); setPatientError(null) }}>Cancelar</Button>
             <Button
               onClick={handleConfirmPatientItem}
               disabled={!patientName.trim() || !patientBed.trim() || !patientWard.trim() || !nurseName.trim()}

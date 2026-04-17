@@ -269,6 +269,9 @@ export function PharmacyItems() {
                     )}
                   </div>
                 </th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
+                  Unidade
+                </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                   Consumo Médio
                 </th>
@@ -333,6 +336,30 @@ export function PharmacyItems() {
                       {isEditing ? (
                         <input value={editData.category || ''} onChange={(e) => setEditData({ ...editData, category: e.target.value as any })} className="w-full px-2 py-1 text-sm border rounded" />
                       ) : item.category}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-700 font-medium">
+                      {isEditing ? (
+                        <select value={editData.unit || ''} onChange={(e) => setEditData({ ...editData, unit: e.target.value as any })} className="w-full px-2 py-1 text-sm border rounded">
+                          <option value="Un">Un</option>
+                          <option value="Pc">Pc</option>
+                          <option value="Cx">Cx</option>
+                          <option value="Fr">Fr</option>
+                          <option value="Amp">Amp</option>
+                          <option value="Tb">Tb</option>
+                          <option value="Rl">Rl</option>
+                          <option value="Lt">Lt</option>
+                          <option value="Kg">Kg</option>
+                          <option value="Gl">Gl</option>
+                          <option value="ml">ml</option>
+                          <option value="g">g</option>
+                          <option value="Pr">Pr</option>
+                          <option value="Cj">Cj</option>
+                          <option value="Sc">Sc</option>
+                          <option value="Rm">Rm</option>
+                          <option value="Ct">Ct</option>
+                          <option value="FL">FL</option>
+                        </select>
+                      ) : item.unit}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês
