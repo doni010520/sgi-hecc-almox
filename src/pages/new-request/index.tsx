@@ -35,6 +35,8 @@ export function NewRequest() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { mode } = useTheme()
+  const draftKey = user?.id ? `sgi_draft_request_${user.id}` : null
+
   const [currentStep, setCurrentStep] = useState(0)
   const [requestType, setRequestType] = useState<RequestType | null>(null)
   const [details, setDetails] = useState<RequestDetailsType | null>(null)
@@ -44,6 +46,9 @@ export function NewRequest() {
   const [_createdRequest, _setCreatedRequest] = useState<any>(null)
   const [recentRequests, setRecentRequests] = useState<any[]>([])
   const [showRecent, setShowRecent] = useState(false)
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
+  const [hasDraft, setHasDraft] = useState(false)
 
   // Check if within service hours (8h-14h)
   const now = new Date()
@@ -55,6 +60,48 @@ export function NewRequest() {
       requestService.getRecentByDepartment(user.department_id).then(setRecentRequests)
     }
   }, [user?.department_id])
+
+  // Load draft on mount
+  useEffect(() => {
+    if (!draftKey || draftLoaded) return
+    try {
+      const saved = localStorage.getItem(draftKey)
+      if (saved) {
+        const draft = JSON.parse(saved)
+        if (draft.requestType) setRequestType(draft.requestType)
+        if (draft.details) setDetails(draft.details)
+        if (draft.items?.length) setItems(draft.items)
+        if (typeof draft.currentStep === 'number') setCurrentStep(draft.currentStep)
+        setHasDraft(true)
+        if (draft.savedAt) setDraftSavedAt(new Date(draft.savedAt))
+      }
+    } catch (e) { console.warn('Failed to load draft', e) }
+    setDraftLoaded(true)
+  }, [draftKey, draftLoaded])
+
+  // Auto-save draft on changes
+  useEffect(() => {
+    if (!draftKey || !draftLoaded) return
+    if (!requestType && !details && items.length === 0) return
+    try {
+      const now = new Date()
+      localStorage.setItem(draftKey, JSON.stringify({
+        requestType, details, items, currentStep, savedAt: now.toISOString()
+      }))
+      setDraftSavedAt(now)
+      setHasDraft(true)
+    } catch (e) { console.warn('Failed to save draft', e) }
+  }, [requestType, details, items, currentStep, draftKey, draftLoaded])
+
+  const clearDraft = () => {
+    if (draftKey) localStorage.removeItem(draftKey)
+    setRequestType(null)
+    setDetails(null)
+    setItems([])
+    setCurrentStep(0)
+    setHasDraft(false)
+    setDraftSavedAt(null)
+  }
 
   const canNavigateToStep = (stepIndex: number) => {
     if (stepIndex === 0) return true
@@ -128,12 +175,13 @@ export function NewRequest() {
       })
 
       if (request) {
-        // Store the created request if needed
         _setCreatedRequest(request)
-        
-        // Redirect to requests page with success message
-        navigate('/requests', { 
-          state: { 
+
+        // Clear draft after successful submission
+        if (draftKey) localStorage.removeItem(draftKey)
+
+        navigate('/requests', {
+          state: {
             message: 'Solicitação criada com sucesso!',
             type: 'success'
           }
@@ -149,6 +197,30 @@ export function NewRequest() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {/* Draft indicator */}
+      {hasDraft && draftSavedAt && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>
+              Rascunho salvo automaticamente às <strong>{draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (confirm('Deseja descartar o rascunho e começar uma nova solicitação?')) {
+                clearDraft()
+              }
+            }}
+            className="text-red-600 hover:bg-red-50 hover:text-red-700 h-8"
+          >
+            Descartar rascunho
+          </Button>
+        </div>
+      )}
+
       {/* Service Hours Warning */}
       {isOutsideServiceHours && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
