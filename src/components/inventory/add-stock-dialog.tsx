@@ -18,6 +18,9 @@ import type { Item } from '@/lib/services/items'
 
 const stockEntrySchema = z.object({
   quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta'], {
+    errorMap: () => ({ message: 'Selecione o tipo de aquisição' })
+  }),
   invoice_number: z.string().min(1, 'Numero da nota fiscal e obrigatorio'),
   invoice_date: z.string().min(1, 'Data de emissao e obrigatoria'),
   invoice_total_value: z.number().min(0, 'Valor total deve ser maior ou igual a 0'),
@@ -52,6 +55,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
     resolver: zodResolver(stockEntrySchema),
     defaultValues: {
       quantity: 1,
+      acquisition_type: 'Compra' as const,
       invoice_number: '',
       invoice_date: today,
       invoice_total_value: 0,
@@ -86,6 +90,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
           item_id: item.id,
           item_type: type,
           quantity: data.quantity,
+          acquisition_type: data.acquisition_type,
           invoice_number: data.invoice_number,
           invoice_date: data.invoice_date,
           invoice_total_value: data.invoice_total_value,
@@ -192,6 +197,23 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
             <div className="flex items-center gap-2 text-sm font-medium text-gray-700 border-b pb-2">
               <FileText className="w-4 h-4" />
               Dados da Nota Fiscal
+            </div>
+
+            <div>
+              <Label htmlFor="acquisition_type">Tipo de Aquisição *</Label>
+              <select
+                id="acquisition_type"
+                {...register('acquisition_type')}
+                className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm"
+              >
+                <option value="Compra">Compra</option>
+                <option value="Empréstimo">Empréstimo</option>
+                <option value="Doação">Doação</option>
+                <option value="Permuta">Permuta</option>
+              </select>
+              {errors.acquisition_type && (
+                <p className="text-sm text-red-500 mt-1">{errors.acquisition_type.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
