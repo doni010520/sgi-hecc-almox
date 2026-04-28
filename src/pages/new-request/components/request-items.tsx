@@ -48,6 +48,13 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
+  // Sincroniza selectedItems quando defaultValues muda (ex: ao "Continuar editando" rascunho)
+  useEffect(() => {
+    if (defaultValues.length > 0 && selectedItems.length === 0) {
+      setSelectedItems(defaultValues.map(v => (v._uid ? v : { ...v, _uid: makeUid() })))
+    }
+  }, [defaultValues])
+
   // Colchao casca de ovo modal
   const [showPatientModal, setShowPatientModal] = useState(false)
   const [pendingItem, setPendingItem] = useState<Item | null>(null)

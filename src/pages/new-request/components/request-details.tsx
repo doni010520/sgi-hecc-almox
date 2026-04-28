@@ -45,7 +45,7 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
   const [allDepartments, setAllDepartments] = useState<Department[]>([])
   const [loadingUserDepartment, setLoadingUserDepartment] = useState(true)
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<RequestDetails>({
+  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<RequestDetails>({
     resolver: zodResolver(detailsSchema),
     defaultValues: {
       priority: 'medium',
@@ -57,6 +57,17 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
   useEffect(() => {
     loadUserDepartment()
   }, [])
+
+  // Sincroniza com defaultValues quando muda (ex: rascunho carregado depois)
+  useEffect(() => {
+    if (defaultValues && Object.keys(defaultValues).length > 0) {
+      reset({
+        priority: 'medium',
+        requestDate: format(new Date(), 'yyyy-MM-dd'),
+        ...defaultValues,
+      })
+    }
+  }, [defaultValues, reset])
 
   async function loadUserDepartment() {
     try {
