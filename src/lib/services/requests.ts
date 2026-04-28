@@ -703,24 +703,18 @@ class RequestService {
   async reject(id: string, reason: string): Promise<Request> {
     try {
       if (!validateUUID(id)) {
-        throw new Error('Invalid request ID format')
+        throw new Error('ID da solicitação inválido')
       }
 
       if (!reason || sanitizeInput(reason).trim().length === 0) {
         throw new Error('Motivo da rejeição é obrigatório')
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('Erro de autenticação: ' + authError.message)
+      if (!user) throw new Error('Usuário não autenticado')
 
-      await this.checkRateLimit()
-      
-      // Clear cache after rejection
       requestCache.clear()
-
-      // Get the request to access owner information
-      const request = await this.getById(id)
-      if (!request) throw new Error('Request not found')
 
       const { data: updatedRequest, error } = await supabase
         .from('requests')
@@ -731,12 +725,24 @@ class RequestService {
           rejection_reason: sanitizeInput(reason)
         })
         .eq('id', id)
-        .select()
-        .single()
+        .select('id, status')
+        .maybeSingle()
 
-      if (error) throw error
+      if (error) {
+        console.error('reject: update error', error)
+        throw new Error('Erro ao rejeitar: ' + error.message)
+      }
 
-      await this.addComment(id, `Solicitação rejeitada: ${sanitizeInput(reason)}`)
+      if (!updatedRequest) {
+        throw new Error('Solicitação não encontrada ou sem permissão')
+      }
+
+      // Add comment (non-blocking)
+      try {
+        await this.addComment(id, `Solicitação rejeitada: ${sanitizeInput(reason)}`)
+      } catch (commentErr) {
+        console.warn('Comment failed but rejection was successful:', commentErr)
+      }
 
       return this.getById(updatedRequest.id)
     } catch (error) {
@@ -748,31 +754,30 @@ class RequestService {
   async startProcessing(id: string): Promise<Request> {
     try {
       if (!validateUUID(id)) {
-        throw new Error('Invalid request ID format')
+        throw new Error('ID da solicitação inválido')
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('Erro de autenticação: ' + authError.message)
+      if (!user) throw new Error('Usuário não autenticado')
 
-      await this.checkRateLimit()
-      
-      // Clear cache after processing start
       requestCache.clear()
-
-      // Get the request to access owner information
-      const request = await this.getById(id)
-      if (!request) throw new Error('Request not found')
 
       const { data: updatedRequest, error } = await supabase
         .from('requests')
         .update({ status: 'processing' })
         .eq('id', id)
-        .select()
-        .single()
+        .select('id, status')
+        .maybeSingle()
 
-      if (error) throw error
+      if (error) throw new Error('Erro ao processar: ' + error.message)
+      if (!updatedRequest) throw new Error('Solicitação não encontrada ou sem permissão')
 
-      await this.addComment(id, 'Iniciado o processamento da solicitação')
+      try {
+        await this.addComment(id, 'Iniciado o processamento da solicitação')
+      } catch (commentErr) {
+        console.warn('Comment failed but processing started:', commentErr)
+      }
 
       return this.getById(updatedRequest.id)
     } catch (error) {
@@ -847,22 +852,14 @@ class RequestService {
   async confirmReceipt(id: string, receiptNotes?: string): Promise<Request> {
     try {
       if (!validateUUID(id)) {
-        throw new Error('Invalid request ID format')
+        throw new Error('ID da solicitação inválido')
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
-      await this.checkRateLimit()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('Erro de autenticação: ' + authError.message)
+      if (!user) throw new Error('Usuário não autenticado')
 
       requestCache.clear()
-
-      const request = await this.getById(id)
-      if (!request) throw new Error('Request not found')
-
-      if (request.requester_id !== user.id) {
-        throw new Error('Apenas o solicitante pode confirmar o recebimento')
-      }
 
       const { data: updatedRequest, error } = await supabase
         .from('requests')
@@ -875,16 +872,21 @@ class RequestService {
           completed_by: user.id
         })
         .eq('id', id)
-        .select()
-        .single()
+        .select('id, status')
+        .maybeSingle()
 
-      if (error) throw error
+      if (error) throw new Error('Erro ao confirmar: ' + error.message)
+      if (!updatedRequest) throw new Error('Solicitação não encontrada ou sem permissão')
 
       const message = receiptNotes
         ? `Recebimento confirmado. Observações: ${sanitizeInput(receiptNotes)}`
         : 'Recebimento confirmado pelo solicitante.'
 
-      await this.addComment(id, message)
+      try {
+        await this.addComment(id, message)
+      } catch (commentErr) {
+        console.warn('Comment failed but receipt confirmed:', commentErr)
+      }
 
       return this.getById(updatedRequest.id)
     } catch (error) {
@@ -936,24 +938,18 @@ class RequestService {
   async cancel(id: string, reason: string): Promise<Request> {
     try {
       if (!validateUUID(id)) {
-        throw new Error('Invalid request ID format')
+        throw new Error('ID da solicitação inválido')
       }
 
       if (!reason || sanitizeInput(reason).trim().length === 0) {
         throw new Error('Motivo do cancelamento é obrigatório')
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) throw new Error('Erro de autenticação: ' + authError.message)
+      if (!user) throw new Error('Usuário não autenticado')
 
-      await this.checkRateLimit()
-      
-      // Clear cache after cancellation
       requestCache.clear()
-
-      // Get the request to access owner information
-      const request = await this.getById(id)
-      if (!request) throw new Error('Request not found')
 
       const { data: updatedRequest, error } = await supabase
         .from('requests')
@@ -964,12 +960,17 @@ class RequestService {
           cancellation_reason: sanitizeInput(reason)
         })
         .eq('id', id)
-        .select()
-        .single()
+        .select('id, status')
+        .maybeSingle()
 
-      if (error) throw error
+      if (error) throw new Error('Erro ao cancelar: ' + error.message)
+      if (!updatedRequest) throw new Error('Solicitação não encontrada ou sem permissão')
 
-      await this.addComment(id, `Solicitação cancelada: ${sanitizeInput(reason)}`)
+      try {
+        await this.addComment(id, `Solicitação cancelada: ${sanitizeInput(reason)}`)
+      } catch (commentErr) {
+        console.warn('Comment failed but cancel was successful:', commentErr)
+      }
 
       return this.getById(updatedRequest.id)
     } catch (error) {
