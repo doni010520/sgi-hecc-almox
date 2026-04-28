@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
-import { ArrowLeft, ArrowRight, AlertCircle, AlertTriangle, ChevronDown, Clock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, AlertCircle, AlertTriangle, ChevronDown, Clock, Cloud, CloudOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { RequestTypeStep } from './components/request-type'
 import { RequestDetails, type RequestDetails as RequestDetailsType } from './components/request-details'
 import { RequestItems, type RequestItem } from './components/request-items'
 import { RequestReview } from './components/request-review'
 import { requestService } from '@/lib/services/requests'
+import { requestDraftsService } from '@/lib/services/request-drafts'
 import { useTheme } from '@/contexts/theme'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -49,6 +50,8 @@ export function NewRequest() {
   const [draftLoaded, setDraftLoaded] = useState(false)
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
+  const [cloudSync, setCloudSync] = useState<'idle' | 'saving' | 'saved' | 'offline'>('idle')
+  const saveTimerRef = useRef<number | null>(null)
 
   // Check if within service hours (8h-14h)
   const now = new Date()
@@ -61,46 +64,98 @@ export function NewRequest() {
     }
   }, [user?.department_id])
 
-  // Load draft on mount
+  // Load draft on mount: try cloud first, then localStorage as fallback
   useEffect(() => {
-    if (!draftKey || draftLoaded) return
-    try {
-      const saved = localStorage.getItem(draftKey)
-      if (saved) {
-        const draft = JSON.parse(saved)
-        if (draft.requestType) setRequestType(draft.requestType)
-        if (draft.details) setDetails(draft.details)
-        if (draft.items?.length) setItems(draft.items)
-        if (typeof draft.currentStep === 'number') setCurrentStep(draft.currentStep)
+    if (!user?.id || draftLoaded) return
+    let cancelled = false
+    ;(async () => {
+      // 1) Try cloud
+      const cloudDraft = await requestDraftsService.load(user.id)
+      if (cancelled) return
+      if (cloudDraft) {
+        if (cloudDraft.request_type) setRequestType(cloudDraft.request_type)
+        if (cloudDraft.details) setDetails(cloudDraft.details)
+        if (cloudDraft.items?.length) setItems(cloudDraft.items)
+        if (typeof cloudDraft.current_step === 'number') setCurrentStep(cloudDraft.current_step)
         setHasDraft(true)
-        if (draft.savedAt) setDraftSavedAt(new Date(draft.savedAt))
+        setDraftSavedAt(new Date(cloudDraft.updated_at))
+        setCloudSync('saved')
+      } else if (draftKey) {
+        // 2) Fallback to localStorage
+        try {
+          const saved = localStorage.getItem(draftKey)
+          if (saved) {
+            const draft = JSON.parse(saved)
+            if (draft.requestType) setRequestType(draft.requestType)
+            if (draft.details) setDetails(draft.details)
+            if (draft.items?.length) setItems(draft.items)
+            if (typeof draft.currentStep === 'number') setCurrentStep(draft.currentStep)
+            setHasDraft(true)
+            if (draft.savedAt) setDraftSavedAt(new Date(draft.savedAt))
+          }
+        } catch (e) { console.warn('Failed to load local draft', e) }
       }
-    } catch (e) { console.warn('Failed to load draft', e) }
-    setDraftLoaded(true)
-  }, [draftKey, draftLoaded])
+      setDraftLoaded(true)
+    })()
+    return () => { cancelled = true }
+  }, [user?.id, draftLoaded, draftKey])
 
-  // Auto-save draft on changes
+  // Auto-save draft on changes (debounced cloud sync + always localStorage)
   useEffect(() => {
-    if (!draftKey || !draftLoaded) return
+    if (!draftLoaded || !user?.id) return
     if (!requestType && !details && items.length === 0) return
-    try {
-      const now = new Date()
-      localStorage.setItem(draftKey, JSON.stringify({
-        requestType, details, items, currentStep, savedAt: now.toISOString()
-      }))
-      setDraftSavedAt(now)
-      setHasDraft(true)
-    } catch (e) { console.warn('Failed to save draft', e) }
-  }, [requestType, details, items, currentStep, draftKey, draftLoaded])
 
-  const clearDraft = () => {
+    const now = new Date()
+
+    // 1) Always save to localStorage immediately (fast)
+    if (draftKey) {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({
+          requestType, details, items, currentStep, savedAt: now.toISOString()
+        }))
+      } catch (e) { console.warn('Failed to save local draft', e) }
+    }
+
+    setHasDraft(true)
+    setDraftSavedAt(now)
+    setCloudSync('saving')
+
+    // 2) Debounced cloud sync (1.2s after last change)
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current)
+    }
+    saveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await requestDraftsService.save(user.id, {
+          request_type: requestType,
+          details,
+          items,
+          current_step: currentStep,
+        })
+        setCloudSync('saved')
+      } catch (e) {
+        console.warn('Cloud sync failed:', e)
+        setCloudSync('offline')
+      }
+    }, 1200)
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [requestType, details, items, currentStep, draftKey, draftLoaded, user?.id])
+
+  const clearDraft = async () => {
     if (draftKey) localStorage.removeItem(draftKey)
+    if (user?.id) await requestDraftsService.clear(user.id)
     setRequestType(null)
     setDetails(null)
     setItems([])
     setCurrentStep(0)
     setHasDraft(false)
     setDraftSavedAt(null)
+    setCloudSync('idle')
   }
 
   const canNavigateToStep = (stepIndex: number) => {
@@ -177,8 +232,9 @@ export function NewRequest() {
       if (request) {
         _setCreatedRequest(request)
 
-        // Clear draft after successful submission
+        // Clear draft after successful submission (cloud + local)
         if (draftKey) localStorage.removeItem(draftKey)
+        if (user?.id) await requestDraftsService.clear(user.id)
 
         navigate('/requests', {
           state: {
@@ -201,10 +257,36 @@ export function NewRequest() {
       {hasDraft && draftSavedAt && (
         <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>
-              Rascunho salvo automaticamente às <strong>{draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
-            </span>
+            {cloudSync === 'saving' && (
+              <>
+                <Cloud className="w-4 h-4 animate-pulse" />
+                <span>Salvando rascunho na nuvem...</span>
+              </>
+            )}
+            {cloudSync === 'saved' && (
+              <>
+                <Cloud className="w-4 h-4" />
+                <span>
+                  Rascunho salvo na nuvem às <strong>{draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                </span>
+              </>
+            )}
+            {cloudSync === 'offline' && (
+              <>
+                <CloudOff className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700">
+                  Salvo localmente (sem conexão com a nuvem) — última atualização <strong>{draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                </span>
+              </>
+            )}
+            {cloudSync === 'idle' && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>
+                  Rascunho salvo às <strong>{draftSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</strong>
+                </span>
+              </>
+            )}
           </div>
           <Button
             variant="ghost"
