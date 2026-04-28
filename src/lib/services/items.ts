@@ -898,7 +898,7 @@ class ItemsService {
     }
   }
 
-  async create(data: CreateItemData) {
+  async create(data: CreateItemData, typeOverride?: 'pharmacy' | 'warehouse') {
     try {
       // Check authentication first
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -911,8 +911,6 @@ class ItemsService {
       if (!user) {
         throw new Error('Usuário não autenticado')
       }
-
-      console.log('User authenticated:', user.id, user.email)
 
       // Enhanced input validation
       if (!data.name || data.name.trim().length < 3) {
@@ -931,9 +929,10 @@ class ItemsService {
         throw new Error('Estoque atual não pode ser negativo')
       }
 
-      const table = ['Medicamentos', 'Material Hospitalar'].includes(data.category)
-        ? 'pharmacy_items'
-        : 'warehouse_items'
+      const pharmacyCategories = ['Medicamentos', 'Material Hospitalar', 'MEDICAMENTO', 'MAT/MED', 'HIGIENE E LIMPEZA']
+      const table = typeOverride
+        ? (typeOverride === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items')
+        : (pharmacyCategories.includes(data.category as string) ? 'pharmacy_items' : 'warehouse_items')
 
       // Prepare the data object with only the fields we need
       const insertData: any = {
