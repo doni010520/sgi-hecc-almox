@@ -52,6 +52,9 @@ export function NewRequest() {
   const [hasDraft, setHasDraft] = useState(false)
   const [cloudSync, setCloudSync] = useState<'idle' | 'saving' | 'saved' | 'offline'>('idle')
   const saveTimerRef = useRef<number | null>(null)
+  // Pending draft (carregado da nuvem mas aguardando o usuario clicar em "Continuar editando")
+  const [pendingDraft, setPendingDraft] = useState<any | null>(null)
+  const [draftDismissed, setDraftDismissed] = useState(false)
 
   // Check if within service hours (8h-14h)
   const now = new Date()
@@ -64,45 +67,79 @@ export function NewRequest() {
     }
   }, [user?.department_id])
 
-  // Load draft on mount: try cloud first, then localStorage as fallback
+  // Load draft on mount: try cloud first, then localStorage. Apenas marca como pendente.
   useEffect(() => {
     if (!user?.id || draftLoaded) return
     let cancelled = false
     ;(async () => {
+      let foundDraft: any = null
+      let savedAt: Date | null = null
+
       // 1) Try cloud
       const cloudDraft = await requestDraftsService.load(user.id)
       if (cancelled) return
-      if (cloudDraft) {
-        if (cloudDraft.request_type) setRequestType(cloudDraft.request_type)
-        if (cloudDraft.details) setDetails(cloudDraft.details)
-        if (cloudDraft.items?.length) setItems(cloudDraft.items)
-        if (typeof cloudDraft.current_step === 'number') setCurrentStep(cloudDraft.current_step)
-        setHasDraft(true)
-        setDraftSavedAt(new Date(cloudDraft.updated_at))
-        setCloudSync('saved')
+      if (cloudDraft && (cloudDraft.request_type || cloudDraft.details || (cloudDraft.items?.length))) {
+        foundDraft = {
+          requestType: cloudDraft.request_type,
+          details: cloudDraft.details,
+          items: cloudDraft.items || [],
+          currentStep: cloudDraft.current_step ?? 0,
+          source: 'cloud'
+        }
+        savedAt = new Date(cloudDraft.updated_at)
       } else if (draftKey) {
         // 2) Fallback to localStorage
         try {
           const saved = localStorage.getItem(draftKey)
           if (saved) {
             const draft = JSON.parse(saved)
-            if (draft.requestType) setRequestType(draft.requestType)
-            if (draft.details) setDetails(draft.details)
-            if (draft.items?.length) setItems(draft.items)
-            if (typeof draft.currentStep === 'number') setCurrentStep(draft.currentStep)
-            setHasDraft(true)
-            if (draft.savedAt) setDraftSavedAt(new Date(draft.savedAt))
+            if (draft.requestType || draft.details || draft.items?.length) {
+              foundDraft = {
+                requestType: draft.requestType,
+                details: draft.details,
+                items: draft.items || [],
+                currentStep: draft.currentStep ?? 0,
+                source: 'local'
+              }
+              if (draft.savedAt) savedAt = new Date(draft.savedAt)
+            }
           }
         } catch (e) { console.warn('Failed to load local draft', e) }
+      }
+
+      if (foundDraft) {
+        setPendingDraft(foundDraft)
+        setDraftSavedAt(savedAt)
       }
       setDraftLoaded(true)
     })()
     return () => { cancelled = true }
   }, [user?.id, draftLoaded, draftKey])
 
+  const continueDraft = () => {
+    if (!pendingDraft) return
+    if (pendingDraft.requestType) setRequestType(pendingDraft.requestType)
+    if (pendingDraft.details) setDetails(pendingDraft.details)
+    if (pendingDraft.items?.length) setItems(pendingDraft.items)
+    if (typeof pendingDraft.currentStep === 'number') setCurrentStep(pendingDraft.currentStep)
+    setHasDraft(true)
+    setCloudSync(pendingDraft.source === 'cloud' ? 'saved' : 'idle')
+    setPendingDraft(null)
+  }
+
+  const dismissDraft = async () => {
+    if (draftKey) localStorage.removeItem(draftKey)
+    if (user?.id) await requestDraftsService.clear(user.id)
+    setPendingDraft(null)
+    setDraftDismissed(true)
+    setDraftSavedAt(null)
+    setHasDraft(false)
+  }
+
   // Auto-save draft on changes (debounced cloud sync + always localStorage)
   useEffect(() => {
     if (!draftLoaded || !user?.id) return
+    if (pendingDraft) return // Aguarda decisao do usuario sobre o rascunho pendente
     if (!requestType && !details && items.length === 0) return
 
     const now = new Date()
@@ -253,8 +290,51 @@ export function NewRequest() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      {/* Draft indicator */}
-      {hasDraft && draftSavedAt && (
+      {/* Pending Draft Banner - aguarda decisao do usuario */}
+      {pendingDraft && draftSavedAt && !draftDismissed && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+          <div className="flex items-start gap-3">
+            <Cloud className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium text-blue-900">Você tem um rascunho não enviado</p>
+              <p className="text-sm text-blue-700 mt-1">
+                Salvo {pendingDraft.source === 'cloud' ? 'na nuvem' : 'no navegador'} em{' '}
+                <strong>{draftSavedAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
+              </p>
+              {pendingDraft.requestType && (
+                <p className="text-xs text-blue-600 mt-1">
+                  Tipo: <strong>{pendingDraft.requestType === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}</strong>
+                  {pendingDraft.items?.length ? ` · ${pendingDraft.items.length} item(s) adicionado(s)` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2 ml-8">
+            <Button
+              size="sm"
+              onClick={continueDraft}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Continuar editando
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (confirm('Descartar este rascunho? Esta ação não pode ser desfeita.')) {
+                  dismissDraft()
+                }
+              }}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Descartar e começar do zero
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Draft indicator (durante edicao) */}
+      {!pendingDraft && hasDraft && draftSavedAt && (
         <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-emerald-800">
             {cloudSync === 'saving' && (
