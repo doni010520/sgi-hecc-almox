@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Pill, FileSpreadsheet,
-  Eye, Plus, Edit, Trash2, Check, X
+  Eye, Plus, Edit, Trash2, Check, X, PackagePlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import { itemsService } from '@/lib/services/items'
 import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
+import { RegisterEntryDialog } from '@/components/inventory/register-entry-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
 import { ImportDialog } from '@/components/inventory/import-dialog'
@@ -33,7 +34,13 @@ export function PharmacyItems() {
   const [showAddItemDialog, setShowAddItemDialog] = useState(false)
   const [showEditStockDialog, setShowEditStockDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+
+  const handleRegisterEntry = (item: Item) => {
+    setSelectedItem(item)
+    setShowEntryDialog(true)
+  }
 
   const isAdmin = user?.role === 'administrador'
   const canEdit = user?.role === 'administrador' || user?.role === 'gestor'
@@ -409,15 +416,20 @@ export function PharmacyItems() {
                           ) : (
                             <>
                               {canEdit && (
-                                <Button variant="outline" size="sm" onClick={() => startEditing(item)} className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
+                                <Button variant="outline" size="sm" onClick={() => handleRegisterEntry(item)} title="Registrar Entrada de Material" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 px-2">
+                                  <PackagePlus className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {canEdit && (
+                                <Button variant="outline" size="sm" onClick={() => startEditing(item)} title="Editar item" className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
                                   <Edit className="w-4 h-4" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/pharmacy/${item.id}`)} className="h-8 px-2">
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/pharmacy/${item.id}`)} title="Ver detalhes" className="h-8 px-2">
                                 <Eye className="w-4 h-4" />
                               </Button>
                               {isAdmin && (
-                                <Button variant="outline" size="sm" onClick={() => handleDelete(item)} className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
+                                <Button variant="outline" size="sm" onClick={() => handleDelete(item)} title="Excluir" className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               )}
@@ -470,6 +482,20 @@ export function PharmacyItems() {
           type="pharmacy"
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
+          onSuccess={() => {
+            loadItems()
+            setSelectedItem(null)
+          }}
+        />
+      )}
+
+      {/* Register Entry Dialog */}
+      {selectedItem && (
+        <RegisterEntryDialog
+          item={selectedItem}
+          type="pharmacy"
+          open={showEntryDialog}
+          onOpenChange={setShowEntryDialog}
           onSuccess={() => {
             loadItems()
             setSelectedItem(null)

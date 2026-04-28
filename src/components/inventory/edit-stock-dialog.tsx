@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Lock, Edit, AlertTriangle, CheckCircle2, FileText, Building2 } from 'lucide-react'
+import { Loader2, Lock, Edit, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { itemsService } from '@/lib/services/items'
-import { supabase } from '@/lib/supabase'
 import type { Item } from '@/lib/services/items'
 
 const passwordSchema = z.object({
@@ -26,11 +25,6 @@ const stockEditSchema = z.object({
   new_stock: z.number().min(0, 'Estoque deve ser maior ou igual a 0'),
   reason: z.string().min(5, 'Motivo deve ter pelo menos 5 caracteres'),
   is_active: z.boolean(),
-  // Entry-only fields (required when adding stock)
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
-  invoice_number: z.string().optional(),
-  afm_number: z.string().optional(),
-  supplier_name: z.string().optional(),
 })
 
 type PasswordFormData = z.infer<typeof passwordSchema>
@@ -63,17 +57,11 @@ export function EditStockDialog({
       new_stock: item.current_stock,
       reason: '',
       is_active: item.is_active ?? true,
-      acquisition_type: 'Compra',
-      invoice_number: '',
-      afm_number: '',
-      supplier_name: ''
     }
   })
 
-  // Watch new_stock to show entry fields only when adding stock
   const watchedNewStock = stockForm.watch('new_stock')
   const stockDifference = (watchedNewStock || 0) - item.current_stock
-  const isAddingStock = stockDifference > 0
 
   const handlePasswordSubmit = async (data: PasswordFormData) => {
     try {
@@ -99,62 +87,22 @@ export function EditStockDialog({
       setLoading(true)
       setError(null)
 
-      const difference = data.new_stock - item.current_stock
-      const isEntry = difference > 0
-
-      // When adding stock, require entry fields
-      if (isEntry) {
-        if (!data.invoice_number?.trim()) {
-          setError('Número da Nota Fiscal é obrigatório para entrada de material')
-          setLoading(false)
-          return
-        }
-        if (!data.afm_number?.trim()) {
-          setError('Número da AFM é obrigatório para entrada de material')
-          setLoading(false)
-          return
-        }
-        if (!data.acquisition_type) {
-          setError('Tipo de Aquisição é obrigatório para entrada de material')
-          setLoading(false)
-          return
-        }
+      // Bloqueia aumento - aumento de estoque deve ser via "Registrar Entrada"
+      if (data.new_stock > item.current_stock) {
+        setError('Para AUMENTAR o estoque, use o botão "Registrar Entrada" (com NF e AFM). Esta tela é apenas para correções e baixas.')
+        setLoading(false)
+        return
       }
 
-      // Determine the type based on item category
-      const pharmacyCats = ['Medicamentos', 'MEDICAMENTO', 'MAT/MED']
+      const pharmacyCats = ['Medicamentos', 'Material Hospitalar', 'MEDICAMENTO', 'MAT/MED', 'HIGIENE E LIMPEZA']
       const itemType = pharmacyCats.includes(item.category as string)
         ? 'pharmacy'
         : 'warehouse'
 
-      // Atualizar o estoque e status ativo
       await itemsService.update(item.id, {
         current_stock: data.new_stock,
         is_active: data.is_active
       }, itemType)
-
-      // Se for entrada de material, registrar em stock_entries
-      if (isEntry) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const today = new Date().toISOString().split('T')[0]
-          await supabase.from('stock_entries').insert({
-            item_id: item.id,
-            item_type: itemType,
-            quantity: difference,
-            acquisition_type: data.acquisition_type,
-            invoice_number: data.invoice_number,
-            invoice_date: today,
-            invoice_total_value: 0,
-            afm_number: data.afm_number,
-            supplier_cnpj: '00.000.000/0000-00',
-            supplier_name: data.supplier_name || 'Não informado',
-            unit_price: 0,
-            notes: data.reason,
-            created_by: user.id,
-          })
-        }
-      }
 
       onSuccess()
       onOpenChange(false)
@@ -175,10 +123,6 @@ export function EditStockDialog({
       new_stock: item.current_stock,
       reason: '',
       is_active: item.is_active ?? true,
-      acquisition_type: 'Compra',
-      invoice_number: '',
-      afm_number: '',
-      supplier_name: ''
     })
   }
 
@@ -318,71 +262,12 @@ export function EditStockDialog({
                     {stockDifference} {item.unit}
                   </span>
                 </div>
-                {isAddingStock && (
-                  <p className="text-xs text-blue-600 mt-2">
-                    Esta é uma <strong>entrada de material</strong>. Preencha os dados da NF abaixo.
+                {stockDifference > 0 && (
+                  <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+                    ⚠️ Para <strong>aumentar</strong> o estoque, use o botão <strong>"Registrar Entrada"</strong> (com NF e AFM). Esta tela é apenas para correções/baixas.
                   </p>
                 )}
               </div>
-
-              {/* Entry-only fields (when adding stock) */}
-              {isAddingStock && (
-                <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 text-sm font-medium text-blue-900 border-b border-blue-200 pb-2">
-                    <FileText className="w-4 h-4" />
-                    Dados da Entrada de Material
-                  </div>
-
-                  <div>
-                    <Label htmlFor="acquisition_type">Tipo de Aquisição *</Label>
-                    <select
-                      id="acquisition_type"
-                      {...stockForm.register('acquisition_type')}
-                      className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm"
-                    >
-                      <option value="Compra">Compra</option>
-                      <option value="Empréstimo">Empréstimo</option>
-                      <option value="Doação">Doação</option>
-                      <option value="Permuta">Permuta</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="invoice_number">Número da Nota Fiscal *</Label>
-                      <Input
-                        id="invoice_number"
-                        {...stockForm.register('invoice_number')}
-                        className="mt-1"
-                        placeholder="Ex: NF-123456"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="afm_number">Número da AFM *</Label>
-                      <Input
-                        id="afm_number"
-                        {...stockForm.register('afm_number')}
-                        className="mt-1"
-                        placeholder="Ex: AFM-2026-001"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="supplier_name" className="flex items-center gap-1">
-                      <Building2 className="w-3 h-3" />
-                      Fornecedor (opcional)
-                    </Label>
-                    <Input
-                      id="supplier_name"
-                      {...stockForm.register('supplier_name')}
-                      className="mt-1"
-                      placeholder="Nome do fornecedor"
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Status Ativo/Inativo */}
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">

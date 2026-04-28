@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, Package2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
-import { supabase } from '@/lib/supabase'
 import type { ItemCategory, UnitType } from '@/lib/services/items'
 
 const itemSchema = z.object({
@@ -24,11 +23,6 @@ const itemSchema = z.object({
   category: z.string(),
   unit: z.string(),
   min_stock: z.number().min(0, 'Estoque minimo deve ser maior ou igual a 0'),
-  initial_stock: z.number().min(0, 'Estoque inicial deve ser maior ou igual a 0'),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
-  invoice_number: z.string().optional(),
-  afm_number: z.string().optional(),
-  supplier_name: z.string().optional(),
 })
 
 type ItemFormData = z.infer<typeof itemSchema>
@@ -65,75 +59,30 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<ItemFormData>({
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       category: type === 'pharmacy' ? 'MEDICAMENTO' : 'MATERIAL HOSPITALAR',
       unit: 'Un',
       min_stock: 0,
-      initial_stock: 0,
-      acquisition_type: 'Compra',
-      invoice_number: '',
-      afm_number: '',
-      supplier_name: '',
     }
   })
-
-  const watchedInitialStock = watch('initial_stock')
-  const hasInitialStock = (watchedInitialStock || 0) > 0
 
   const onSubmit = async (data: ItemFormData) => {
     try {
       setLoading(true)
       setError(null)
 
-      // Validate entry fields when initial stock is informed
-      if ((data.initial_stock || 0) > 0) {
-        if (!data.invoice_number?.trim()) {
-          setError('Número da Nota Fiscal é obrigatório quando há estoque inicial')
-          setLoading(false)
-          return
-        }
-        if (!data.afm_number?.trim()) {
-          setError('Número da AFM é obrigatório quando há estoque inicial')
-          setLoading(false)
-          return
-        }
-      }
-
-      const newItem = await itemsService.create({
+      await itemsService.create({
         code: data.code,
         name: data.name,
         description: data.description,
         category: data.category as ItemCategory,
         unit: data.unit as UnitType,
         min_stock: data.min_stock,
-        current_stock: data.initial_stock || 0,
+        current_stock: 0,
         price: 0,
       }, type)
-
-      // Register stock entry if there's initial stock
-      if ((data.initial_stock || 0) > 0 && newItem?.id) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const today = new Date().toISOString().split('T')[0]
-          await supabase.from('stock_entries').insert({
-            item_id: newItem.id,
-            item_type: type,
-            quantity: data.initial_stock,
-            acquisition_type: data.acquisition_type,
-            invoice_number: data.invoice_number,
-            invoice_date: today,
-            invoice_total_value: 0,
-            afm_number: data.afm_number,
-            supplier_cnpj: '00.000.000/0000-00',
-            supplier_name: data.supplier_name || 'Não informado',
-            unit_price: 0,
-            notes: 'Entrada inicial do item',
-            created_by: user.id,
-          })
-        }
-      }
 
       reset()
       onSuccess()
@@ -271,83 +220,8 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
           </div>
 
-          <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Package2 className="w-4 h-4" />
-              Estoque Inicial (opcional)
-            </div>
-
-            <div>
-              <Label htmlFor="initial_stock">Quantidade Inicial em Estoque</Label>
-              <Input
-                id="initial_stock"
-                type="number"
-                min="0"
-                {...register('initial_stock', { valueAsNumber: true })}
-                className="mt-1"
-                placeholder="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Deixe 0 se for cadastrar apenas o item sem estoque.
-              </p>
-              {errors.initial_stock && (
-                <p className="text-sm text-red-500 mt-1">{errors.initial_stock.message}</p>
-              )}
-            </div>
-
-            {hasInitialStock && (
-              <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-                  <FileText className="w-4 h-4" />
-                  Dados da Entrada de Material
-                </div>
-
-                <div>
-                  <Label htmlFor="acquisition_type">Tipo de Aquisição *</Label>
-                  <select
-                    id="acquisition_type"
-                    {...register('acquisition_type')}
-                    className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white text-sm"
-                  >
-                    <option value="Compra">Compra</option>
-                    <option value="Empréstimo">Empréstimo</option>
-                    <option value="Doação">Doação</option>
-                    <option value="Permuta">Permuta</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="invoice_number">Nº Nota Fiscal *</Label>
-                    <Input
-                      id="invoice_number"
-                      {...register('invoice_number')}
-                      className="mt-1"
-                      placeholder="Ex: NF-123456"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="afm_number">Nº AFM *</Label>
-                    <Input
-                      id="afm_number"
-                      {...register('afm_number')}
-                      className="mt-1"
-                      placeholder="Ex: AFM-2026-001"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="supplier_name">Fornecedor</Label>
-                  <Input
-                    id="supplier_name"
-                    {...register('supplier_name')}
-                    className="mt-1"
-                    placeholder="Nome do fornecedor (opcional)"
-                  />
-                </div>
-              </div>
-            )}
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-700">
+            Apenas cadastra o item. Para registrar estoque, use o botão <strong>"Registrar Entrada"</strong> na lista do item.
           </div>
 
           {error && (
