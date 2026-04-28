@@ -154,6 +154,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await new Promise(resolve => setTimeout(resolve, 1000))
               continue
             }
+            // Detect expired JWT and auto-logout
+            const errMsg = checkError.message || ''
+            if (errMsg.toLowerCase().includes('jwt') || errMsg.toLowerCase().includes('expir')) {
+              console.warn('JWT expired, signing out')
+              await supabase.auth.signOut()
+              setState({ user: null, loading: false, error: null, connectionError: false })
+              if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                window.location.href = '/login'
+              }
+              return
+            }
             console.error('Error checking user profile:', checkError)
             setState({ user: null, loading: false, error: `Erro ao verificar perfil: ${checkError.message}`, connectionError: false })
             return
