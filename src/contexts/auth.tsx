@@ -110,7 +110,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Token refresh: nao recarrega o perfil (usuario ja esta logado, evita tela de erro)
+      if (event === 'TOKEN_REFRESHED') {
+        return
+      }
       if (session) {
         await loadUser(session)
       } else {
@@ -154,9 +158,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await new Promise(resolve => setTimeout(resolve, 1000))
               continue
             }
-            // Detect expired JWT and auto-logout
+            // Detect expired JWT and auto-logout (somente se nao houver usuario logado)
             const errMsg = checkError.message || ''
-            if (errMsg.toLowerCase().includes('jwt') || errMsg.toLowerCase().includes('expir')) {
+            const isJwtError = errMsg.toLowerCase().includes('jwt') || errMsg.toLowerCase().includes('expir')
+
+            // Se ja temos usuario logado, ignora erros transitorios e mantem a sessao
+            // (evita logout falso por problema de rede, RLS temporario, etc)
+            if (state.user && !isJwtError) {
+              console.warn('Profile check error during active session, keeping user logged in:', errMsg)
+              return
+            }
+
+            if (isJwtError) {
               console.warn('JWT expired, signing out')
               await supabase.auth.signOut()
               setState({ user: null, loading: false, error: null, connectionError: false })
