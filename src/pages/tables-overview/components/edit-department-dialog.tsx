@@ -37,6 +37,7 @@ export function EditDepartmentDialog({
   onSuccess
 }: EditDepartmentDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors } } = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema),
@@ -49,11 +50,13 @@ export function EditDepartmentDialog({
   const onSubmit = async (data: DepartmentFormData) => {
     try {
       setLoading(true)
+      setSubmitError(null)
       await departmentsService.update(department.id, data)
       onSuccess()
       onOpenChange(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating department:', error)
+      setSubmitError(error?.message || 'Erro ao atualizar setor')
     } finally {
       setLoading(false)
     }
@@ -96,6 +99,12 @@ export function EditDepartmentDialog({
               )}
             </div>
           </div>
+
+          {submitError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+              {submitError}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

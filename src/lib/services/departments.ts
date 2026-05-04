@@ -28,11 +28,15 @@ class DepartmentsService {
         .from('departments')
         .insert(department)
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Database error creating department:', error);
-        throw new Error(`Database error creating department: ${error.message}`);
+        throw new Error('Erro ao criar setor: ' + error.message);
+      }
+
+      if (!data) {
+        throw new Error('Setor não foi criado. Verifique suas permissões.');
       }
 
       return data;
@@ -49,11 +53,15 @@ class DepartmentsService {
         .update(updates)
         .eq('id', id)
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Database error updating department:', error);
-        throw new Error(`Database error updating department: ${error.message}`);
+        throw new Error('Erro ao atualizar setor: ' + error.message);
+      }
+
+      if (!data) {
+        throw new Error('Setor não atualizado. Verifique suas permissões.');
       }
 
       return data;
