@@ -18,22 +18,31 @@ interface DeleteDepartmentDialogProps {
   onSuccess: () => void
 }
 
-export function DeleteDepartmentDialog({ 
-  department, 
-  open, 
-  onOpenChange, 
-  onSuccess 
+export function DeleteDepartmentDialog({
+  department,
+  open,
+  onOpenChange,
+  onSuccess
 }: DeleteDepartmentDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDelete = async () => {
     try {
       setLoading(true)
+      setError(null)
       await departmentsService.delete(department.id)
       onSuccess()
       onOpenChange(false)
-    } catch (error) {
-      console.error('Error deleting department:', error)
+    } catch (err: any) {
+      console.error('Error deleting department:', err)
+      const msg = err?.message || ''
+      // Detectar erro de FK
+      if (msg.toLowerCase().includes('foreign key') || msg.toLowerCase().includes('violates') || msg.toLowerCase().includes('referenced')) {
+        setError('Este setor não pode ser excluído porque está vinculado a usuários ou solicitações. Remova essas vinculações primeiro.')
+      } else {
+        setError(msg || 'Erro ao excluir setor')
+      }
     } finally {
       setLoading(false)
     }
@@ -49,13 +58,18 @@ export function DeleteDepartmentDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="py-6">
+        <div className="py-6 space-y-3">
           <p className="text-gray-700">
             Tem certeza que deseja excluir o setor <strong>{department.name}</strong>?
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-gray-500">
             Esta ação não poderá ser desfeita e todos os dados relacionados a este setor serão perdidos.
           </p>
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
