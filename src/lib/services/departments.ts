@@ -73,14 +73,26 @@ class DepartmentsService {
 
   async delete(id: string): Promise<void> {
     try {
+      // 1. Desvincular usuarios deste setor (set department_id = null)
+      const { error: usersErr } = await supabase
+        .from('users')
+        .update({ department_id: null })
+        .eq('department_id', id);
+
+      if (usersErr) {
+        console.warn('Aviso ao desvincular usuarios:', usersErr.message);
+      }
+
+      // 2. Soft delete: marca setor como inativo
+      // Mantem o registro para que solicitacoes antigas continuem com referencia
       const { error } = await supabase
         .from('departments')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) {
-        console.error('Database error deleting department:', error);
-        throw new Error(`Database error deleting department: ${error.message}`);
+        console.error('Erro ao excluir setor:', error);
+        throw new Error('Erro ao excluir setor: ' + error.message);
       }
     } catch (error) {
       console.error('DepartmentsService: Database error deleting department:', error);

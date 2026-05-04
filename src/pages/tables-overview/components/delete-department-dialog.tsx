@@ -62,9 +62,14 @@ export function DeleteDepartmentDialog({
           <p className="text-gray-700">
             Tem certeza que deseja excluir o setor <strong>{department.name}</strong>?
           </p>
-          <p className="text-sm text-gray-500">
-            Esta ação não poderá ser desfeita e todos os dados relacionados a este setor serão perdidos.
-          </p>
+          <div className="text-sm text-gray-600 space-y-1 bg-amber-50 border border-amber-200 rounded p-3">
+            <p>Ao excluir:</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>O setor sairá das listas e não poderá receber novas solicitações</li>
+              <li>Os usuários vinculados ficarão <strong>sem setor</strong> (você pode realocá-los depois)</li>
+              <li>O histórico de solicitações antigas é <strong>preservado</strong></li>
+            </ul>
+          </div>
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
               {error}
