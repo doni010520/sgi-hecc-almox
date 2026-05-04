@@ -30,20 +30,40 @@ interface NewDepartmentDialogProps {
 
 export function NewDepartmentDialog({ open, onOpenChange, onSuccess }: NewDepartmentDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema)
   })
 
+  const generateCode = (name: string): string => {
+    // Remove acentos, converte pra maiusculo, mantem so letras/numeros e limita 10 chars
+    const clean = name
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase()
+      .substring(0, 8)
+    // Adiciona timestamp pra evitar duplicatas
+    const suffix = Date.now().toString().slice(-3)
+    return clean + suffix
+  }
+
   const onSubmit = async (data: DepartmentFormData) => {
     try {
       setLoading(true)
-      await departmentsService.create(data)
+      setSubmitError(null)
+      await departmentsService.create({
+        ...data,
+        code: generateCode(data.name),
+        is_active: true,
+      } as any)
       reset()
       onSuccess()
       onOpenChange(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating department:', error)
+      setSubmitError(error?.message || 'Erro ao criar setor')
     } finally {
       setLoading(false)
     }
@@ -86,6 +106,12 @@ export function NewDepartmentDialog({ open, onOpenChange, onSuccess }: NewDepart
               )}
             </div>
           </div>
+
+          {submitError && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+              {submitError}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
