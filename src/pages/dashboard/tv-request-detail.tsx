@@ -360,6 +360,7 @@ export function TVRequestDetail({ type }: TVRequestDetailProps) {
                           max={item.item_current_stock}
                           value={itemData?.supplied_quantity ?? 0}
                           onChange={(e) => updateItem(item.id, 'supplied_quantity', Math.max(0, parseInt(e.target.value) || 0))}
+                          onWheel={(e) => e.currentTarget.blur()}
                           className="w-20 mx-auto bg-gray-700 border border-gray-600 rounded px-2 py-1 text-center text-white text-sm focus:border-blue-500 focus:outline-none"
                         />
                       ) : (

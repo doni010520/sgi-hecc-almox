@@ -61,6 +61,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       setTouched(true)
     }
 
+    // Bloqueia alteração via scroll do mouse em inputs numéricos.
+    // Caso contrário, o usuário foca no campo, digita "1000", e ao rolar a
+    // página o navegador interpreta o wheel como step (-1) e o valor cai
+    // para 999. Tirar o foco no wheel anula esse comportamento.
+    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      if (type === 'number') {
+        e.currentTarget.blur()
+      }
+    }
+
     return (
       <div className="w-full">
         <input
@@ -73,6 +83,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
           onChange={handleChange}
           onBlur={handleBlur}
+          onWheel={handleWheel}
           ref={ref}
           {...props}
         />

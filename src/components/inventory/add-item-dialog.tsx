@@ -23,6 +23,10 @@ const itemSchema = z.object({
   category: z.string(),
   unit: z.string(),
   min_stock: z.number().min(0, 'Estoque minimo deve ser maior ou igual a 0'),
+  batch_number: z.string().optional(),
+  expiry_date: z.string().optional(),
+  last_purchase_price: z.number().min(0).optional(),
+  reference_price: z.number().min(0).optional(),
 })
 
 type ItemFormData = z.infer<typeof itemSchema>
@@ -82,6 +86,10 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         min_stock: data.min_stock,
         current_stock: 0,
         price: 0,
+        batch_number: data.batch_number,
+        expiry_date: data.expiry_date,
+        last_purchase_price: data.last_purchase_price,
+        reference_price: data.reference_price,
       }, type)
 
       reset()
@@ -217,6 +225,56 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
               {errors.min_stock && (
                 <p className="text-sm text-red-500 mt-1">{errors.min_stock.message}</p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="batch_number">Numero do Lote</Label>
+              <Input
+                id="batch_number"
+                {...register('batch_number')}
+                className="mt-1"
+                placeholder="Ex: LOTE-2024-001"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="expiry_date">Data de Validade</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                {...register('expiry_date')}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="last_purchase_price">Valor da Última Compra (R$)</Label>
+              <Input
+                id="last_purchase_price"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('last_purchase_price', { valueAsNumber: true })}
+                className="mt-1"
+                placeholder="0,00"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="reference_price">Valor Referencial (R$)</Label>
+              <Input
+                id="reference_price"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('reference_price', { valueAsNumber: true })}
+                className="mt-1"
+                placeholder="0,00"
+              />
             </div>
           </div>
 
