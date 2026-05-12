@@ -42,6 +42,8 @@ export interface Item {
   created_at: string
   updated_at: string
   price?: number
+  last_purchase_price?: number
+  reference_price?: number
   expiry_date?: string
   batch_number?: string
   invoice_number?: string
@@ -92,6 +94,8 @@ interface CreateItemData {
   min_stock?: number
   current_stock?: number
   price?: number
+  last_purchase_price?: number
+  reference_price?: number
   expiry_date?: string
   batch_number?: string
   invoice_number?: string
@@ -115,6 +119,8 @@ interface UpdateItemData {
   min_stock?: number
   current_stock?: number
   price?: number
+  last_purchase_price?: number
+  reference_price?: number
   expiry_date?: string
   batch_number?: string
   invoice_number?: string
@@ -954,6 +960,14 @@ class ItemsService {
 
       if (data.price !== undefined && data.price !== null) {
         insertData.price = data.price
+      }
+
+      if (data.last_purchase_price !== undefined && data.last_purchase_price !== null) {
+        insertData.last_purchase_price = data.last_purchase_price
+      }
+
+      if (data.reference_price !== undefined && data.reference_price !== null) {
+        insertData.reference_price = data.reference_price
       }
 
       if (data.expiry_date !== undefined && data.expiry_date !== null && data.expiry_date.trim() !== '') {

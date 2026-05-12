@@ -59,6 +59,8 @@ export function PharmacyItems() {
       min_stock: item.min_stock,
       batch_number: (item as any).batch_number || '',
       expiry_date: item.expiry_date || '',
+      last_purchase_price: (item as any).last_purchase_price ?? undefined,
+      reference_price: (item as any).reference_price ?? undefined,
     })
   }
 
@@ -288,6 +290,12 @@ export function PharmacyItems() {
                   Validade
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
+                  Última Compra
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
+                  Valor Referencial
+                </th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                   Consumo Médio
                 </th>
                 <th 
@@ -386,6 +394,16 @@ export function PharmacyItems() {
                       {isEditing ? (
                         <input type="date" value={editData.expiry_date || ''} onChange={(e) => setEditData({ ...editData, expiry_date: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
                       ) : (item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                      {isEditing ? (
+                        <input type="number" step="0.01" min="0" value={(editData as any).last_purchase_price ?? ''} onChange={(e) => setEditData({ ...editData, last_purchase_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
+                      ) : ((item as any).last_purchase_price != null ? `R$ ${Number((item as any).last_purchase_price).toFixed(2)}` : '-')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                      {isEditing ? (
+                        <input type="number" step="0.01" min="0" value={(editData as any).reference_price ?? ''} onChange={(e) => setEditData({ ...editData, reference_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
+                      ) : ((item as any).reference_price != null ? `R$ ${Number((item as any).reference_price).toFixed(2)}` : '-')}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês

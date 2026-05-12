@@ -292,6 +292,7 @@ export function NewDispensation() {
                       max={item.current_stock}
                       value={item.quantity}
                       onChange={(e) => updateQuantity(item.item_id, parseInt(e.target.value) || 1)}
+                      onWheel={(e) => e.currentTarget.blur()}
                       style={{ ...inputStyle, width: 80, textAlign: 'center' as const, padding: '6px 8px' }}
                     />
                     <span className="text-xs" style={{ color: txtMut }}>{item.unit}</span>

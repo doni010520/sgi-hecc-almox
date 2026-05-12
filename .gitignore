@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# MCP config local (contém tokens, não comitar)
+.mcp.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
