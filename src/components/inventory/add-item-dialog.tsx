@@ -23,6 +23,8 @@ const itemSchema = z.object({
   category: z.string(),
   unit: z.string(),
   min_stock: z.number().min(0, 'Estoque minimo deve ser maior ou igual a 0'),
+  batch_number: z.string().optional(),
+  expiry_date: z.string().optional(),
 })
 
 type ItemFormData = z.infer<typeof itemSchema>
@@ -82,6 +84,8 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         min_stock: data.min_stock,
         current_stock: 0,
         price: 0,
+        batch_number: data.batch_number,
+        expiry_date: data.expiry_date,
       }, type)
 
       reset()
@@ -217,6 +221,28 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
               {errors.min_stock && (
                 <p className="text-sm text-red-500 mt-1">{errors.min_stock.message}</p>
               )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="batch_number">Numero do Lote</Label>
+              <Input
+                id="batch_number"
+                {...register('batch_number')}
+                className="mt-1"
+                placeholder="Ex: LOTE-2024-001"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="expiry_date">Data de Validade</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                {...register('expiry_date')}
+                className="mt-1"
+              />
             </div>
           </div>
 

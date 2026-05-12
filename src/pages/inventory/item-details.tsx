@@ -149,9 +149,21 @@ export function ItemDetails() {
     return 'Estoque Normal'
   }
 
-  const avgConsumption = item.consumption_history?.length 
-    ? item.consumption_history.reduce((acc, curr) => acc + curr.quantity, 0) / item.consumption_history.length
+  const history = Array.isArray(item.consumption_history) ? item.consumption_history : []
+  const avgConsumption = history.length
+    ? history.reduce((acc, curr) => acc + (curr?.quantity || 0), 0) / history.length
     : 0
+
+  const safeFormat = (value: string | undefined | null, fmt: string) => {
+    if (!value) return '-'
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return '-'
+    try {
+      return format(d, fmt, { locale: ptBR })
+    } catch {
+      return '-'
+    }
+  }
 
   const supplyPoint = Math.ceil(
     (avgConsumption / 30) * (item.lead_time_days || 7) * 1.5
@@ -402,7 +414,7 @@ export function ItemDetails() {
                                   {event.expiry_date && (
                                     <p>
                                       <span className="font-medium">Validade:</span>{' '}
-                                      {format(new Date(event.expiry_date), "dd/MM/yyyy")}
+                                      {safeFormat(event.expiry_date, "dd/MM/yyyy")}
                                     </p>
                                   )}
                                   {event.supplier && (
@@ -426,13 +438,13 @@ export function ItemDetails() {
                                   {event.invoice_date && (
                                     <p>
                                       <span className="font-medium">Data da Emissão da NF:</span>{' '}
-                                      {format(new Date(event.invoice_date), "dd/MM/yyyy")}
+                                      {safeFormat(event.invoice_date, "dd/MM/yyyy")}
                                     </p>
                                   )}
                                   {event.delivery_date && (
                                     <p>
                                       <span className="font-medium">Entrega:</span>{' '}
-                                      {format(new Date(event.delivery_date), "dd/MM/yyyy")}
+                                      {safeFormat(event.delivery_date, "dd/MM/yyyy")}
                                     </p>
                                   )}
                                   {event.afm_number && (
@@ -492,9 +504,7 @@ export function ItemDetails() {
                           </div>
                           <div className="mt-2 text-sm text-gray-500">
                             <time dateTime={event.created_at}>
-                              {format(new Date(event.created_at), "dd 'de' MMMM', às' HH:mm", {
-                                locale: ptBR,
-                              })}
+                              {safeFormat(event.created_at, "dd 'de' MMMM', às' HH:mm")}
                             </time>
                           </div>
                         </div>
@@ -552,9 +562,7 @@ export function ItemDetails() {
                               <div>
                                 <span className="text-blue-600 font-medium">Data:</span>
                                 <span className="ml-2 text-blue-800">
-                                  {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                                    locale: ptBR,
-                                  })}
+                                  {safeFormat(event.created_at, "dd/MM/yyyy 'às' HH:mm")}
                                 </span>
                               </div>
                             </div>
@@ -743,7 +751,7 @@ export function ItemDetails() {
                           }
                         </p>
                         <p className="text-xs text-gray-500">
-                          {format(new Date(event.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {safeFormat(event.created_at, "dd/MM/yyyy 'às' HH:mm")}
                         </p>
                       </div>
                       {event.status && event.type === 'request' && (

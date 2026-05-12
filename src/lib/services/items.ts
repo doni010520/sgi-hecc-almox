@@ -43,6 +43,7 @@ export interface Item {
   updated_at: string
   price?: number
   expiry_date?: string
+  batch_number?: string
   invoice_number?: string
   supplier_cnpj?: string
   supplier_name?: string
@@ -92,6 +93,7 @@ interface CreateItemData {
   current_stock?: number
   price?: number
   expiry_date?: string
+  batch_number?: string
   invoice_number?: string
   supplier_cnpj?: string
   supplier_name?: string
@@ -114,6 +116,7 @@ interface UpdateItemData {
   current_stock?: number
   price?: number
   expiry_date?: string
+  batch_number?: string
   invoice_number?: string
   supplier_cnpj?: string
   supplier_name?: string
@@ -955,6 +958,10 @@ class ItemsService {
 
       if (data.expiry_date !== undefined && data.expiry_date !== null && data.expiry_date.trim() !== '') {
         insertData.expiry_date = data.expiry_date
+      }
+
+      if (data.batch_number !== undefined && data.batch_number !== null && data.batch_number.trim() !== '') {
+        insertData.batch_number = data.batch_number
       }
 
       if (data.invoice_number !== undefined && data.invoice_number !== null && data.invoice_number.trim() !== '') {

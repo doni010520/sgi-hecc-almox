@@ -57,6 +57,8 @@ export function WarehouseItems() {
       unit: item.unit,
       current_stock: item.current_stock,
       min_stock: item.min_stock,
+      batch_number: (item as any).batch_number || '',
+      expiry_date: item.expiry_date || '',
     })
   }
 
@@ -282,6 +284,12 @@ export function WarehouseItems() {
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
                   Unidade
                 </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Lote
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  Validade
+                </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                   Consumo Médio
                 </th>
@@ -320,8 +328,9 @@ export function WarehouseItems() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredItems.map((item) => {
-                const avgConsumption = item.consumption_history?.length 
-                  ? item.consumption_history.reduce((acc, curr) => acc + curr.quantity, 0) / item.consumption_history.length
+                const history = Array.isArray(item.consumption_history) ? item.consumption_history : []
+                const avgConsumption = history.length
+                  ? history.reduce((acc, curr) => acc + (curr?.quantity || 0), 0) / history.length
                   : 0
 
                 const supplyPoint = Math.ceil(
@@ -370,6 +379,16 @@ export function WarehouseItems() {
                           <option value="FL">FL</option>
                         </select>
                       ) : item.unit}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {isEditing ? (
+                        <input value={(editData as any).batch_number || ''} onChange={(e) => setEditData({ ...editData, batch_number: e.target.value } as any)} className="w-full px-2 py-1 text-sm border rounded" placeholder="Lote" />
+                      ) : ((item as any).batch_number || '-')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {isEditing ? (
+                        <input type="date" value={editData.expiry_date || ''} onChange={(e) => setEditData({ ...editData, expiry_date: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
+                      ) : (item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-')}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês
