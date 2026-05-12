@@ -252,29 +252,35 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="last_purchase_price">Valor da Última Compra (R$)</Label>
-              <Input
-                id="last_purchase_price"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('last_purchase_price', { valueAsNumber: true })}
-                className="mt-1"
-                placeholder="0,00"
-              />
+              <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                <Input
+                  id="last_purchase_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('last_purchase_price', { valueAsNumber: true })}
+                  className="pl-9"
+                  placeholder="0,00"
+                />
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="reference_price">Valor Referencial (R$)</Label>
-              <Input
-                id="reference_price"
-                type="number"
-                step="0.01"
-                min="0"
-                {...register('reference_price', { valueAsNumber: true })}
-                className="mt-1"
-                placeholder="0,00"
-              />
+              <Label htmlFor="reference_price">Valor Referencial</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                <Input
+                  id="reference_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('reference_price', { valueAsNumber: true })}
+                  className="pl-9"
+                  placeholder="0,00"
+                />
+              </div>
             </div>
           </div>
 

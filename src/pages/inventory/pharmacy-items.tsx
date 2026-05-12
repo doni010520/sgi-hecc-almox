@@ -397,13 +397,19 @@ export function PharmacyItems() {
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {isEditing ? (
-                        <input type="number" step="0.01" min="0" value={(editData as any).last_purchase_price ?? ''} onChange={(e) => setEditData({ ...editData, last_purchase_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
-                      ) : ((item as any).last_purchase_price != null ? `R$ ${Number((item as any).last_purchase_price).toFixed(2)}` : '-')}
+                        <div className="flex items-center gap-1 justify-end">
+                          <span className="text-xs text-gray-500">R$</span>
+                          <input type="number" step="0.01" min="0" value={(editData as any).last_purchase_price ?? ''} onChange={(e) => setEditData({ ...editData, last_purchase_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
+                        </div>
+                      ) : ((item as any).last_purchase_price != null ? Number((item as any).last_purchase_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-')}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {isEditing ? (
-                        <input type="number" step="0.01" min="0" value={(editData as any).reference_price ?? ''} onChange={(e) => setEditData({ ...editData, reference_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
-                      ) : ((item as any).reference_price != null ? `R$ ${Number((item as any).reference_price).toFixed(2)}` : '-')}
+                        <div className="flex items-center gap-1 justify-end">
+                          <span className="text-xs text-gray-500">R$</span>
+                          <input type="number" step="0.01" min="0" value={(editData as any).reference_price ?? ''} onChange={(e) => setEditData({ ...editData, reference_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
+                        </div>
+                      ) : ((item as any).reference_price != null ? Number((item as any).reference_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-')}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês
