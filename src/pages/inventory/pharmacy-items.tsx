@@ -290,7 +290,7 @@ export function PharmacyItems() {
                   Validade
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                  Última Compra
+                  Valor da Última Compra
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                   Valor Referencial
