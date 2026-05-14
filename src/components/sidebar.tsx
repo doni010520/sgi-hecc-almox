@@ -62,6 +62,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     },
     {
+      title: 'Saída Direta — Almoxarifado',
+      items: [
+        { name: 'Saídas Registradas', icon: Package2, href: '/saida-direta', show: canManageRequests },
+        { name: 'Nova Saída', icon: ListChecks, href: '/saida-direta/new', show: canManageRequests }
+      ]
+    },
+    {
       title: 'Gestão de Solicitações',
       items: [
         { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: canManageRequests },

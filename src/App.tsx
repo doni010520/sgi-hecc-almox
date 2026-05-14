@@ -38,6 +38,8 @@ import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
+import { WarehouseDispatchList } from '@/pages/saida-direta/index'
+import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { ChangePassword } from '@/pages/change-password'
 
 const queryClient = new QueryClient()
@@ -297,6 +299,22 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <DispensationDetails />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Saída Direta - Almoxarifado */}
+              <Route path="/saida-direta" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <WarehouseDispatchList />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/saida-direta/new" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NewWarehouseDispatch />
                   </MainLayout>
                 </ProtectedRoute>
               } />
