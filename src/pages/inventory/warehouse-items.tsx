@@ -36,6 +36,7 @@ export function WarehouseItems() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [hideZeroStock, setHideZeroStock] = useState(true)
 
   const handleRegisterEntry = (item: Item) => {
     setSelectedItem(item)
@@ -151,11 +152,15 @@ export function WarehouseItems() {
     return 0
   })
 
-  const filteredItems = sortedItems.filter(item =>
-    searchTerm === '' || 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.code?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredItems = sortedItems
+    .filter(item => !hideZeroStock || (item.current_stock ?? 0) > 0)
+    .filter(item =>
+      searchTerm === '' ||
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.code?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+  const zeroStockCount = sortedItems.filter(item => (item.current_stock ?? 0) === 0).length
 
   if (loading) {
     return (
@@ -231,6 +236,21 @@ export function WarehouseItems() {
               defaultFilters={filters}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideZeroStock}
+              onChange={(e) => setHideZeroStock(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+            />
+            Ocultar itens zerados
+            {hideZeroStock && zeroStockCount > 0 && (
+              <span className="text-xs text-gray-500">({zeroStockCount} ocultos)</span>
+            )}
+          </label>
         </div>
 
         <div className="relative">
