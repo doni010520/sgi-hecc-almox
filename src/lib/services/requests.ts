@@ -493,6 +493,11 @@ class RequestService {
     justification?: string
     notes?: string
     created_by: string
+    /**
+     * Local de origem do estoque. Se omitido, eh deduzido do departamento
+     * do solicitante via departments.default_pharmacy_location_id (ou _warehouse).
+     */
+    source_location_id?: string | null
     items: Array<{
       item_id: string
       quantity: number
@@ -545,6 +550,26 @@ class RequestService {
       // Clear cache after creating new request
       requestCache.clear()
 
+      // Deduz o estoque de origem a partir do departamento, se nao veio explicito.
+      // Regra: departments.default_pharmacy_location_id (type='pharmacy') ou
+      //        departments.default_warehouse_location_id (type='warehouse').
+      let resolvedSourceLocationId: string | null = data.source_location_id ?? null
+      if (!resolvedSourceLocationId && data.department) {
+        const { data: dept, error: deptErr } = await supabase
+          .from('departments')
+          .select('default_pharmacy_location_id, default_warehouse_location_id')
+          .eq('id', data.department)
+          .maybeSingle()
+        if (deptErr) {
+          console.warn('Falha ao buscar default location do departamento:', deptErr)
+        } else if (dept) {
+          resolvedSourceLocationId =
+            data.type === 'pharmacy'
+              ? (dept.default_pharmacy_location_id as string | null) ?? null
+              : (dept.default_warehouse_location_id as string | null) ?? null
+        }
+      }
+
       // First, create the request
       const insertData: any = {
         type: data.type,
@@ -552,7 +577,8 @@ class RequestService {
         department_id: data.department,
         justification: sanitizeInput(data.justification || ''),
         requester_id: data.created_by,
-        status: 'pending'
+        status: 'pending',
+        source_location_id: resolvedSourceLocationId,
       }
       if (data.destination_department) {
         insertData.destination_department_id = data.destination_department

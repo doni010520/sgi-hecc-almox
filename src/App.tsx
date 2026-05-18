@@ -40,6 +40,12 @@ import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
+import { SaidaAvulsa } from '@/pages/estoque/saida-avulsa'
+import { DevolucaoInterna } from '@/pages/estoque/devolucao'
+import { Transferencia } from '@/pages/estoque/transferencia'
+import { EmprestimosAbertos } from '@/pages/estoque/emprestimos'
+import { VencimentosABaixar } from '@/pages/estoque/vencimentos'
+import { FarmaciaMultiEstoqueReport } from '@/pages/reports/farmacia-multi-estoque'
 import { ChangePassword } from '@/pages/change-password'
 
 const queryClient = new QueryClient()
@@ -315,6 +321,50 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <NewWarehouseDispatch />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Estoque - Operacoes (multi-estoque) */}
+              <Route path="/estoque/saida-avulsa" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <SaidaAvulsa />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/estoque/devolucao" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <DevolucaoInterna />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/estoque/transferencia" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Transferencia />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/estoque/emprestimos" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <EmprestimosAbertos />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/estoque/vencimentos" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <VencimentosABaixar />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/reports/farmacia-multi-estoque" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <FarmaciaMultiEstoqueReport />
                   </MainLayout>
                 </ProtectedRoute>
               } />

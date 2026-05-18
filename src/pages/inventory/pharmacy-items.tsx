@@ -8,6 +8,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { itemsService } from '@/lib/services/items'
+import { stockService } from '@/lib/services/stock'
+import type { ItemStockWithLocation } from '@/lib/types/stock'
 import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
@@ -37,6 +39,9 @@ export function PharmacyItems() {
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [hideZeroStock, setHideZeroStock] = useState(true)
+  // Saldos por local (CAF, SAT_1, SAT_2, SAT_T) carregados em uma chamada.
+  // Map<itemId, Map<locationCode, quantity>>
+  const [stocksByItem, setStocksByItem] = useState<Map<string, Record<string, number>>>(new Map())
 
   const handleRegisterEntry = (item: Item) => {
     setSelectedItem(item)
@@ -94,14 +99,49 @@ export function PharmacyItems() {
     try {
       setLoading(true)
       setError(null)
-      const pharmacyItems = await itemsService.getByType('pharmacy', filters)
-      
+      // Carrega itens e saldos por local em paralelo
+      const [pharmacyItems, allStocks] = await Promise.all([
+        itemsService.getByType('pharmacy', filters),
+        loadAllPharmacyStocks(),
+      ])
+
       setItems(pharmacyItems)
+      setStocksByItem(allStocks)
     } catch (error) {
       console.error('Error loading items:', error)
       setError('Erro ao carregar itens. Por favor, tente novamente.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Busca saldo de todos os itens de farmacia em todos os locais e agrupa por item_id.
+  async function loadAllPharmacyStocks(): Promise<Map<string, Record<string, number>>> {
+    try {
+      // Lista os locais ativos uma vez (com cache no service) e depois busca todos
+      // os saldos de cada local de uma so vez (paginacao 1k linhas eh suficiente).
+      const locations = await stockService.getLocations()
+      const result = new Map<string, Record<string, number>>()
+
+      // Faz uma query por local. Sao 5 locais no maximo => 5 round-trips paralelos.
+      const perLocation = await Promise.all(
+        locations.map(async (loc) => {
+          const rows = await stockService.getStocksByLocation(loc.id, 'pharmacy')
+          return { code: loc.code, rows }
+        })
+      )
+
+      for (const { code, rows } of perLocation) {
+        for (const r of rows as ItemStockWithLocation[]) {
+          const bucket = result.get(r.item_id) ?? {}
+          bucket[code] = r.quantity
+          result.set(r.item_id, bucket)
+        }
+      }
+      return result
+    } catch (e) {
+      console.error('loadAllPharmacyStocks failed (continuando sem saldos por local):', e)
+      return new Map()
     }
   }
 
@@ -318,18 +358,21 @@ export function PharmacyItems() {
                 <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
                   Consumo Médio
                 </th>
-                <th 
+                <th
                   className="px-4 py-3 text-right text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('current_stock')}
                 >
                   <div className="flex items-center justify-end gap-2">
-                    Estoque Atual
+                    Estoque CAF
                     {sortColumn === 'current_stock' && (
                       <ArrowUpDown className="w-4 h-4" />
                     )}
                   </div>
                 </th>
-                <th 
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600" title="Saldo nos demais estoques (Satelite 1, Satelite 2, Satelite T)">
+                  Outros Estoques
+                </th>
+                <th
                   className="px-4 py-3 text-right text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('min_stock')}
                 >
@@ -440,6 +483,37 @@ export function PharmacyItems() {
                       ) : (
                         <>{item.current_stock} {item.unit}</>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const bucket = stocksByItem.get(item.id) ?? {}
+                        // Mostra apenas locais satelite que tem saldo > 0 ou existem como chave.
+                        // CAF ja aparece na coluna "Estoque CAF".
+                        const sat1 = bucket['SAT_1'] ?? 0
+                        const sat2 = bucket['SAT_2'] ?? 0
+                        const satT = bucket['SAT_T'] ?? 0
+                        const chip = (label: string, value: number) => (
+                          <span
+                            key={label}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${
+                              value > 0
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                : 'bg-gray-50 border-gray-200 text-gray-400'
+                            }`}
+                            title={`${label}: ${value} ${item.unit}`}
+                          >
+                            <span className="font-medium">{label}</span>
+                            <span>{value}</span>
+                          </span>
+                        )
+                        return (
+                          <div className="flex flex-wrap gap-1 justify-start">
+                            {chip('Sat 1', sat1)}
+                            {chip('Sat 2', sat2)}
+                            {chip('Sat T', satT)}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {isEditing ? (

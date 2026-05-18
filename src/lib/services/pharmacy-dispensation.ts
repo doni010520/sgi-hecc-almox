@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { stockService } from './stock'
 import type {
   PharmacyDispensation,
   CreateDispensationData,
@@ -182,7 +183,14 @@ class PharmacyDispensationService {
       const { data: authData } = await supabase.auth.getUser()
       if (!authData?.user) throw new Error('User not authenticated')
 
-      // Insert dispensation header
+      // Resolve o estoque-fonte (CAF por padrao). Modelo multi-estoque exige
+      // que toda prescricao tenha origem. CAF tem cache no stockService.
+      const cafLocation = await stockService.getLocationByCode('CAF')
+      if (!cafLocation) {
+        throw new Error('Local CAF nao encontrado em stock_locations.')
+      }
+
+      // Insert dispensation header (ja com source_location_id no novo modelo)
       const { data: dispensation, error: dispError } = await supabase
         .from('pharmacy_dispensations')
         .insert({
@@ -194,6 +202,7 @@ class PharmacyDispensationService {
           sector: data.sector?.trim() || null,
           notes: data.notes?.trim() || null,
           created_by: authData.user.id,
+          source_location_id: cafLocation.id,
         })
         .select('id')
         .single()
@@ -201,7 +210,22 @@ class PharmacyDispensationService {
       if (dispError) throw dispError
       if (!dispensation) throw new Error('Failed to create dispensation')
 
-      // Insert dispensation items (trigger handles stock deduction)
+      // Snapshot de precos unitarios para registrar custo em stock_movements
+      const itemIds = data.items.map((i) => i.item_id)
+      const { data: priceRows } = await supabase
+        .from('pharmacy_items')
+        .select('id, price')
+        .in('id', itemIds)
+      const priceMap = new Map<string, number | null>(
+        (priceRows || []).map((p: any) => [p.id, p.price ?? null])
+      )
+
+      // Insert dispensation items.
+      // OBS: a trigger legada `deduct_pharmacy_stock` ja decrementa
+      // pharmacy_items.current_stock. Em seguida, registramos no
+      // livro-razao (stock_movements) — o trigger fn_apply_stock_movement
+      // decrementa item_stocks(CAF). Sao tabelas diferentes; o trigger
+      // de compat fn_sync_legacy_stock_columns mantem ambos coerentes.
       const itemsToInsert = data.items.map((item) => ({
         dispensation_id: dispensation.id,
         item_id: item.item_id,
@@ -219,6 +243,39 @@ class PharmacyDispensationService {
           .delete()
           .eq('id', dispensation.id)
         throw itemsError
+      }
+
+      // Registra cada saida no livro-razao do novo modelo.
+      // Se algum falhar (ex: saldo insuficiente em item_stocks), faz rollback
+      // total (dispensacao + items + movimentacoes ja criadas).
+      const today = new Date().toISOString().slice(0, 10)
+      try {
+        for (const item of data.items) {
+          await stockService.dispenseFromPrescription({
+            item_id: item.item_id,
+            quantity: item.quantity,
+            unit_cost: priceMap.get(item.item_id) ?? null,
+            source_location_id: cafLocation.id,
+            medical_record_number: data.medical_record_number.trim(),
+            prescription_date: today,
+            dispensation_id: dispensation.id,
+          })
+        }
+      } catch (movementError) {
+        // Rollback completo. As movimentacoes ja criadas sao imutaveis (trigger
+        // bloqueia DELETE em stock_movements), mas como nao deveriam existir
+        // se a dispensacao falha como um todo, apenas deletamos a dispensacao
+        // (items caem por CASCADE) e o usuario refaz. Sera necessario um
+        // AJUSTE manual se houver inconsistencia. Logamos para investigar.
+        console.error(
+          'Falha ao registrar stock_movement; revertendo dispensacao.',
+          movementError
+        )
+        await supabase
+          .from('pharmacy_dispensations')
+          .delete()
+          .eq('id', dispensation.id)
+        throw movementError
       }
 
       return { id: dispensation.id }

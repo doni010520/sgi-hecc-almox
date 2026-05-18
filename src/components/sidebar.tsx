@@ -22,7 +22,12 @@ import {
   Package2,
   X,
   Tv,
-  Syringe
+  Syringe,
+  PackageMinus,
+  Undo2,
+  ArrowRightLeft,
+  Handshake,
+  CalendarX
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -85,6 +90,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     },
     {
+      title: 'Operações de Estoque',
+      items: [
+        { name: 'Saída Avulsa', icon: PackageMinus, href: '/estoque/saida-avulsa', show: isManager || isAdmin || isAtendente },
+        { name: 'Devolução Interna', icon: Undo2, href: '/estoque/devolucao', show: true },
+        { name: 'Transferência', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
+        { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: isManager || isAdmin || isAtendente },
+        { name: 'Vencimentos a Baixar', icon: CalendarX, href: '/estoque/vencimentos', show: isManager || isAdmin || isAtendente }
+      ]
+    },
+    {
       title: 'Relatórios',
       items: [
         { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin || isAtendente },
@@ -92,7 +107,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
-        { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin }
+        { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin },
+        { name: 'Farmácia (Multi-Estoque)', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: isManager || isAdmin || isAtendente }
       ]
     },
     {
