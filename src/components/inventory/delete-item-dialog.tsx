@@ -22,7 +22,7 @@ interface DeleteItemDialogProps {
   onSuccess: () => void
 }
 
-const DELETE_PASSWORD = 'coruja'
+const DELETE_PASSWORD = 'excluir2026'
 
 export function DeleteItemDialog({
   item,
