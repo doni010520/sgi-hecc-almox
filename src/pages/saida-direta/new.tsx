@@ -26,6 +26,7 @@ export function NewWarehouseDispatch() {
   const navigate = useNavigate()
 
   // Form state
+  const [destinationType, setDestinationType] = useState<'interno' | 'externo'>('interno')
   const [departmentId, setDepartmentId] = useState<string>('')
   const [departmentText, setDepartmentText] = useState<string>('')
   const [notes, setNotes] = useState('')
@@ -114,7 +115,10 @@ export function NewWarehouseDispatch() {
     )
   }
 
-  const hasDestination = !!departmentId || departmentText.trim().length > 0
+  const hasDestination =
+    destinationType === 'interno'
+      ? !!departmentId
+      : departmentText.trim().length > 0
   const allItemsValid =
     selectedItems.length > 0 &&
     selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.current_stock)
@@ -126,8 +130,8 @@ export function NewWarehouseDispatch() {
     setError('')
     try {
       await warehouseDispatchService.create({
-        destination_department_id: departmentId || undefined,
-        destination_department_text: !departmentId ? departmentText : undefined,
+        destination_department_id: destinationType === 'interno' ? departmentId || undefined : undefined,
+        destination_department_text: destinationType === 'externo' ? departmentText.trim() : undefined,
         notes: notes || undefined,
         items: selectedItems.map((i) => ({ item_id: i.item_id, quantity: i.quantity })),
       })
@@ -169,40 +173,76 @@ export function NewWarehouseDispatch() {
       {/* Destination */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Destino</h2>
+
+        {/* Toggle: setor interno OU unidade externa */}
+        <div className="flex gap-2 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
+          <button
+            type="button"
+            onClick={() => {
+              setDestinationType('interno')
+              setDepartmentText('')
+            }}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              destinationType === 'interno'
+                ? 'bg-white text-primary-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Setor interno
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDestinationType('externo')
+              setDepartmentId('')
+            }}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              destinationType === 'externo'
+                ? 'bg-white text-primary-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Unidade externa
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="department">Setor / Departamento *</Label>
-            <select
-              id="department"
-              value={departmentId}
-              onChange={(e) => {
-                setDepartmentId(e.target.value)
-                if (e.target.value) setDepartmentText('')
-              }}
-              className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
-            >
-              <option value="">— Selecione —</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Não tem na lista? Use o campo ao lado para digitar.
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="department_text">Ou digite o destino</Label>
-            <Input
-              id="department_text"
-              value={departmentText}
-              disabled={!!departmentId}
-              onChange={(e) => setDepartmentText(e.target.value)}
-              placeholder="Ex: Manutenção, Recepção"
-              className="mt-1"
-            />
-          </div>
+          {destinationType === 'interno' ? (
+            <div className="md:col-span-2">
+              <Label htmlFor="department">Setor / Departamento *</Label>
+              <select
+                id="department"
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
+              >
+                <option value="">— Selecione —</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Se o destino for uma unidade externa (outro hospital), troque a opção acima.
+              </p>
+            </div>
+          ) : (
+            <div className="md:col-span-2">
+              <Label htmlFor="department_text">Nome da unidade externa *</Label>
+              <Input
+                id="department_text"
+                value={departmentText}
+                onChange={(e) => setDepartmentText(e.target.value)}
+                placeholder="Ex: Hospital São Rafael, UPA Lauro de Freitas, SAMU"
+                className="mt-1"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Digite o nome do hospital, posto ou unidade que vai receber os itens.
+              </p>
+            </div>
+          )}
           <div className="md:col-span-2">
             <Label htmlFor="notes">Observações</Label>
             <textarea
