@@ -67,8 +67,8 @@ export function EditStockDialog({
     try {
       setError(null)
       
-      // Verificar se a senha é "coruja"
-      if (data.password !== 'coruja') {
+      // Verificar se a senha é "excluir2026"
+      if (data.password !== 'excluir2026') {
         setError('Senha incorreta. Acesso negado.')
         return
       }
