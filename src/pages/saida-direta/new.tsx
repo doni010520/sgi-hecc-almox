@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
-import { warehouseDispatchService } from '@/lib/services/warehouse-dispatch'
+import { warehouseDispatchService, DISPATCH_TYPE_LABELS, type DispatchType } from '@/lib/services/warehouse-dispatch'
 import type { Item } from '@/lib/services/items'
 
 interface SelectedItem {
@@ -29,6 +29,7 @@ export function NewWarehouseDispatch() {
   const [destinationType, setDestinationType] = useState<'interno' | 'externo'>('interno')
   const [departmentId, setDepartmentId] = useState<string>('')
   const [departmentText, setDepartmentText] = useState<string>('')
+  const [dispatchType, setDispatchType] = useState<DispatchType>('consumo')
   const [notes, setNotes] = useState('')
 
   // Departments
@@ -132,6 +133,7 @@ export function NewWarehouseDispatch() {
       await warehouseDispatchService.create({
         destination_department_id: destinationType === 'interno' ? departmentId || undefined : undefined,
         destination_department_text: destinationType === 'externo' ? departmentText.trim() : undefined,
+        dispatch_type: dispatchType,
         notes: notes || undefined,
         items: selectedItems.map((i) => ({ item_id: i.item_id, quantity: i.quantity })),
       })
@@ -181,6 +183,7 @@ export function NewWarehouseDispatch() {
             onClick={() => {
               setDestinationType('interno')
               setDepartmentText('')
+              setDispatchType('consumo')
             }}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               destinationType === 'interno'
@@ -195,6 +198,7 @@ export function NewWarehouseDispatch() {
             onClick={() => {
               setDestinationType('externo')
               setDepartmentId('')
+              if (dispatchType === 'consumo') setDispatchType('doacao')
             }}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
               destinationType === 'externo'
@@ -243,6 +247,24 @@ export function NewWarehouseDispatch() {
               </p>
             </div>
           )}
+          <div className="md:col-span-2">
+            <Label htmlFor="dispatch_type">Tipo de Saída *</Label>
+            <select
+              id="dispatch_type"
+              value={dispatchType}
+              onChange={(e) => setDispatchType(e.target.value as DispatchType)}
+              className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
+            >
+              {(Object.keys(DISPATCH_TYPE_LABELS) as DispatchType[]).map((key) => (
+                <option key={key} value={key}>
+                  {DISPATCH_TYPE_LABELS[key]}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Selecione "Empréstimo" se o material vai voltar; "Doação" se não retorna; "Permuta" se há troca.
+            </p>
+          </div>
           <div className="md:col-span-2">
             <Label htmlFor="notes">Observações</Label>
             <textarea
