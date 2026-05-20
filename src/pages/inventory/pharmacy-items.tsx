@@ -13,7 +13,7 @@ import type { ItemStockWithLocation } from '@/lib/types/stock'
 import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
-import { RegisterEntryDialog } from '@/components/inventory/register-entry-dialog'
+import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
 import { ImportDialog } from '@/components/inventory/import-dialog'
@@ -626,9 +626,9 @@ export function PharmacyItems() {
         />
       )}
 
-      {/* Register Entry Dialog */}
+      {/* Register Entry Dialog (form completo) */}
       {selectedItem && (
-        <RegisterEntryDialog
+        <AddStockDialog
           item={selectedItem}
           type="pharmacy"
           open={showEntryDialog}
