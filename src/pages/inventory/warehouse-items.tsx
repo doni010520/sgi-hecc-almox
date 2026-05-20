@@ -13,7 +13,7 @@ import { ImportDialog } from '@/components/inventory/import-dialog'
 import { AddItemDialog } from '@/components/inventory/add-item-dialog'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
-import { RegisterEntryDialog } from '@/components/inventory/register-entry-dialog'
+import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
 
@@ -563,9 +563,9 @@ export function WarehouseItems() {
         />
       )}
 
-      {/* Register Entry Dialog */}
+      {/* Register Entry Dialog (form completo) */}
       {selectedItem && (
-        <RegisterEntryDialog
+        <AddStockDialog
           item={selectedItem}
           type="warehouse"
           open={showEntryDialog}
