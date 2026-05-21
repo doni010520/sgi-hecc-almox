@@ -46,6 +46,7 @@ import { Transferencia } from '@/pages/estoque/transferencia'
 import { EmprestimosAbertos } from '@/pages/estoque/emprestimos'
 import { VencimentosABaixar } from '@/pages/estoque/vencimentos'
 import { FarmaciaMultiEstoqueReport } from '@/pages/reports/farmacia-multi-estoque'
+import { MovementsReport } from '@/pages/reports/movimentacoes'
 import { ChangePassword } from '@/pages/change-password'
 
 const queryClient = new QueryClient()
@@ -365,6 +366,13 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <FarmaciaMultiEstoqueReport />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/reports/movimentacoes" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <MovementsReport />
                   </MainLayout>
                 </ProtectedRoute>
               } />
