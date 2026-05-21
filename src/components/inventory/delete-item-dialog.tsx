@@ -80,7 +80,7 @@ export function DeleteItemDialog({
             Excluir Item
           </DialogTitle>
           <DialogDescription>
-            Esta ação é irreversível. O item será permanentemente removido do sistema.
+            O item será removido das listagens. Se o item já tiver histórico de solicitações ou movimentações, ele será desativado (não aparece mais nas listas) mas o histórico fica preservado para auditoria.
           </DialogDescription>
         </DialogHeader>
 

@@ -1161,12 +1161,34 @@ class ItemsService {
         throw new Error('ID do item é obrigatório')
       }
 
-      const { error } = await supabase
+      // Tenta delete físico. Se o item nunca foi usado (sem histórico),
+      // some do banco. Se já está em solicitações/movimentações, o banco
+      // bloqueia via FK — aí fazemos soft delete (is_active=false).
+      const { error: deleteError } = await supabase
         .from(this.getTableName(type))
         .delete()
         .eq('id', id)
 
-      if (error) throw error
+      if (!deleteError) return
+
+      // Código 23503 = foreign_key_violation (item tem histórico).
+      // Para qualquer erro de FK, faz soft delete.
+      const isFkError =
+        (deleteError as any)?.code === '23503' ||
+        /foreign key|violates|fkey/i.test(deleteError.message || '')
+
+      if (!isFkError) {
+        throw deleteError
+      }
+
+      const { error: updateError } = await supabase
+        .from(this.getTableName(type))
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (updateError) throw updateError
+      // Soft delete OK — o item some das listas (filtro is_active=true)
+      // mas o histórico de solicitações/movimentações fica preservado.
     } catch (error) {
       console.error('Error deleting item:', error)
       throw error
