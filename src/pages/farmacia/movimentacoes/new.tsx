@@ -9,9 +9,11 @@ import { useAuth } from '@/contexts/auth'
 import {
   pharmacyLoanService,
   LOAN_TYPE_LABELS,
+  LOAN_SCOPE_LABELS,
   type LoanType,
   type LoanDirection,
   type LoanItemInput,
+  type LoanScope,
 } from '@/lib/services/pharmacy-loan'
 
 const HECC_NAME = 'HOSPITAL ESTADUAL COSTA DOS COQUEIROS'
@@ -33,9 +35,11 @@ interface RowState extends LoanItemInput {
   _kind?: 'pharmacy' | 'warehouse'
 }
 
-export function NewPharmacyLoan() {
+export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  const baseRoute = scope === 'pharmacy' ? '/farmacia/movimentacoes' : '/almoxarifado/movimentacoes'
 
   // Cabeçalho
   const [origem, setOrigem] = useState(HECC_NAME)
@@ -58,12 +62,11 @@ export function NewPharmacyLoan() {
   // Itens
   const [items, setItems] = useState<RowState[]>([])
 
-  // Catálogo unificado (farmácia + almoxarifado) para autocomplete
+  // Catálogo do escopo escolhido (Farmácia OU Almoxarifado)
   const [catalog, setCatalog] = useState<PharmacyItemLite[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const [activeSearch, setActiveSearch] = useState<LoanDirection | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchScope, setSearchScope] = useState<'all' | 'pharmacy' | 'warehouse'>('all')
 
   // Submit
   const [submitting, setSubmitting] = useState(false)
@@ -71,28 +74,20 @@ export function NewPharmacyLoan() {
 
   useEffect(() => {
     loadCatalog()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope])
 
   async function loadCatalog() {
     try {
       setLoadingCatalog(true)
-      const [pharm, ware] = await Promise.all([
-        supabase
-          .from('pharmacy_items')
-          .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
-          .eq('is_active', true)
-          .order('name'),
-        supabase
-          .from('warehouse_items')
-          .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
-          .eq('is_active', true)
-          .order('name'),
-      ])
-      const combined: PharmacyItemLite[] = [
-        ...((pharm.data as any[]) || []).map((r) => ({ ...r, _kind: 'pharmacy' as const })),
-        ...((ware.data as any[]) || []).map((r) => ({ ...r, _kind: 'warehouse' as const })),
-      ]
-      setCatalog(combined)
+      const table = scope === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
+      const { data, error } = await supabase
+        .from(table)
+        .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
+        .eq('is_active', true)
+        .order('name')
+      if (error) throw error
+      setCatalog(((data as any[]) || []).map((r) => ({ ...r, _kind: scope })))
     } catch (e) {
       console.error('Error loading catalog:', e)
     } finally {
@@ -104,10 +99,9 @@ export function NewPharmacyLoan() {
     if (!searchTerm.trim()) return []
     const q = searchTerm.toLowerCase()
     return catalog
-      .filter((c) => searchScope === 'all' || c._kind === searchScope)
       .filter((c) => c.name.toLowerCase().includes(q) || (c.code || '').toLowerCase().includes(q))
       .slice(0, 20)
-  }, [catalog, searchTerm, searchScope])
+  }, [catalog, searchTerm])
 
   const newKey = () => Math.random().toString(36).slice(2)
 
@@ -190,6 +184,7 @@ export function NewPharmacyLoan() {
     setError('')
     try {
       const result = await pharmacyLoanService.create({
+        scope,
         origem,
         destino,
         contato_origem: contatoOrigem,
@@ -214,7 +209,7 @@ export function NewPharmacyLoan() {
           observation: r.observation || null,
         })),
       })
-      navigate(`/farmacia/movimentacoes/${result.id}`)
+      navigate(`${baseRoute}/${result.id}`)
     } catch (e: any) {
       setError(e?.message || 'Erro ao salvar')
     } finally {
@@ -225,7 +220,7 @@ export function NewPharmacyLoan() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/farmacia/movimentacoes')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(baseRoute)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Button>
@@ -234,9 +229,11 @@ export function NewPharmacyLoan() {
             <ArrowRightLeft className="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nova Movimentação entre Unidades</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Nova Movimentação — {LOAN_SCOPE_LABELS[scope]}
+            </h1>
             <p className="text-sm text-gray-500">
-              Empréstimo, devolução, permuta, troca de validade, consignação ou doação — Farmácia e Almoxarifado.
+              Empréstimo, devolução, permuta, troca de validade, consignação ou doação de itens do estoque de {LOAN_SCOPE_LABELS[scope]}.
             </p>
           </div>
         </div>
@@ -323,13 +320,12 @@ export function NewPharmacyLoan() {
         }}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        searchScope={searchScope}
-        setSearchScope={setSearchScope}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('enviando', item)}
         onAddManual={() => addManualRow('enviando')}
         total={totalEnviado}
         loadingCatalog={loadingCatalog}
+        scope={scope}
       />
 
       {/* RECEBENDO */}
@@ -353,13 +349,12 @@ export function NewPharmacyLoan() {
         }}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        searchScope={searchScope}
-        setSearchScope={setSearchScope}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('recebendo', item)}
         onAddManual={() => addManualRow('recebendo')}
         total={totalRecebido}
         loadingCatalog={loadingCatalog}
+        scope={scope}
       />
 
       {/* Assinaturas e observações */}
@@ -402,7 +397,7 @@ export function NewPharmacyLoan() {
 
       {/* Submit */}
       <div className="flex justify-end gap-3 pb-8">
-        <Button variant="outline" onClick={() => navigate('/farmacia/movimentacoes')}>
+        <Button variant="outline" onClick={() => navigate(baseRoute)}>
           Cancelar
         </Button>
         <Button
@@ -432,13 +427,12 @@ function DirectionBlock(props: {
   onSearchOpen: () => void
   searchTerm: string
   setSearchTerm: (s: string) => void
-  searchScope: 'all' | 'pharmacy' | 'warehouse'
-  setSearchScope: (s: 'all' | 'pharmacy' | 'warehouse') => void
   searchResults: PharmacyItemLite[]
   onPick: (item: PharmacyItemLite) => void
   onAddManual: () => void
   total: number
   loadingCatalog: boolean
+  scope: LoanScope
 }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -476,31 +470,13 @@ function DirectionBlock(props: {
         <>
           {/* Busca / adicionar */}
           <div className="space-y-2 mb-4">
-            {/* Toggle de escopo */}
-            <div className="flex gap-1 p-1 bg-gray-100 rounded-md w-fit text-xs">
-              {(['all', 'pharmacy', 'warehouse'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => props.setSearchScope(s)}
-                  className={`px-3 py-1 rounded transition-colors ${
-                    props.searchScope === s
-                      ? 'bg-white text-primary-700 shadow-sm font-medium'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {s === 'all' ? 'Todos' : s === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}
-                </button>
-              ))}
-            </div>
-
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder={
                   props.loadingCatalog
-                    ? 'Carregando catálogo...'
-                    : 'Buscar item por nome ou código SIMPAS...'
+                    ? `Carregando ${props.scope === 'pharmacy' ? 'medicamentos' : 'itens do almoxarifado'}...`
+                    : `Buscar item de ${props.scope === 'pharmacy' ? 'farmácia' : 'almoxarifado'} por nome ou código...`
                 }
                 disabled={props.loadingCatalog}
                 value={props.searchOpen ? props.searchTerm : ''}
@@ -521,18 +497,7 @@ function DirectionBlock(props: {
                     onClick={() => props.onPick(it)}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                   >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          it._kind === 'pharmacy'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}
-                      >
-                        {it._kind === 'pharmacy' ? 'FARM' : 'ALMOX'}
-                      </span>
-                      <span className="text-sm font-medium text-gray-900">{it.name}</span>
-                    </div>
+                    <div className="text-sm font-medium text-gray-900">{it.name}</div>
                     <div className="text-xs text-gray-500 font-mono mt-0.5">
                       {it.code} • {it.unit || 'Un'} • Estoque: {it.current_stock}
                       {it.last_purchase_price != null && ` • R$ ${it.last_purchase_price.toFixed(2)}`}
