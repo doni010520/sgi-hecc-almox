@@ -47,6 +47,9 @@ import { EmprestimosAbertos } from '@/pages/estoque/emprestimos'
 import { VencimentosABaixar } from '@/pages/estoque/vencimentos'
 import { FarmaciaMultiEstoqueReport } from '@/pages/reports/farmacia-multi-estoque'
 import { MovementsReport } from '@/pages/reports/movimentacoes'
+import { PharmacyLoansList } from '@/pages/farmacia/movimentacoes/index'
+import { NewPharmacyLoan } from '@/pages/farmacia/movimentacoes/new'
+import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
 import { ChangePassword } from '@/pages/change-password'
 
 const queryClient = new QueryClient()
@@ -374,6 +377,34 @@ export default function App() {
                   <MainLayout>
                     <MovementsReport />
                   </MainLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Farmácia: Movimentações entre unidades */}
+              <Route path="/farmacia/movimentacoes" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PharmacyLoansList />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/movimentacoes/new" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NewPharmacyLoan />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/movimentacoes/:id" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PharmacyLoanDetail />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/movimentacoes/:id/imprimir" element={
+                <ProtectedRoute>
+                  <PharmacyLoanDetail printMode />
                 </ProtectedRoute>
               } />
 
