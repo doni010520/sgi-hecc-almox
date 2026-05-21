@@ -16,13 +16,17 @@ import { useAuth } from '@/contexts/auth'
 import {
   pharmacyLoanService,
   LOAN_TYPE_LABELS,
+  LOAN_SCOPE_LABELS,
   type LoanSummary,
+  type LoanScope,
 } from '@/lib/services/pharmacy-loan'
 
-export function PharmacyLoansList() {
+export function PharmacyLoansList({ scope }: { scope: LoanScope }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const canCancel = user?.role === 'administrador' || user?.role === 'gestor'
+
+  const baseRoute = scope === 'pharmacy' ? '/farmacia/movimentacoes' : '/almoxarifado/movimentacoes'
 
   const [loans, setLoans] = useState<LoanSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,12 +38,13 @@ export function PharmacyLoansList() {
 
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope])
 
   async function load() {
     try {
       setLoading(true)
-      const data = await pharmacyLoanService.list()
+      const data = await pharmacyLoanService.list(scope)
       setLoans(data)
     } finally {
       setLoading(false)
@@ -84,14 +89,16 @@ export function PharmacyLoansList() {
             <ArrowRightLeft className="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Movimentações entre Unidades</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Movimentações entre Unidades — {LOAN_SCOPE_LABELS[scope]}
+            </h1>
             <p className="text-sm text-gray-500">
-              Empréstimo, devolução, permuta, troca de validade, consignação e doação — para itens de Farmácia e Almoxarifado.
+              Empréstimo, devolução, permuta, troca de validade, consignação e doação de itens do estoque de {LOAN_SCOPE_LABELS[scope]}.
             </p>
           </div>
         </div>
         <Button
-          onClick={() => navigate('/farmacia/movimentacoes/new')}
+          onClick={() => navigate(`${baseRoute}/new`)}
           className="bg-primary-500 hover:bg-primary-600 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -108,7 +115,7 @@ export function PharmacyLoansList() {
           <div className="text-center py-12">
             <ArrowRightLeft className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500 mb-4">Nenhuma movimentação registrada ainda.</p>
-            <Button onClick={() => navigate('/farmacia/movimentacoes/new')}>
+            <Button onClick={() => navigate(`${baseRoute}/new`)}>
               <Plus className="w-4 h-4 mr-2" />
               Registrar primeira movimentação
             </Button>
@@ -191,7 +198,7 @@ export function PharmacyLoansList() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/farmacia/movimentacoes/${l.id}`)}
+                          onClick={() => navigate(`${baseRoute}/${l.id}`)}
                           className="h-8 px-2"
                           title="Ver detalhes"
                         >
@@ -200,7 +207,7 @@ export function PharmacyLoansList() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/farmacia/movimentacoes/${l.id}/imprimir`)}
+                          onClick={() => navigate(`${baseRoute}/${l.id}/imprimir`)}
                           className="h-8 px-2"
                           title="Imprimir formulário"
                         >

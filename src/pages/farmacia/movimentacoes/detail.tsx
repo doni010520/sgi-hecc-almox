@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   pharmacyLoanService,
   LOAN_TYPE_LABELS,
+  LOAN_SCOPE_LABELS,
   type LoanDetail,
   type LoanType,
 } from '@/lib/services/pharmacy-loan'
@@ -40,6 +41,9 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
   const [loan, setLoan] = useState<LoanDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const baseRoute =
+    loan?.scope === 'warehouse' ? '/almoxarifado/movimentacoes' : '/farmacia/movimentacoes'
 
   useEffect(() => {
     if (id) load(id)
@@ -77,7 +81,7 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
       <div className="text-center py-12">
         <AlertTriangle className="w-12 h-12 mx-auto text-red-500 mb-3" />
         <p className="text-gray-600 mb-4">{error || 'Formulário não encontrado'}</p>
-        <Button onClick={() => navigate('/farmacia/movimentacoes')}>Voltar</Button>
+        <Button onClick={() => navigate(baseRoute)}>Voltar</Button>
       </div>
     )
   }
@@ -99,7 +103,7 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
       {/* Toolbar (some no print) */}
       {!printMode && (
         <div className="flex items-center justify-between print:hidden">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/farmacia/movimentacoes')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(baseRoute)}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
           </Button>
           <div className="flex items-center gap-2">
@@ -128,7 +132,9 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
           <div className="text-sm font-bold text-gray-800">FESF-SUS</div>
           <div className="text-center flex-1">
             <div className="text-lg font-bold text-gray-900">HOSPITAL ESTADUAL COSTA DOS COQUEIROS</div>
-            <div className="text-sm font-semibold text-gray-700">FORMULÁRIO DE SAÍDA DE MATERIAL</div>
+            <div className="text-sm font-semibold text-gray-700">
+              FORMULÁRIO DE SAÍDA DE MATERIAL — {LOAN_SCOPE_LABELS[loan.scope]}
+            </div>
           </div>
           <div className="text-sm font-bold text-gray-800">GOVERNO BAHIA</div>
         </div>

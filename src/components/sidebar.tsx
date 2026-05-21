@@ -67,10 +67,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     },
     {
-      title: 'Movimentação entre Unidades',
+      title: 'Movimentação entre Unidades — Farmácia',
       items: [
         { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: canManageRequests },
         { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: canManageRequests }
+      ]
+    },
+    {
+      title: 'Movimentação entre Unidades — Almoxarifado',
+      items: [
+        { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: canManageRequests }
       ]
     },
     {

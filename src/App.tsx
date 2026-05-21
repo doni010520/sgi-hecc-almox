@@ -384,14 +384,14 @@ export default function App() {
               <Route path="/farmacia/movimentacoes" element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <PharmacyLoansList />
+                    <PharmacyLoansList scope="pharmacy" />
                   </MainLayout>
                 </ProtectedRoute>
               } />
               <Route path="/farmacia/movimentacoes/new" element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <NewPharmacyLoan />
+                    <NewPharmacyLoan scope="pharmacy" />
                   </MainLayout>
                 </ProtectedRoute>
               } />
@@ -403,6 +403,34 @@ export default function App() {
                 </ProtectedRoute>
               } />
               <Route path="/farmacia/movimentacoes/:id/imprimir" element={
+                <ProtectedRoute>
+                  <PharmacyLoanDetail printMode />
+                </ProtectedRoute>
+              } />
+
+              {/* Almoxarifado: Movimentações entre unidades */}
+              <Route path="/almoxarifado/movimentacoes" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PharmacyLoansList scope="warehouse" />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/almoxarifado/movimentacoes/new" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NewPharmacyLoan scope="warehouse" />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/almoxarifado/movimentacoes/:id" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PharmacyLoanDetail />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/almoxarifado/movimentacoes/:id/imprimir" element={
                 <ProtectedRoute>
                   <PharmacyLoanDetail printMode />
                 </ProtectedRoute>

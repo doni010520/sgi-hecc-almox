@@ -19,6 +19,13 @@ export const LOAN_TYPE_LABELS: Record<LoanType, string> = {
 
 export type LoanDirection = 'enviando' | 'recebendo'
 
+export type LoanScope = 'pharmacy' | 'warehouse'
+
+export const LOAN_SCOPE_LABELS: Record<LoanScope, string> = {
+  pharmacy: 'Farmácia',
+  warehouse: 'Almoxarifado',
+}
+
 export type LoanItemKind = 'pharmacy' | 'warehouse'
 
 export interface LoanItemInput {
@@ -36,6 +43,7 @@ export interface LoanItemInput {
 }
 
 export interface CreateLoanData {
+  scope: LoanScope
   origem: string
   destino: string
   contato_origem?: string
@@ -69,6 +77,7 @@ export interface LoanItem {
 export interface LoanSummary {
   id: string
   form_number: number
+  scope: LoanScope
   origem: string
   destino: string
   contato_origem: string | null
@@ -103,11 +112,11 @@ class PharmacyLoanService {
     return PharmacyLoanService.instance
   }
 
-  async list(): Promise<LoanSummary[]> {
-    const { data, error } = await supabase
+  async list(scope?: LoanScope): Promise<LoanSummary[]> {
+    let q = supabase
       .from('pharmacy_loans')
       .select(
-        `id, form_number, origem, destino, contato_origem, contato_destino, form_date,
+        `id, form_number, scope, origem, destino, contato_origem, contato_destino, form_date,
          enviando_type, recebendo_type, signature_solicitante_name, signature_cedente_name,
          related_loan_id, status, notes, created_by, created_at,
          cancelled_at, cancellation_reason,
@@ -116,6 +125,8 @@ class PharmacyLoanService {
       )
       .order('created_at', { ascending: false })
       .limit(300)
+    if (scope) q = q.eq('scope', scope)
+    const { data, error } = await q
 
     if (error) {
       console.error('Error listing loans:', error)
@@ -136,6 +147,7 @@ class PharmacyLoanService {
       return {
         id: row.id,
         form_number: row.form_number,
+        scope: (row.scope || 'pharmacy') as LoanScope,
         origem: row.origem,
         destino: row.destino,
         contato_origem: row.contato_origem,
@@ -165,7 +177,7 @@ class PharmacyLoanService {
     const { data, error } = await supabase
       .from('pharmacy_loans')
       .select(
-        `id, form_number, origem, destino, contato_origem, contato_destino, form_date,
+        `id, form_number, scope, origem, destino, contato_origem, contato_destino, form_date,
          enviando_type, recebendo_type, signature_solicitante_name, signature_cedente_name,
          related_loan_id, status, notes, created_by, created_at,
          cancelled_at, cancellation_reason,
@@ -188,6 +200,7 @@ class PharmacyLoanService {
     return {
       id: row.id,
       form_number: row.form_number,
+      scope: (row.scope || 'pharmacy') as LoanScope,
       origem: row.origem,
       destino: row.destino,
       contato_origem: row.contato_origem,
@@ -240,11 +253,19 @@ class PharmacyLoanService {
       if (!it.quantity || it.quantity <= 0) {
         throw new Error('Cada item precisa de quantidade maior que zero')
       }
+      // valida que o vínculo bate com o escopo
+      if (data.scope === 'pharmacy' && it.warehouse_item_id) {
+        throw new Error('Formulário de Farmácia não pode ter item de Almoxarifado')
+      }
+      if (data.scope === 'warehouse' && it.pharmacy_item_id) {
+        throw new Error('Formulário de Almoxarifado não pode ter item de Farmácia')
+      }
     }
 
     const { data: loan, error: loanError } = await supabase
       .from('pharmacy_loans')
       .insert({
+        scope: data.scope,
         origem: data.origem.trim(),
         destino: data.destino.trim(),
         contato_origem: data.contato_origem?.trim() || null,
