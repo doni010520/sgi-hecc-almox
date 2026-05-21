@@ -67,6 +67,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     },
     {
+      title: 'Farmácia — Movimentação entre Unidades',
+      items: [
+        { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: canManageRequests }
+      ]
+    },
+    {
       title: 'Saída Direta — Almoxarifado',
       items: [
         { name: 'Saídas Registradas', icon: Package2, href: '/saida-direta', show: canManageRequests },
