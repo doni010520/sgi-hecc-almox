@@ -149,21 +149,22 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
           throw new Error('Selecione o tipo de aquisição da nova entrada')
         }
 
+        // Campos NOT NULL do banco: usa string vazia em vez de null
         const entry = {
           item_id: item.id,
           item_type: type,
           quantity: data.entry_quantity!,
           acquisition_type: data.acquisition_type,
-          invoice_number: data.invoice_number || 'EDIÇÃO',
+          invoice_number: data.invoice_number?.trim() || '—',
           invoice_date: data.invoice_date || new Date().toISOString().slice(0, 10),
-          invoice_total_value: data.invoice_total_value || 0,
-          unit_price: data.unit_price || data.last_purchase_price || 0,
-          afm_number: data.afm_number || null,
-          supplier_cnpj: data.supplier_cnpj || null,
+          invoice_total_value: data.invoice_total_value ?? 0,
+          unit_price: data.unit_price ?? data.last_purchase_price ?? 0,
+          afm_number: data.afm_number?.trim() || '—',
+          supplier_cnpj: data.supplier_cnpj?.trim() || '00.000.000/0000-00',
           supplier_name:
-            data.supplier_name ||
+            data.supplier_name?.trim() ||
             (data.acquisition_type === 'Doação' ? 'Doação' : 'Entrada via edição do item'),
-          batch_number: data.batch_number || null,
+          batch_number: data.batch_number?.trim() || null,
           expiry_date: data.expiry_date || null,
           notes: 'Entrada registrada na edição do item',
           created_by: authData.user.id,

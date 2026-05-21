@@ -1054,7 +1054,8 @@ class ItemsService {
         }
 
         // Cria um stock_entries para o estoque inicial (para auditoria
-        // e para aparecer corretamente nos relatórios de movimentação)
+        // e para aparecer corretamente nos relatórios de movimentação).
+        // Campos NOT NULL do banco recebem placeholders ('—') em vez de null.
         try {
           const itemType = table === 'pharmacy_items' ? 'pharmacy' : 'warehouse'
           const entryData: any = {
@@ -1062,13 +1063,13 @@ class ItemsService {
             item_type: itemType,
             quantity: data.current_stock,
             acquisition_type: data.acquisition_type || 'Compra',
-            invoice_number: data.invoice_number || 'CADASTRO INICIAL',
+            invoice_number: data.invoice_number?.trim() || 'CADASTRO INICIAL',
             invoice_date: data.invoice_date || new Date().toISOString().slice(0, 10),
-            invoice_total_value: data.invoice_total_value || 0,
-            unit_price: data.unit_price || data.last_purchase_price || 0,
-            afm_number: data.afm_number || null,
-            supplier_cnpj: data.supplier_cnpj || null,
-            supplier_name: data.supplier_name || (data.acquisition_type === 'Doação' ? 'Doação' : 'Cadastro inicial'),
+            invoice_total_value: data.invoice_total_value ?? 0,
+            unit_price: data.unit_price ?? data.last_purchase_price ?? 0,
+            afm_number: data.afm_number?.trim() || '—',
+            supplier_cnpj: data.supplier_cnpj?.trim() || '00.000.000/0000-00',
+            supplier_name: data.supplier_name?.trim() || (data.acquisition_type === 'Doação' ? 'Doação' : 'Cadastro inicial'),
             batch_number: data.batch_number || null,
             expiry_date: data.expiry_date || null,
             notes: 'Estoque inicial registrado no cadastro do item',
