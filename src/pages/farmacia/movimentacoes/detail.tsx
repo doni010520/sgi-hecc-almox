@@ -291,7 +291,15 @@ function DirectionSection({
             const totalRow = Number(it.quantity || 0) * Number(it.unit_price || 0)
             return (
               <tr key={it.id} className="border-b border-gray-800">
-                <td className="p-1 border-r border-gray-800">{it.item_description}</td>
+                <td className="p-1 border-r border-gray-800">
+                  {(it as any).warehouse_item_id && (
+                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">ALMOX</span>
+                  )}
+                  {it.pharmacy_item_id && (
+                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">FARM</span>
+                  )}
+                  {it.item_description}
+                </td>
                 <td className="p-1 border-r border-gray-800 text-center">{it.unit || '—'}</td>
                 <td className="p-1 border-r border-gray-800 text-right">{it.quantity}</td>
                 <td className="p-1 border-r border-gray-800 text-right">

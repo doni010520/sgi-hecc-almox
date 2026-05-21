@@ -24,11 +24,13 @@ interface PharmacyItemLite {
   current_stock: number
   last_purchase_price: number | null
   reference_price: number | null
+  _kind: 'pharmacy' | 'warehouse'
 }
 
 interface RowState extends LoanItemInput {
   _key: string
   current_stock?: number
+  _kind?: 'pharmacy' | 'warehouse'
 }
 
 export function NewPharmacyLoan() {
@@ -56,11 +58,12 @@ export function NewPharmacyLoan() {
   // Itens
   const [items, setItems] = useState<RowState[]>([])
 
-  // Catálogo de medicamentos para autocomplete
+  // Catálogo unificado (farmácia + almoxarifado) para autocomplete
   const [catalog, setCatalog] = useState<PharmacyItemLite[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
   const [activeSearch, setActiveSearch] = useState<LoanDirection | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchScope, setSearchScope] = useState<'all' | 'pharmacy' | 'warehouse'>('all')
 
   // Submit
   const [submitting, setSubmitting] = useState(false)
@@ -73,13 +76,23 @@ export function NewPharmacyLoan() {
   async function loadCatalog() {
     try {
       setLoadingCatalog(true)
-      const { data, error } = await supabase
-        .from('pharmacy_items')
-        .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
-        .eq('is_active', true)
-        .order('name')
-      if (error) throw error
-      setCatalog((data as any) || [])
+      const [pharm, ware] = await Promise.all([
+        supabase
+          .from('pharmacy_items')
+          .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
+          .eq('is_active', true)
+          .order('name'),
+        supabase
+          .from('warehouse_items')
+          .select('id, code, name, unit, current_stock, last_purchase_price, reference_price')
+          .eq('is_active', true)
+          .order('name'),
+      ])
+      const combined: PharmacyItemLite[] = [
+        ...((pharm.data as any[]) || []).map((r) => ({ ...r, _kind: 'pharmacy' as const })),
+        ...((ware.data as any[]) || []).map((r) => ({ ...r, _kind: 'warehouse' as const })),
+      ]
+      setCatalog(combined)
     } catch (e) {
       console.error('Error loading catalog:', e)
     } finally {
@@ -91,9 +104,10 @@ export function NewPharmacyLoan() {
     if (!searchTerm.trim()) return []
     const q = searchTerm.toLowerCase()
     return catalog
+      .filter((c) => searchScope === 'all' || c._kind === searchScope)
       .filter((c) => c.name.toLowerCase().includes(q) || (c.code || '').toLowerCase().includes(q))
-      .slice(0, 15)
-  }, [catalog, searchTerm])
+      .slice(0, 20)
+  }, [catalog, searchTerm, searchScope])
 
   const newKey = () => Math.random().toString(36).slice(2)
 
@@ -103,7 +117,9 @@ export function NewPharmacyLoan() {
       {
         _key: newKey(),
         direction,
-        pharmacy_item_id: item.id,
+        pharmacy_item_id: item._kind === 'pharmacy' ? item.id : null,
+        warehouse_item_id: item._kind === 'warehouse' ? item.id : null,
+        _kind: item._kind,
         item_description: item.name,
         unit: item.unit || 'Un',
         quantity: 1,
@@ -126,6 +142,7 @@ export function NewPharmacyLoan() {
         _key: newKey(),
         direction,
         pharmacy_item_id: null,
+        warehouse_item_id: null,
         item_description: '',
         unit: 'Un',
         quantity: 1,
@@ -186,6 +203,7 @@ export function NewPharmacyLoan() {
         items: items.map((r) => ({
           direction: r.direction,
           pharmacy_item_id: r.pharmacy_item_id,
+          warehouse_item_id: r.warehouse_item_id,
           item_description: r.item_description,
           unit: r.unit || undefined,
           quantity: Number(r.quantity),
@@ -218,7 +236,7 @@ export function NewPharmacyLoan() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Nova Movimentação entre Unidades</h1>
             <p className="text-sm text-gray-500">
-              Empréstimo, devolução, permuta, troca de validade, consignação ou doação.
+              Empréstimo, devolução, permuta, troca de validade, consignação ou doação — Farmácia e Almoxarifado.
             </p>
           </div>
         </div>
@@ -305,6 +323,8 @@ export function NewPharmacyLoan() {
         }}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        searchScope={searchScope}
+        setSearchScope={setSearchScope}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('enviando', item)}
         onAddManual={() => addManualRow('enviando')}
@@ -333,6 +353,8 @@ export function NewPharmacyLoan() {
         }}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        searchScope={searchScope}
+        setSearchScope={setSearchScope}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('recebendo', item)}
         onAddManual={() => addManualRow('recebendo')}
@@ -410,6 +432,8 @@ function DirectionBlock(props: {
   onSearchOpen: () => void
   searchTerm: string
   setSearchTerm: (s: string) => void
+  searchScope: 'all' | 'pharmacy' | 'warehouse'
+  setSearchScope: (s: 'all' | 'pharmacy' | 'warehouse') => void
   searchResults: PharmacyItemLite[]
   onPick: (item: PharmacyItemLite) => void
   onAddManual: () => void
@@ -452,13 +476,31 @@ function DirectionBlock(props: {
         <>
           {/* Busca / adicionar */}
           <div className="space-y-2 mb-4">
+            {/* Toggle de escopo */}
+            <div className="flex gap-1 p-1 bg-gray-100 rounded-md w-fit text-xs">
+              {(['all', 'pharmacy', 'warehouse'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => props.setSearchScope(s)}
+                  className={`px-3 py-1 rounded transition-colors ${
+                    props.searchScope === s
+                      ? 'bg-white text-primary-700 shadow-sm font-medium'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  {s === 'all' ? 'Todos' : s === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}
+                </button>
+              ))}
+            </div>
+
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <Input
                 placeholder={
                   props.loadingCatalog
-                    ? 'Carregando medicamentos...'
-                    : 'Buscar medicamento por nome ou código SIMPAS...'
+                    ? 'Carregando catálogo...'
+                    : 'Buscar item por nome ou código SIMPAS...'
                 }
                 disabled={props.loadingCatalog}
                 value={props.searchOpen ? props.searchTerm : ''}
@@ -474,13 +516,24 @@ function DirectionBlock(props: {
               <div className="rounded-lg border border-gray-200 overflow-hidden max-h-64 overflow-y-auto">
                 {props.searchResults.map((it) => (
                   <button
-                    key={it.id}
+                    key={`${it._kind}-${it.id}`}
                     type="button"
                     onClick={() => props.onPick(it)}
                     className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                   >
-                    <div className="text-sm font-medium text-gray-900">{it.name}</div>
-                    <div className="text-xs text-gray-500 font-mono">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                          it._kind === 'pharmacy'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200'
+                        }`}
+                      >
+                        {it._kind === 'pharmacy' ? 'FARM' : 'ALMOX'}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">{it.name}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono mt-0.5">
                       {it.code} • {it.unit || 'Un'} • Estoque: {it.current_stock}
                       {it.last_purchase_price != null && ` • R$ ${it.last_purchase_price.toFixed(2)}`}
                     </div>

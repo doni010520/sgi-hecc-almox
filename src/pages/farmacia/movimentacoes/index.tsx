@@ -86,7 +86,7 @@ export function PharmacyLoansList() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Movimentações entre Unidades</h1>
             <p className="text-sm text-gray-500">
-              Empréstimo, devolução, permuta, troca de validade, consignação e doação de medicamentos.
+              Empréstimo, devolução, permuta, troca de validade, consignação e doação — para itens de Farmácia e Almoxarifado.
             </p>
           </div>
         </div>
