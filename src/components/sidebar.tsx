@@ -67,7 +67,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       ]
     },
     {
-      title: 'Farmácia — Movimentação entre Unidades',
+      title: 'Movimentação entre Unidades',
       items: [
         { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: canManageRequests },
         { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: canManageRequests }

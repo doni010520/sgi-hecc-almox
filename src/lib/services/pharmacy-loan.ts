@@ -19,9 +19,12 @@ export const LOAN_TYPE_LABELS: Record<LoanType, string> = {
 
 export type LoanDirection = 'enviando' | 'recebendo'
 
+export type LoanItemKind = 'pharmacy' | 'warehouse'
+
 export interface LoanItemInput {
   direction: LoanDirection
   pharmacy_item_id?: string | null
+  warehouse_item_id?: string | null
   item_description: string
   unit?: string
   quantity: number
@@ -52,6 +55,7 @@ export interface LoanItem {
   loan_id: string
   direction: LoanDirection
   pharmacy_item_id: string | null
+  warehouse_item_id: string | null
   item_description: string
   unit: string | null
   quantity: number
@@ -166,7 +170,7 @@ class PharmacyLoanService {
          related_loan_id, status, notes, created_by, created_at,
          cancelled_at, cancellation_reason,
          users:created_by ( full_name ),
-         pharmacy_loan_items ( id, loan_id, direction, pharmacy_item_id, item_description,
+         pharmacy_loan_items ( id, loan_id, direction, pharmacy_item_id, warehouse_item_id, item_description,
                                unit, quantity, unit_price, validity_date, batch_number,
                                codigo_simpas, observation )`
       )
@@ -266,6 +270,7 @@ class PharmacyLoanService {
       loan_id: loan.id,
       direction: it.direction,
       pharmacy_item_id: it.pharmacy_item_id || null,
+      warehouse_item_id: it.warehouse_item_id || null,
       item_description: it.item_description.trim(),
       unit: it.unit?.trim() || null,
       quantity: it.quantity,
