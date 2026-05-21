@@ -239,6 +239,9 @@ class ItemsService {
       let query = supabase
         .from(table)
         .select('*')
+        // Exclui itens soft-deletados (is_active=false) das listagens.
+        // Trata também itens antigos com is_active=null como ativos.
+        .or('is_active.is.null,is_active.eq.true')
 
       // Apply filters if provided
       if (filters) {
