@@ -99,10 +99,13 @@ interface CreateItemData {
   expiry_date?: string
   batch_number?: string
   invoice_number?: string
+  invoice_date?: string
   supplier_cnpj?: string
   supplier_name?: string
   afm_number?: string
   invoice_total_value?: number
+  unit_price?: number
+  acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta'
 }
 
 interface PaginationOptions {
@@ -1048,6 +1051,36 @@ class ItemsService {
         if (trackingError) {
           console.error('Error creating expiry tracking entry:', trackingError)
           // Don't throw error here, as the item was created successfully
+        }
+
+        // Cria um stock_entries para o estoque inicial (para auditoria
+        // e para aparecer corretamente nos relatórios de movimentação)
+        try {
+          const itemType = table === 'pharmacy_items' ? 'pharmacy' : 'warehouse'
+          const entryData: any = {
+            item_id: item.id,
+            item_type: itemType,
+            quantity: data.current_stock,
+            acquisition_type: data.acquisition_type || 'Compra',
+            invoice_number: data.invoice_number || 'CADASTRO INICIAL',
+            invoice_date: data.invoice_date || new Date().toISOString().slice(0, 10),
+            invoice_total_value: data.invoice_total_value || 0,
+            unit_price: data.unit_price || data.last_purchase_price || 0,
+            afm_number: data.afm_number || null,
+            supplier_cnpj: data.supplier_cnpj || null,
+            supplier_name: data.supplier_name || (data.acquisition_type === 'Doação' ? 'Doação' : 'Cadastro inicial'),
+            batch_number: data.batch_number || null,
+            expiry_date: data.expiry_date || null,
+            notes: 'Estoque inicial registrado no cadastro do item',
+            created_by: user.id,
+          }
+          const { error: entryError } = await supabase.from('stock_entries').insert(entryData)
+          if (entryError) {
+            console.error('Error creating initial stock_entries record:', entryError)
+            // não falha o cadastro — o item já está criado
+          }
+        } catch (e) {
+          console.error('Error creating initial stock_entries record:', e)
         }
       }
 
