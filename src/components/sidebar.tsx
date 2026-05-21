@@ -108,7 +108,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
         { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin },
-        { name: 'Farmácia (Multi-Estoque)', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: isManager || isAdmin || isAtendente }
+        { name: 'Farmácia (Multi-Estoque)', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: isManager || isAdmin || isAtendente },
+        { name: 'Movimentações e Consumo', icon: BarChart3, href: '/reports/movimentacoes', show: isManager || isAdmin || isAtendente }
       ]
     },
     {
