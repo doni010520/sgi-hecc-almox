@@ -29,9 +29,11 @@ const itemSchema = z.object({
   reference_price: z.number().min(0).optional(),
   // Estoque inicial + NF (opcionais — só preenche se já tem estoque)
   initial_stock: z.number().min(0).optional(),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
   invoice_number: z.string().optional(),
   invoice_date: z.string().optional(),
   invoice_total_value: z.number().min(0).optional(),
+  unit_price: z.number().min(0).optional(),
   afm_number: z.string().optional(),
   supplier_cnpj: z.string().optional(),
   supplier_name: z.string().optional(),
@@ -100,7 +102,10 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         last_purchase_price: data.last_purchase_price,
         reference_price: data.reference_price,
         // Dados de origem (NF) — preenchidos só se houver estoque inicial
+        acquisition_type: hasInitial ? data.acquisition_type : undefined,
         invoice_number: hasInitial ? data.invoice_number : undefined,
+        invoice_date: hasInitial ? data.invoice_date : undefined,
+        unit_price: hasInitial ? data.unit_price : undefined,
         afm_number: hasInitial ? data.afm_number : undefined,
         supplier_cnpj: hasInitial ? data.supplier_cnpj : undefined,
         supplier_name: hasInitial ? data.supplier_name : undefined,
@@ -313,6 +318,26 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 Preencha se o item está sendo cadastrado <strong>com estoque inicial</strong>. Deixe em branco se for só cadastro do item (sem estoque).
               </p>
 
+              {/* Tipo de aquisição — sempre visível */}
+              <div>
+                <Label htmlFor="acquisition_type">Como o material chegou? *</Label>
+                <select
+                  id="acquisition_type"
+                  {...register('acquisition_type')}
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
+                  defaultValue=""
+                >
+                  <option value="">— Selecione o tipo —</option>
+                  <option value="Compra">Compra</option>
+                  <option value="Doação">Doação</option>
+                  <option value="Empréstimo">Empréstimo</option>
+                  <option value="Permuta">Permuta</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Define a origem do estoque inicial (aparece nos relatórios).
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="initial_stock">Quantidade Inicial</Label>
@@ -328,6 +353,24 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 </div>
 
                 <div>
+                  <Label htmlFor="unit_price">Valor Unitário</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                    <Input
+                      id="unit_price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('unit_price', { valueAsNumber: true })}
+                      className="pl-9"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="invoice_total_value">Valor Total da NF</Label>
                   <div className="relative mt-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
@@ -342,6 +385,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                     />
                   </div>
                 </div>
+                <div></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
