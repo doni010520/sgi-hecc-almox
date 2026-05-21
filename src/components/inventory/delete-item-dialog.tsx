@@ -22,37 +22,38 @@ interface DeleteItemDialogProps {
   onSuccess: () => void
 }
 
-const DELETE_PASSWORD = 'excluir2026'
+// Palavra que o usuário precisa digitar exatamente para confirmar.
+// O nível de acesso (admin) já é validado antes do botão aparecer; isto
+// é só uma trava contra clique acidental.
+const CONFIRMATION_WORD = 'EXCLUIR'
 
 export function DeleteItemDialog({
   item,
   type,
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
 }: DeleteItemDialogProps) {
-  const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isConfirmed = confirmation.trim().toUpperCase() === CONFIRMATION_WORD
+
   const handleDelete = async () => {
     setError(null)
-
-    if (password !== DELETE_PASSWORD) {
-      setError('Senha incorreta')
-      return
-    }
+    if (!isConfirmed) return
 
     try {
       setLoading(true)
       await itemsService.delete(item.id, type)
-      toast.success('Item excluido com sucesso')
-      setPassword('')
+      toast.success('Item excluído com sucesso')
+      setConfirmation('')
       onOpenChange(false)
       onSuccess()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting item:', err)
-      setError('Erro ao excluir item. Tente novamente.')
+      setError(err?.message || 'Erro ao excluir item. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -60,11 +61,15 @@ export function DeleteItemDialog({
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
-      setPassword('')
+      setConfirmation('')
       setError(null)
     }
     onOpenChange(isOpen)
   }
+
+  // Mostra só os primeiros 120 caracteres do nome (alguns têm descrição enorme)
+  const shortName =
+    item.name.length > 120 ? item.name.slice(0, 120) + '…' : item.name
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -75,38 +80,35 @@ export function DeleteItemDialog({
             Excluir Item
           </DialogTitle>
           <DialogDescription>
-            Esta acao e irreversivel. O item sera permanentemente removido do sistema.
+            Esta ação é irreversível. O item será permanentemente removido do sistema.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800 font-medium mb-1">
-              Item a ser excluido:
-            </p>
+            <p className="text-sm text-red-800 font-medium mb-1">Item a ser excluído:</p>
             <p className="text-sm text-red-700">
-              <span className="font-mono">{item.code}</span> - {item.name}
+              <span className="font-mono">{item.code}</span> — {shortName}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="delete-password">
-              Digite a senha para confirmar a exclusao
+            <Label htmlFor="delete-confirmation">
+              Para confirmar, digite <span className="font-mono font-bold text-red-700">EXCLUIR</span> abaixo
             </Label>
             <Input
-              id="delete-password"
-              type="password"
-              placeholder="Digite a senha..."
-              value={password}
+              id="delete-confirmation"
+              type="text"
+              autoComplete="off"
+              placeholder="Digite EXCLUIR"
+              value={confirmation}
               onChange={(e) => {
-                setPassword(e.target.value)
+                setConfirmation(e.target.value)
                 setError(null)
               }}
               className={error ? 'border-red-500' : ''}
             />
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
           </div>
         </div>
 
@@ -123,7 +125,7 @@ export function DeleteItemDialog({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={loading || !password}
+            disabled={loading || !isConfirmed}
             className="bg-red-600 hover:bg-red-700"
           >
             {loading ? (
