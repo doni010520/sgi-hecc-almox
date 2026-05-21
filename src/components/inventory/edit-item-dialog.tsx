@@ -1,0 +1,443 @@
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2, FileText, Pencil } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { itemsService } from '@/lib/services/items'
+import { supabase } from '@/lib/supabase'
+import type { Item, ItemCategory, UnitType } from '@/lib/services/items'
+
+const schema = z.object({
+  // Dados do item
+  code: z.string().min(1, 'Código é obrigatório'),
+  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
+  description: z.string().optional(),
+  category: z.string(),
+  unit: z.string(),
+  min_stock: z.number().min(0),
+  batch_number: z.string().optional(),
+  expiry_date: z.string().optional(),
+  last_purchase_price: z.number().min(0).optional(),
+  reference_price: z.number().min(0).optional(),
+  // Nova entrada (opcional)
+  entry_quantity: z.number().min(0).optional(),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
+  invoice_number: z.string().optional(),
+  invoice_date: z.string().optional(),
+  invoice_total_value: z.number().min(0).optional(),
+  unit_price: z.number().min(0).optional(),
+  afm_number: z.string().optional(),
+  supplier_cnpj: z.string().optional(),
+  supplier_name: z.string().optional(),
+})
+
+type FormData = z.infer<typeof schema>
+
+interface EditItemDialogProps {
+  item: Item
+  type: 'pharmacy' | 'warehouse'
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+}
+
+const unitOptions = [
+  'Un','Pc','Cx','Fr','Amp','Tb','Rl','Lt','Kg','Gl','ml','g','Pr','Cj','Sc','Rm','Ct','FL',
+]
+
+export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: EditItemDialogProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      code: item.code,
+      name: item.name,
+      description: item.description || '',
+      category: item.category,
+      unit: item.unit,
+      min_stock: item.min_stock ?? 0,
+      batch_number: (item as any).batch_number || '',
+      expiry_date: item.expiry_date || '',
+      last_purchase_price: (item as any).last_purchase_price ?? undefined,
+      reference_price: (item as any).reference_price ?? undefined,
+      entry_quantity: 0,
+    },
+  })
+
+  // Recarrega valores quando trocar de item
+  useEffect(() => {
+    reset({
+      code: item.code,
+      name: item.name,
+      description: item.description || '',
+      category: item.category,
+      unit: item.unit,
+      min_stock: item.min_stock ?? 0,
+      batch_number: (item as any).batch_number || '',
+      expiry_date: item.expiry_date || '',
+      last_purchase_price: (item as any).last_purchase_price ?? undefined,
+      reference_price: (item as any).reference_price ?? undefined,
+      entry_quantity: 0,
+      acquisition_type: undefined,
+      invoice_number: '',
+      invoice_date: '',
+      invoice_total_value: undefined,
+      unit_price: undefined,
+      afm_number: '',
+      supplier_cnpj: '',
+      supplier_name: '',
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id])
+
+  const categoryOptions =
+    type === 'pharmacy'
+      ? [
+          { value: 'MEDICAMENTO', label: 'Medicamento' },
+          { value: 'MAT/MED', label: 'Material/Medicamento' },
+          { value: 'HIGIENE E LIMPEZA', label: 'Higiene e Limpeza' },
+        ]
+      : [
+          { value: 'MATERIAL HOSPITALAR', label: 'Material Hospitalar' },
+          { value: 'MATERIAL DE EXPEDIENTE', label: 'Material de Expediente' },
+          { value: 'MATERIAL DE HIGIENIZAÇÃO', label: 'Material de Higienização' },
+          { value: 'HIGIENIZAÇÃO E LIMPEZA', label: 'Higienização e Limpeza' },
+          { value: 'EPI', label: 'EPI' },
+          { value: 'OUTROS', label: 'Outros' },
+        ]
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const hasEntry = (data.entry_quantity ?? 0) > 0
+
+      // 1) Atualiza dados do item (mantém current_stock — pode mudar abaixo)
+      const updatePayload: any = {
+        code: data.code,
+        name: data.name,
+        description: data.description || null,
+        category: data.category as ItemCategory,
+        unit: data.unit as UnitType,
+        min_stock: data.min_stock,
+        batch_number: data.batch_number || null,
+        expiry_date: data.expiry_date || null,
+        last_purchase_price: data.last_purchase_price ?? null,
+        reference_price: data.reference_price ?? null,
+      }
+      await itemsService.update(item.id, updatePayload, type)
+
+      // 2) Se preencheu Nova Entrada, registra e soma estoque
+      if (hasEntry) {
+        const { data: authData } = await supabase.auth.getUser()
+        if (!authData?.user) throw new Error('Usuário não autenticado')
+
+        if (!data.acquisition_type) {
+          throw new Error('Selecione o tipo de aquisição da nova entrada')
+        }
+
+        const entry = {
+          item_id: item.id,
+          item_type: type,
+          quantity: data.entry_quantity!,
+          acquisition_type: data.acquisition_type,
+          invoice_number: data.invoice_number || 'EDIÇÃO',
+          invoice_date: data.invoice_date || new Date().toISOString().slice(0, 10),
+          invoice_total_value: data.invoice_total_value || 0,
+          unit_price: data.unit_price || data.last_purchase_price || 0,
+          afm_number: data.afm_number || null,
+          supplier_cnpj: data.supplier_cnpj || null,
+          supplier_name:
+            data.supplier_name ||
+            (data.acquisition_type === 'Doação' ? 'Doação' : 'Entrada via edição do item'),
+          batch_number: data.batch_number || null,
+          expiry_date: data.expiry_date || null,
+          notes: 'Entrada registrada na edição do item',
+          created_by: authData.user.id,
+        }
+        const { error: entryError } = await supabase.from('stock_entries').insert(entry)
+        if (entryError) throw entryError
+
+        // Soma no estoque atual
+        const newStock = (item.current_stock ?? 0) + data.entry_quantity!
+        const tableName = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
+        const { error: stockErr } = await supabase
+          .from(tableName)
+          .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+          .eq('id', item.id)
+        if (stockErr) throw stockErr
+      }
+
+      onSuccess()
+      onOpenChange(false)
+    } catch (e: any) {
+      console.error('Error editing item:', e)
+      setError(e?.message || 'Erro ao salvar')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-amber-600" />
+            Editar Item — {item.name.slice(0, 60)}{item.name.length > 60 ? '…' : ''}
+          </DialogTitle>
+          <p className="text-sm text-gray-500 mt-1">
+            Atualize os dados do item. Se quiser <strong>registrar uma nova entrada</strong> de estoque,
+            preencha a seção verde no final do formulário.
+          </p>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Dados do item */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="code">Código *</Label>
+              <Input id="code" {...register('code')} className="mt-1" />
+              {errors.code && <p className="text-sm text-red-500 mt-1">{errors.code.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor="category">Categoria *</Label>
+              <select
+                id="category"
+                {...register('category')}
+                className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+              >
+                {categoryOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="name">Nome *</Label>
+            <Input id="name" {...register('name')} className="mt-1" />
+            {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="description">Descrição</Label>
+            <textarea
+              id="description"
+              {...register('description')}
+              className="w-full mt-1 rounded-md border border-input px-3 py-2 min-h-[60px] bg-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="unit">Unidade *</Label>
+              <select
+                id="unit"
+                {...register('unit')}
+                className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+              >
+                {unitOptions.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="min_stock">Estoque Mínimo *</Label>
+              <Input
+                id="min_stock"
+                type="number"
+                min="0"
+                {...register('min_stock', { valueAsNumber: true })}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="batch_number">Lote</Label>
+              <Input id="batch_number" {...register('batch_number')} className="mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="expiry_date">Validade</Label>
+              <Input id="expiry_date" type="date" {...register('expiry_date')} className="mt-1" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                <Input
+                  id="last_purchase_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('last_purchase_price', { valueAsNumber: true })}
+                  className="pl-9"
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="reference_price">Valor Referencial</Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                <Input
+                  id="reference_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('reference_price', { valueAsNumber: true })}
+                  className="pl-9"
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Nova entrada de estoque (opcional) */}
+          <div className="border border-emerald-200 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border-b border-emerald-200">
+              <FileText className="w-4 h-4 text-emerald-700" />
+              <span className="text-sm font-medium text-emerald-900">
+                Registrar nova entrada de estoque (opcional)
+              </span>
+            </div>
+
+            <div className="p-4 space-y-4 bg-white">
+              <p className="text-xs text-gray-500">
+                Preencha esta seção se está recebendo <strong>mais material</strong> agora (Compra, Doação,
+                Empréstimo ou Permuta). O sistema vai somar a quantidade ao estoque e registrar a NF/fornecedor.
+                Estoque atual: <strong>{item.current_stock} {item.unit}</strong>
+              </p>
+
+              <div>
+                <Label htmlFor="acquisition_type">Como o material chegou?</Label>
+                <select
+                  id="acquisition_type"
+                  {...register('acquisition_type')}
+                  className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
+                  defaultValue=""
+                >
+                  <option value="">— Selecione o tipo —</option>
+                  <option value="Compra">Compra</option>
+                  <option value="Doação">Doação</option>
+                  <option value="Empréstimo">Empréstimo</option>
+                  <option value="Permuta">Permuta</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="entry_quantity">Quantidade a adicionar</Label>
+                  <Input
+                    id="entry_quantity"
+                    type="number"
+                    min="0"
+                    {...register('entry_quantity', { valueAsNumber: true })}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="unit_price">Valor Unitário</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                    <Input
+                      id="unit_price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('unit_price', { valueAsNumber: true })}
+                      className="pl-9"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="invoice_number">Número da NF</Label>
+                  <Input id="invoice_number" {...register('invoice_number')} className="mt-1" placeholder="Ex: NF-123456" />
+                </div>
+                <div>
+                  <Label htmlFor="afm_number">Número da AFM</Label>
+                  <Input id="afm_number" {...register('afm_number')} className="mt-1" placeholder="Ex: AFM-2026-001" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="invoice_date">Data da NF</Label>
+                  <Input id="invoice_date" type="date" {...register('invoice_date')} className="mt-1" />
+                </div>
+                <div>
+                  <Label htmlFor="invoice_total_value">Valor Total da NF</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
+                    <Input
+                      id="invoice_total_value"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      {...register('invoice_total_value', { valueAsNumber: true })}
+                      className="pl-9"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
+                  <Input id="supplier_cnpj" {...register('supplier_cnpj')} className="mt-1" placeholder="00.000.000/0000-00" />
+                </div>
+                <div>
+                  <Label htmlFor="supplier_name">Nome do Fornecedor</Label>
+                  <Input id="supplier_name" {...register('supplier_name')} className="mt-1" placeholder="Nome da empresa" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

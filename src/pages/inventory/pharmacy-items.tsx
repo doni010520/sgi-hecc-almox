@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Pill, FileSpreadsheet,
-  Eye, Plus, Edit, Trash2, Check, X, PackagePlus
+  Eye, Plus, Edit, Trash2, PackagePlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
 import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
+import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
 import { ImportDialog } from '@/components/inventory/import-dialog'
@@ -39,6 +40,7 @@ export function PharmacyItems() {
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [hideZeroStock, setHideZeroStock] = useState(true)
+  const [showEditItemDialog, setShowEditItemDialog] = useState(false)
   // Saldos por local (CAF, SAT_1, SAT_2, SAT_T) carregados em uma chamada.
   // Map<itemId, Map<locationCode, quantity>>
   const [stocksByItem, setStocksByItem] = useState<Map<string, Record<string, number>>>(new Map())
@@ -48,48 +50,13 @@ export function PharmacyItems() {
     setShowEntryDialog(true)
   }
 
+  const handleEditItem = (item: Item) => {
+    setSelectedItem(item)
+    setShowEditItemDialog(true)
+  }
+
   const isAdmin = user?.role === 'administrador'
   const canEdit = user?.role === 'administrador' || user?.role === 'gestor'
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editData, setEditData] = useState<Partial<Item>>({})
-  const [saving, setSaving] = useState(false)
-
-  const startEditing = (item: Item) => {
-    setEditingId(item.id)
-    setEditData({
-      code: item.code,
-      name: item.name,
-      category: item.category,
-      unit: item.unit,
-      current_stock: item.current_stock,
-      min_stock: item.min_stock,
-      batch_number: (item as any).batch_number || '',
-      expiry_date: item.expiry_date || '',
-      last_purchase_price: (item as any).last_purchase_price ?? undefined,
-      reference_price: (item as any).reference_price ?? undefined,
-    })
-  }
-
-  const cancelEditing = () => {
-    setEditingId(null)
-    setEditData({})
-  }
-
-  const saveEditing = async () => {
-    if (!editingId) return
-    try {
-      setSaving(true)
-      await itemsService.update(editingId, editData as any, 'pharmacy')
-      setEditingId(null)
-      setEditData({})
-      loadItems()
-    } catch (error: any) {
-      console.error('Error saving item:', error)
-      alert('Erro ao salvar: ' + (error?.message || 'Erro desconhecido'))
-    } finally {
-      setSaving(false)
-    }
-  }
 
   useEffect(() => {
     loadItems()
@@ -405,84 +372,33 @@ export function PharmacyItems() {
                   (avgConsumption / 30) * (item.lead_time_days || 7) * 1.5
                 )
                 
-                const isEditing = editingId === item.id
-
                 return (
-                  <tr key={item.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-yellow-50' : ''}`}>
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.code}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-700 font-medium">{item.unit}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {isEditing ? (
-                        <input value={editData.code || ''} onChange={(e) => setEditData({ ...editData, code: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
-                      ) : item.code}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {isEditing ? (
-                        <input value={editData.name || ''} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
-                      ) : item.name}
+                      {(item as any).batch_number || '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {isEditing ? (
-                        <input value={editData.category || ''} onChange={(e) => setEditData({ ...editData, category: e.target.value as any })} className="w-full px-2 py-1 text-sm border rounded" />
-                      ) : item.category}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-700 font-medium">
-                      {isEditing ? (
-                        <select value={editData.unit || ''} onChange={(e) => setEditData({ ...editData, unit: e.target.value as any })} className="w-full px-2 py-1 text-sm border rounded">
-                          <option value="Un">Un</option>
-                          <option value="Pc">Pc</option>
-                          <option value="Cx">Cx</option>
-                          <option value="Fr">Fr</option>
-                          <option value="Amp">Amp</option>
-                          <option value="Tb">Tb</option>
-                          <option value="Rl">Rl</option>
-                          <option value="Lt">Lt</option>
-                          <option value="Kg">Kg</option>
-                          <option value="Gl">Gl</option>
-                          <option value="ml">ml</option>
-                          <option value="g">g</option>
-                          <option value="Pr">Pr</option>
-                          <option value="Cj">Cj</option>
-                          <option value="Sc">Sc</option>
-                          <option value="Rm">Rm</option>
-                          <option value="Ct">Ct</option>
-                          <option value="FL">FL</option>
-                        </select>
-                      ) : item.unit}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {isEditing ? (
-                        <input value={(editData as any).batch_number || ''} onChange={(e) => setEditData({ ...editData, batch_number: e.target.value } as any)} className="w-full px-2 py-1 text-sm border rounded" placeholder="Lote" />
-                      ) : ((item as any).batch_number || '-')}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {isEditing ? (
-                        <input type="date" value={editData.expiry_date || ''} onChange={(e) => setEditData({ ...editData, expiry_date: e.target.value })} className="w-full px-2 py-1 text-sm border rounded" />
-                      ) : (item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-')}
+                      {item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1 justify-end">
-                          <span className="text-xs text-gray-500">R$</span>
-                          <input type="number" step="0.01" min="0" value={(editData as any).last_purchase_price ?? ''} onChange={(e) => setEditData({ ...editData, last_purchase_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
-                        </div>
-                      ) : ((item as any).last_purchase_price != null ? Number((item as any).last_purchase_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-')}
+                      {(item as any).last_purchase_price != null
+                        ? Number((item as any).last_purchase_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1 justify-end">
-                          <span className="text-xs text-gray-500">R$</span>
-                          <input type="number" step="0.01" min="0" value={(editData as any).reference_price ?? ''} onChange={(e) => setEditData({ ...editData, reference_price: e.target.value === '' ? undefined : parseFloat(e.target.value) } as any)} onWheel={(e) => e.currentTarget.blur()} className="w-24 px-2 py-1 text-sm border rounded text-right" placeholder="0,00" />
-                        </div>
-                      ) : ((item as any).reference_price != null ? Number((item as any).reference_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '-')}
+                      {(item as any).reference_price != null
+                        ? Number((item as any).reference_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {Math.round(avgConsumption)} {item.unit}/mês
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-medium">
-                      {isEditing ? (
-                        <input type="number" min="0" value={editData.current_stock ?? 0} onChange={(e) => setEditData({ ...editData, current_stock: parseInt(e.target.value) || 0 })} className="w-20 px-2 py-1 text-sm border rounded text-right" />
-                      ) : (
-                        <>{item.current_stock} {item.unit}</>
-                      )}
+                      {item.current_stock} {item.unit}
                     </td>
                     <td className="px-4 py-3">
                       {(() => {
@@ -516,11 +432,7 @@ export function PharmacyItems() {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
-                      {isEditing ? (
-                        <input type="number" min="0" value={editData.min_stock ?? 0} onChange={(e) => setEditData({ ...editData, min_stock: parseInt(e.target.value) || 0 })} className="w-20 px-2 py-1 text-sm border rounded text-right" />
-                      ) : (
-                        <>{item.min_stock} {item.unit}</>
-                      )}
+                      {item.min_stock} {item.unit}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {supplyPoint} {item.unit}
@@ -541,36 +453,23 @@ export function PharmacyItems() {
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
                         <div className="flex items-center gap-1">
-                          {isEditing ? (
-                            <>
-                              <Button size="sm" onClick={saveEditing} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-2">
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={cancelEditing} className="h-8 px-2">
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              {canEdit && (
-                                <Button variant="outline" size="sm" onClick={() => handleRegisterEntry(item)} title="Registrar Entrada de Material" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 px-2">
-                                  <PackagePlus className="w-4 h-4" />
-                                </Button>
-                              )}
-                              {canEdit && (
-                                <Button variant="outline" size="sm" onClick={() => startEditing(item)} title="Editar item" className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/pharmacy/${item.id}`)} title="Ver detalhes" className="h-8 px-2">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              {isAdmin && (
-                                <Button variant="outline" size="sm" onClick={() => handleDelete(item)} title="Excluir" className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </>
+                          {canEdit && (
+                            <Button variant="outline" size="sm" onClick={() => handleRegisterEntry(item)} title="Registrar Entrada de Material" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 px-2">
+                              <PackagePlus className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {canEdit && (
+                            <Button variant="outline" size="sm" onClick={() => handleEditItem(item)} title="Editar item" className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/inventory/pharmacy/${item.id}`)} title="Ver detalhes" className="h-8 px-2">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(item)} title="Excluir" className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -633,6 +532,23 @@ export function PharmacyItems() {
           type="pharmacy"
           open={showEntryDialog}
           onOpenChange={setShowEntryDialog}
+          onSuccess={() => {
+            loadItems()
+            setSelectedItem(null)
+          }}
+        />
+      )}
+
+      {/* Edit Item Dialog */}
+      {selectedItem && (
+        <EditItemDialog
+          item={selectedItem}
+          type="pharmacy"
+          open={showEditItemDialog}
+          onOpenChange={(open) => {
+            setShowEditItemDialog(open)
+            if (!open) setSelectedItem(null)
+          }}
           onSuccess={() => {
             loadItems()
             setSelectedItem(null)
