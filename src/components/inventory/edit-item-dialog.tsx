@@ -17,6 +17,12 @@ import { itemsService } from '@/lib/services/items'
 import { supabase } from '@/lib/supabase'
 import type { Item, ItemCategory, UnitType } from '@/lib/services/items'
 
+// Transforma NaN/vazio em undefined para campos numéricos opcionais
+const optionalNumber = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? undefined : Number(v)),
+  z.number().min(0).optional(),
+)
+
 const schema = z.object({
   // Dados do item
   code: z.string().min(1, 'Código é obrigatório'),
@@ -24,18 +30,24 @@ const schema = z.object({
   description: z.string().optional(),
   category: z.string(),
   unit: z.string(),
-  min_stock: z.number().min(0),
+  min_stock: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? 0 : Number(v)),
+    z.number().min(0),
+  ),
   batch_number: z.string().optional(),
   expiry_date: z.string().optional(),
-  last_purchase_price: z.number().min(0).optional(),
-  reference_price: z.number().min(0).optional(),
+  last_purchase_price: optionalNumber,
+  reference_price: optionalNumber,
   // Nova entrada (opcional)
-  entry_quantity: z.number().min(0).optional(),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Devolução']).optional(),
+  entry_quantity: optionalNumber,
+  acquisition_type: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Devolução']).optional(),
+  ),
   invoice_number: z.string().optional(),
   invoice_date: z.string().optional(),
-  invoice_total_value: z.number().min(0).optional(),
-  unit_price: z.number().min(0).optional(),
+  invoice_total_value: optionalNumber,
+  unit_price: optionalNumber,
   afm_number: z.string().optional(),
   supplier_cnpj: z.string().optional(),
   supplier_name: z.string().optional(),
@@ -426,6 +438,15 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
           {error && (
             <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
               {error}
+            </div>
+          )}
+
+          {Object.keys(errors).length > 0 && (
+            <div className="p-3 text-sm text-amber-700 bg-amber-50 rounded-md border border-amber-200">
+              <strong>Corrija os campos:</strong>{' '}
+              {Object.entries(errors).map(([key, err]) => (
+                <span key={key}>{key}: {(err as any)?.message || 'inválido'}; </span>
+              ))}
             </div>
           )}
 
