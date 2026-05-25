@@ -39,6 +39,8 @@ import { StockExpiryReport } from '@/pages/reports/stock-expiry-report'
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
+import { PatientSelect } from '@/pages/dispensacao/patient-select'
+import { PatientDischarge } from '@/pages/dispensacao/patient-discharge'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { SaidaAvulsa } from '@/pages/estoque/saida-avulsa'
@@ -306,10 +308,24 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/dispensacao/paciente" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PatientSelect />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
               <Route path="/dispensacao/new" element={
                 <ProtectedRoute>
                   <MainLayout>
                     <NewDispensation />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/paciente/:id/alta" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PatientDischarge />
                   </MainLayout>
                 </ProtectedRoute>
               } />
