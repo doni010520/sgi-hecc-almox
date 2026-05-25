@@ -441,7 +441,7 @@ export function RequestDetails() {
                 <p className="font-medium print:text-sm">#{request.request_number || formatRequestNumber(request.id)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 print:text-xs">Setor Solicitante</p>
+                <p className="text-sm text-gray-500 print:text-xs">Setor do Usuário</p>
                 <p className="font-medium print:text-sm">{getDepartmentName(request.department)}</p>
               </div>
               <div className="col-span-2">
