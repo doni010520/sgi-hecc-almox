@@ -13,8 +13,9 @@ import type { Department } from '@/lib/types/departments'
 
 // Updated schema to use justification_option instead of justification text
 const detailsSchema = z.object({
-  department: z.string().min(1, 'Setor solicitante é obrigatório'),
-  destination_department: z.string().min(1, 'Setor de destino é obrigatório'),
+  department: z.string().min(1, 'Setor do usuário é obrigatório'),
+  requesting_department: z.string().min(1, 'Setor solicitante é obrigatório'),
+  destination_department: z.string().min(1, 'Setor solicitado é obrigatório'),
   priority: z.enum(['low', 'medium', 'high']),
   justification_option: z.string().min(1, 'Selecione uma justificativa'),
   requestDate: z.string(),
@@ -125,14 +126,16 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
           />
         </div>
 
-        {/* Department Selection */}
+
+
+        {/* Setor do Usuário (read-only) */}
         <div className="space-y-2">
-          <Label htmlFor="department">Setor Solicitante</Label>
+          <Label htmlFor="department">Setor do Usuário</Label>
           <input
             type="hidden"
             {...register('department')}
           />
-          
+
           {userDepartment ? (
             <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
               <div className="flex items-center justify-between">
@@ -160,21 +163,47 @@ export function RequestDetails({ onSubmit, defaultValues }: RequestDetailsProps)
               </div>
             </div>
           )}
-          
+
           {errors.department && (
             <p className="text-sm text-red-500 mt-1">{errors.department.message}</p>
           )}
         </div>
 
-        {/* Destination Department Selection */}
+        {/* Setor Solicitante — onde o pedido será entregue */}
         <div className="space-y-2">
-          <Label htmlFor="destination_department">Setor de Destino</Label>
+          <Label htmlFor="requesting_department">
+            Setor Solicitante
+            <span className="ml-1 text-xs font-normal text-gray-500">(Setor onde o pedido será entregue)</span>
+          </Label>
+          <select
+            id="requesting_department"
+            {...register('requesting_department')}
+            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Selecione o setor solicitante...</option>
+            {allDepartments.map(dept => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+          {errors.requesting_department && (
+            <p className="text-sm text-red-500 mt-1">{errors.requesting_department.message}</p>
+          )}
+        </div>
+
+        {/* Setor Solicitado — quem fará a entrega */}
+        <div className="space-y-2">
+          <Label htmlFor="destination_department">
+            Setor Solicitado
+            <span className="ml-1 text-xs font-normal text-gray-500">(Setor que fará a entrega do pedido)</span>
+          </Label>
           <select
             id="destination_department"
             {...register('destination_department')}
             className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
-            <option value="">Selecione o setor de destino...</option>
+            <option value="">Selecione o setor solicitado...</option>
             {allDepartments.map(dept => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
