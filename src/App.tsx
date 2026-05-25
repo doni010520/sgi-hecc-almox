@@ -35,6 +35,7 @@ import { TVRequestDetail } from '@/pages/dashboard/tv-request-detail'
 import { TVHistory } from '@/pages/dashboard/tv-history'
 import { Dashboard } from '@/pages/dashboard'
 import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock-report'
+import { StockExpiryReport } from '@/pages/reports/stock-expiry-report'
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
@@ -286,6 +287,13 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <WarehouseStockReport />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/reports/stock-expiry" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <StockExpiryReport />
                   </MainLayout>
                 </ProtectedRoute>
               } />
