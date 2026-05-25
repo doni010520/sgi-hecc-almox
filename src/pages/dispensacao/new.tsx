@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
-import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
@@ -18,7 +18,9 @@ interface SelectedItem {
 
 export function NewDispensation() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { mode } = useTheme()
+  const patient = location.state?.patient
 
   const txt = mode === 'dark' ? '#fff' : '#0d2e1c'
   const txtSec = mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
@@ -42,14 +44,21 @@ export function NewDispensation() {
 
   const labelStyle: React.CSSProperties = { color: txtSec, fontSize: 13, fontWeight: 600, marginBottom: 4, display: 'block' }
 
-  // Form state
-  const [patientName, setPatientName] = useState('')
-  const [medicalRecord, setMedicalRecord] = useState('')
+  // Form state — pré-preenche com dados do paciente selecionado
+  const [patientName, setPatientName] = useState(patient?.full_name || '')
+  const [medicalRecord, setMedicalRecord] = useState(patient?.medical_record_number || '')
   const [bedRoom, setBedRoom] = useState('')
   const [sector, setSector] = useState('')
   const [doctor, setDoctor] = useState('')
   const [prescriptionNumber, setPrescriptionNumber] = useState('')
   const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    // Se não veio paciente via state, redireciona para seleção
+    if (!patient) {
+      navigate('/dispensacao/paciente', { replace: true })
+    }
+  }, [])
 
   // Items state
   const [allItems, setAllItems] = useState<Item[]>([])
@@ -170,6 +179,33 @@ export function NewDispensation() {
       {error && (
         <div className="p-4 rounded-xl bg-red-100 border border-red-200 flex items-center gap-2 text-red-800 text-sm">
           <AlertCircle size={16} /> {error}
+        </div>
+      )}
+
+      {/* Paciente selecionado */}
+      {patient && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{
+          background: mode === 'dark' ? 'rgba(22,163,74,0.1)' : 'rgba(22,163,74,0.07)',
+          border: '1px solid rgba(22,163,74,0.25)',
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8, display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(22,163,74,0.15)',
+          }}>
+            <User size={16} style={{ color: '#16a34a' }} />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-sm" style={{ color: txt }}>{patient.full_name}</p>
+            <p className="text-xs" style={{ color: txtSec }}>Prontuário: {patient.medical_record_number}</p>
+          </div>
+          <button
+            onClick={() => navigate('/dispensacao/paciente')}
+            className="text-xs underline"
+            style={{ color: '#16a34a', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            Trocar
+          </button>
         </div>
       )}
 
