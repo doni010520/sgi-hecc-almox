@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import {
-  CalendarClock, Download, Search, AlertTriangle, Filter,
+  CalendarClock, Search, AlertTriangle, Filter,
   ChevronDown, ChevronUp, Printer, FileSpreadsheet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
