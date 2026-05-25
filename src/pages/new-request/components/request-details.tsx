@@ -233,7 +233,9 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
             className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
             <option value="">Selecione o setor solicitante...</option>
-            {allDepartments.map(dept => (
+            {allDepartments
+              .filter(d => !d.name.toLowerCase().includes('satélite 2') && !d.name.toLowerCase().includes('satelite 2'))
+              .map(dept => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
               </option>
