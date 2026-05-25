@@ -31,7 +31,7 @@ const schema = z.object({
   reference_price: z.number().min(0).optional(),
   // Nova entrada (opcional)
   entry_quantity: z.number().min(0).optional(),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Devolução']).optional(),
   invoice_number: z.string().optional(),
   invoice_date: z.string().optional(),
   invoice_total_value: z.number().min(0).optional(),
@@ -163,7 +163,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
           supplier_cnpj: data.supplier_cnpj?.trim() || '00.000.000/0000-00',
           supplier_name:
             data.supplier_name?.trim() ||
-            (data.acquisition_type === 'Doação' ? 'Doação' : 'Entrada via edição do item'),
+            (data.acquisition_type === 'Doação' ? 'Doação' : data.acquisition_type === 'Devolução' ? 'Devolução de setor' : 'Entrada via edição do item'),
           batch_number: data.batch_number?.trim() || null,
           expiry_date: data.expiry_date || null,
           notes: 'Entrada registrada na edição do item',
@@ -326,7 +326,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
             <div className="p-4 space-y-4 bg-white">
               <p className="text-xs text-gray-500">
                 Preencha esta seção se está recebendo <strong>mais material</strong> agora (Compra, Doação,
-                Empréstimo ou Permuta). O sistema vai somar a quantidade ao estoque e registrar a NF/fornecedor.
+                Empréstimo, Permuta ou Devolução). O sistema vai somar a quantidade ao estoque e registrar a NF/fornecedor.
                 Estoque atual: <strong>{item.current_stock} {item.unit}</strong>
               </p>
 
@@ -343,6 +343,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                   <option value="Doação">Doação</option>
                   <option value="Empréstimo">Empréstimo</option>
                   <option value="Permuta">Permuta</option>
+                  <option value="Devolução">Devolução</option>
                 </select>
               </div>
 
