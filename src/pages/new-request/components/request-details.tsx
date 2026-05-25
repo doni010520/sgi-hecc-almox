@@ -59,7 +59,7 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
     },
   })
 
-  // Trava o setor solicitado conforme o setor solicitante selecionado
+  // Trava ou filtra o setor solicitado conforme o setor solicitante selecionado
   const watchedRequestingDept = watch('requesting_department')
   useEffect(() => {
     if (!watchedRequestingDept || requestType === 'warehouse') return
@@ -70,22 +70,18 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
     const nameLower = selected.name.toLowerCase()
 
     if (nameLower.includes('satélite térreo') || nameLower.includes('satelite terreo')) {
-      // Térreo → Almoxarifado
+      // Térreo → trava em Almoxarifado
       if (warehouseDepartment) {
         setValue('destination_department', warehouseDepartment.id, { shouldValidate: true })
         setLockedDestination(warehouseDepartment)
       }
-    } else if (
-      (nameLower.includes('satélite') || nameLower.includes('satelite')) &&
-      (nameLower.includes('1') || nameLower.includes('2') || nameLower.includes('andar'))
-    ) {
-      // 1º ou 2º Andar → CAF
-      if (cafDepartment) {
-        setValue('destination_department', cafDepartment.id, { shouldValidate: true })
-        setLockedDestination(cafDepartment)
-      }
+    } else if (nameLower.includes('satélite') || nameLower.includes('satelite')) {
+      // 1º ou 2º Andar → libera com opções restritas (CAF + o outro satélite)
+      setValue('destination_department', '', { shouldValidate: false })
+      setLockedDestination(null)
     } else {
-      // Outros setores → libera o select
+      // Outros setores → libera o select completo
+      setValue('destination_department', '', { shouldValidate: false })
       setLockedDestination(null)
     }
   }, [watchedRequestingDept, allDepartments, warehouseDepartment, cafDepartment, requestType, setValue])
@@ -252,44 +248,82 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
             Setor Solicitado
             <span className="ml-1 text-xs font-normal text-gray-500">(Setor que fará a entrega do pedido)</span>
           </Label>
-          {requestType === 'warehouse' && warehouseDepartment ? (
-            <>
-              <input type="hidden" {...register('destination_department')} />
-              <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-primary-900">{warehouseDepartment.name}</p>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">
-                    Fixo
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : lockedDestination ? (
-            <>
-              <input type="hidden" {...register('destination_department')} />
-              <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-primary-900">{lockedDestination.name}</p>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">
-                    Fixo
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <select
-              id="destination_department"
-              {...register('destination_department')}
-              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="">Selecione o setor solicitado...</option>
-              {allDepartments.map(dept => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-          )}
+          {(() => {
+            const selectedDept = allDepartments.find(d => d.id === watchedRequestingDept)
+            const selectedName = selectedDept?.name.toLowerCase() ?? ''
+            const isSatelite1 = selectedName.includes('satélite 1') || selectedName.includes('satelite 1')
+            const isSatelite2 = selectedName.includes('satélite 2') || selectedName.includes('satelite 2')
+            const isAndar = (selectedName.includes('satélite') || selectedName.includes('satelite')) &&
+              (isSatelite1 || isSatelite2 || selectedName.includes('andar'))
+            const isTerreo = selectedName.includes('satélite térreo') || selectedName.includes('satelite terreo')
+
+            if (requestType === 'warehouse' && warehouseDepartment) {
+              return (
+                <>
+                  <input type="hidden" {...register('destination_department')} />
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-primary-900">{warehouseDepartment.name}</p>
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">Fixo</span>
+                    </div>
+                  </div>
+                </>
+              )
+            }
+
+            if (isTerreo && lockedDestination) {
+              return (
+                <>
+                  <input type="hidden" {...register('destination_department')} />
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-primary-900">{lockedDestination.name}</p>
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">Fixo</span>
+                    </div>
+                  </div>
+                </>
+              )
+            }
+
+            if (isAndar && !isTerreo) {
+              // Satélite 1º → pode escolher CAF ou Satélite 2º
+              // Satélite 2º → pode escolher CAF ou Satélite 1º
+              const allowedOptions = allDepartments.filter(d => {
+                const n = d.name.toLowerCase()
+                const isCAF = n.includes('caf')
+                const isSat1 = n.includes('satélite 1') || n.includes('satelite 1')
+                const isSat2 = n.includes('satélite 2') || n.includes('satelite 2')
+                if (isSatelite1) return isCAF || isSat2
+                if (isSatelite2) return isCAF || isSat1
+                return isCAF || isSat1 || isSat2
+              })
+              return (
+                <select
+                  id="destination_department"
+                  {...register('destination_department')}
+                  className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Selecione o setor solicitado...</option>
+                  {allowedOptions.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              )
+            }
+
+            return (
+              <select
+                id="destination_department"
+                {...register('destination_department')}
+                className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Selecione o setor solicitado...</option>
+                {allDepartments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            )
+          })()}
           {errors.destination_department && (
             <p className="text-sm text-red-500 mt-1">{errors.destination_department.message}</p>
           )}
