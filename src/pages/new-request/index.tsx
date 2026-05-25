@@ -568,6 +568,7 @@ export function NewRequest() {
                 setCurrentStep(prev => prev + 1)
               }}
               defaultValues={details || undefined}
+              requestType={requestType}
             />
             <div className="flex justify-center gap-4">
               <Button
