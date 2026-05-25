@@ -27,7 +27,8 @@ import {
   Undo2,
   ArrowRightLeft,
   Handshake,
-  CalendarX
+  CalendarX,
+  CalendarClock
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -118,6 +119,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin || isAtendente },
         { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: isManager || isAdmin || isAtendente },
+        { name: 'Validade de Estoque', icon: CalendarClock, href: '/reports/stock-expiry', show: isManager || isAdmin || isAtendente },
         { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin || isAtendente },
         { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
