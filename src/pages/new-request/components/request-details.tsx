@@ -47,6 +47,8 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
   const [allDepartments, setAllDepartments] = useState<Department[]>([])
   const [loadingUserDepartment, setLoadingUserDepartment] = useState(true)
   const [warehouseDepartment, setWarehouseDepartment] = useState<Department | null>(null)
+  const [cafDepartment, setCafDepartment] = useState<Department | null>(null)
+  const [lockedDestination, setLockedDestination] = useState<Department | null>(null)
 
   const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<RequestDetails>({
     resolver: zodResolver(detailsSchema),
@@ -56,6 +58,37 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
       ...defaultValues,
     },
   })
+
+  // Trava o setor solicitado conforme o setor solicitante selecionado
+  const watchedRequestingDept = watch('requesting_department')
+  useEffect(() => {
+    if (!watchedRequestingDept || requestType === 'warehouse') return
+
+    const selected = allDepartments.find(d => d.id === watchedRequestingDept)
+    if (!selected) return
+
+    const nameLower = selected.name.toLowerCase()
+
+    if (nameLower.includes('satélite térreo') || nameLower.includes('satelite terreo')) {
+      // Térreo → Almoxarifado
+      if (warehouseDepartment) {
+        setValue('destination_department', warehouseDepartment.id, { shouldValidate: true })
+        setLockedDestination(warehouseDepartment)
+      }
+    } else if (
+      (nameLower.includes('satélite') || nameLower.includes('satelite')) &&
+      (nameLower.includes('1') || nameLower.includes('2') || nameLower.includes('andar'))
+    ) {
+      // 1º ou 2º Andar → CAF
+      if (cafDepartment) {
+        setValue('destination_department', cafDepartment.id, { shouldValidate: true })
+        setLockedDestination(cafDepartment)
+      }
+    } else {
+      // Outros setores → libera o select
+      setLockedDestination(null)
+    }
+  }, [watchedRequestingDept, allDepartments, warehouseDepartment, cafDepartment, requestType, setValue])
 
   useEffect(() => {
     loadUserDepartment()
@@ -85,6 +118,12 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
         d.name.toLowerCase().includes('almoxarifado')
       ) || null
       setWarehouseDepartment(warehouseDept)
+
+      // Identifica o CAF
+      const cafDept = departments.find(d =>
+        d.name.toLowerCase().includes('caf')
+      ) || null
+      setCafDepartment(cafDept)
 
       // Se for pedido de almoxarifado, trava o setor solicitado automaticamente
       if (requestType === 'warehouse' && warehouseDept) {
@@ -217,6 +256,18 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
               <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-primary-900">{warehouseDepartment.name}</p>
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">
+                    Fixo
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : lockedDestination ? (
+            <>
+              <input type="hidden" {...register('destination_department')} />
+              <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-primary-900">{lockedDestination.name}</p>
                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">
                     Fixo
                   </span>
