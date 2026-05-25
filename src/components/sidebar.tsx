@@ -64,7 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       title: 'Dispensação',
       items: [
         { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/new', show: canManageRequests }
+        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: canManageRequests }
       ]
     },
     {
