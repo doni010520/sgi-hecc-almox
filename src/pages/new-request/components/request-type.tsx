@@ -9,7 +9,7 @@ interface RequestTypeProps {
 // Flag central de bloqueio. Quando o sistema de farmacia estiver pronto
 // pra producao (estoque CAF carregado, roteamento de departamentos
 // completo, RLS finalizado), troque para `false` e remova o banner.
-const PHARMACY_REQUESTS_BLOCKED = true
+const PHARMACY_REQUESTS_BLOCKED = false
 
 export function RequestTypeStep({ type, onTypeSelect }: RequestTypeProps) {
   const handlePharmacyClick = () => {
