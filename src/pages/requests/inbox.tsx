@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Search, Filter, Download, AlertCircle, 
-  Loader2, Package2, Pill, Building2,
-  Calendar, Users, Activity, 
+  Loader2, Package2, Pill, Building2, ArrowRightLeft,
+  Calendar, Users, Activity,
   Clock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -124,6 +124,14 @@ export function RequestInbox() {
                 {getDepartmentName(request.department)}
               </span>
             </div>
+            {request.destination_department && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-sm">
+                <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-700">
+                  {getDepartmentName(request.destination_department)}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-gray-500">
               <Users className="w-4 h-4" />
               <span className="text-sm">{request.requester?.full_name}</span>

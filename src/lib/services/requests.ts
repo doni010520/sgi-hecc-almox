@@ -154,6 +154,10 @@ class RequestService {
             id,
             name
           ),
+          destination_dept:departments!requests_destination_department_id_fkey(
+            id,
+            name
+          ),
           approved_by_user:users!requests_approved_by_fkey(
             full_name
           ),
@@ -228,6 +232,7 @@ class RequestService {
                 department: sanitizeInput(request.department?.name || 'Departamento Desconhecido')
               },
               department: sanitizeInput(request.department?.name || 'Departamento Desconhecido'),
+              destination_department: request.destination_dept?.name ? sanitizeInput(request.destination_dept.name) : undefined,
               request_items: (request.request_items || [])
                 .filter((item: any) => item && typeof item === 'object')
                 .map((item: any) => {
@@ -377,6 +382,10 @@ class RequestService {
             id,
             name
           ),
+          destination_dept:departments!requests_destination_department_id_fkey(
+            id,
+            name
+          ),
           approved_by_user:users!requests_approved_by_fkey(
             full_name
           ),
@@ -440,6 +449,7 @@ class RequestService {
           department: sanitizeInput(request.department?.name || 'Unknown')
         },
         department: sanitizeInput(request.department?.name || 'Unknown'),
+        destination_department: request.destination_dept?.name ? sanitizeInput(request.destination_dept.name) : undefined,
         request_items: request.request_items.map((item: any) => {
           const source = item.item_type === 'pharmacy' ? item.pharmacy_item : item.warehouse_item
           return {

@@ -245,7 +245,8 @@ export function RequestDetails() {
   <div class="info">
     <div><strong>Solicitação:</strong> ${reqNumber}</div>
     <div><strong>Data:</strong> ${createdDate}</div>
-    <div><strong>Setor:</strong> ${deptName}</div>
+    <div><strong>Setor Solicitante:</strong> ${deptName}</div>
+    <div><strong>Setor de Destino:</strong> ${(request as any).destination_department ? 'Ver no sistema' : '—'}</div>
     <div><strong>Solicitante:</strong> ${requesterName}</div>
     <div><strong>Prioridade:</strong> ${request.priority === 'high' ? 'Alta' : request.priority === 'medium' ? 'Média' : 'Baixa'}</div>
     <div><strong>Status:</strong> ${request.status}</div>
@@ -444,7 +445,13 @@ export function RequestDetails() {
                 <p className="text-sm text-gray-500 print:text-xs">Setor Solicitante</p>
                 <p className="font-medium print:text-sm">{getDepartmentName(request.department)}</p>
               </div>
-              <div className="col-span-2">
+              <div>
+                <p className="text-sm text-gray-500 print:text-xs">Setor de Destino</p>
+                <p className="font-medium print:text-sm">
+                  {request.destination_department ? getDepartmentName(request.destination_department) : '—'}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500 print:text-xs">Data de Criação</p>
                 <p className="font-medium print:text-sm">
                   {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", {

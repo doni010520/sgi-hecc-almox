@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { 
-  Search, Filter, AlertCircle, 
-  Loader2, Building2,
+  Search, Filter, AlertCircle,
+  Loader2, Building2, ArrowRightLeft,
   Calendar, Activity, CheckCircle2,
   Clock, XCircle, Ban, Plus,
   FileText
@@ -143,6 +143,14 @@ export function MyRequests() {
                 {getDepartmentName(request.department)}
               </span>
             </div>
+            {request.destination_department && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-sm">
+                <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-blue-700">
+                  {getDepartmentName(request.destination_department)}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-gray-500">
               <Calendar className="w-4 h-4" />
               <span className="text-sm">
