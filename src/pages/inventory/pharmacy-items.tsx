@@ -197,37 +197,39 @@ export function PharmacyItems() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+        {/* Layout: empilha em < xl porque com 4 botoes + titulo + sidebar, falta espaco em telas medias */}
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="p-3 bg-blue-100 rounded-lg flex-shrink-0">
               <Pill className="w-6 h-6 text-blue-600" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Itens da Farmácia</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Itens da Farmácia</h1>
               <p className="text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque farmacêutico
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
+          {/* flex-wrap garante que os botoes nao espremam em larguras intermediarias */}
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowImportDialog(true)}
             >
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Importar
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={handleExport}
             >
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
-            <Button 
+            <Button
               className="bg-primary-500 hover:bg-primary-600 text-white"
               onClick={() => setShowAddItemDialog(true)}
             >
