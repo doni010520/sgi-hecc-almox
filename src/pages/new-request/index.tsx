@@ -383,8 +383,8 @@ export function NewRequest() {
         </div>
       )}
 
-      {/* Service Hours Warning */}
-      {isOutsideServiceHours && (
+      {/* Service Hours Warning — apenas para pedidos de almoxarifado */}
+      {isOutsideServiceHours && requestType === 'warehouse' && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <div>
@@ -568,6 +568,7 @@ export function NewRequest() {
                 setCurrentStep(prev => prev + 1)
               }}
               defaultValues={details || undefined}
+              requestType={requestType}
             />
             <div className="flex justify-center gap-4">
               <Button

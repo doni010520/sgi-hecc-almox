@@ -159,13 +159,13 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Setor Solicitante</p>
+              <p className="text-sm text-gray-500">Setor do Usuário</p>
               <p className="font-medium">{departmentName || 'Carregando...'}</p>
             </div>
           </div>
           {destinationDepartmentName && (
             <div>
-              <p className="text-sm text-gray-500">Setor de Destino</p>
+              <p className="text-sm text-gray-500">Setor Solicitado</p>
               <p className="font-medium">{destinationDepartmentName}</p>
             </div>
           )}

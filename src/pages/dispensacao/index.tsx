@@ -72,7 +72,7 @@ export function DispensationList() {
         </div>
         <Button
           className="bg-primary-500 hover:bg-primary-600 text-white"
-          onClick={() => navigate('/dispensacao/new')}
+          onClick={() => navigate('/dispensacao/paciente')}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nova Dispensacao

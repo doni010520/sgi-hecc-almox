@@ -35,9 +35,12 @@ import { TVRequestDetail } from '@/pages/dashboard/tv-request-detail'
 import { TVHistory } from '@/pages/dashboard/tv-history'
 import { Dashboard } from '@/pages/dashboard'
 import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock-report'
+import { StockExpiryReport } from '@/pages/reports/stock-expiry-report'
 import { DispensationList } from '@/pages/dispensacao/index'
 import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
+import { PatientSelect } from '@/pages/dispensacao/patient-select'
+import { PatientDischarge } from '@/pages/dispensacao/patient-discharge'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { Fornecedores } from '@/pages/farmacia/fornecedores'
@@ -292,6 +295,13 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/reports/stock-expiry" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <StockExpiryReport />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
 
               {/* Dispensacao Routes */}
               <Route path="/dispensacao" element={
@@ -301,10 +311,24 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/dispensacao/paciente" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PatientSelect />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
               <Route path="/dispensacao/new" element={
                 <ProtectedRoute>
                   <MainLayout>
                     <NewDispensation />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/paciente/:id/alta" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <PatientDischarge />
                   </MainLayout>
                 </ProtectedRoute>
               } />
