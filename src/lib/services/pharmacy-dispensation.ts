@@ -203,6 +203,10 @@ class PharmacyDispensationService {
           notes: data.notes?.trim() || null,
           created_by: authData.user.id,
           source_location_id: cafLocation.id,
+          // Novos vinculos
+          patient_id: data.patient_id ?? null,
+          admission_id: data.admission_id ?? null,
+          prescriber_id: data.prescriber_id ?? null,
         })
         .select('id')
         .single()
@@ -230,6 +234,9 @@ class PharmacyDispensationService {
         dispensation_id: dispensation.id,
         item_id: item.item_id,
         quantity: item.quantity,
+        expiry_tracking_id: item.expiry_tracking_id ?? null,
+        batch_number: item.batch_number ?? null,
+        expiry_date: item.expiry_date ?? null,
       }))
 
       const { error: itemsError } = await supabase
@@ -260,6 +267,17 @@ class PharmacyDispensationService {
             prescription_date: today,
             dispensation_id: dispensation.id,
           })
+
+          // Se um lote foi escolhido, decrementa o expiry_tracking via RPC atomico
+          if (item.expiry_tracking_id) {
+            const { error: trackErr } = await supabase.rpc('decrement_expiry_tracking', {
+              p_tracking_id: item.expiry_tracking_id,
+              p_qty: item.quantity,
+            })
+            if (trackErr) {
+              throw new Error(`Falha ao baixar lote: ${trackErr.message}`)
+            }
+          }
         }
       } catch (movementError) {
         // Rollback completo. As movimentacoes ja criadas sao imutaveis (trigger
