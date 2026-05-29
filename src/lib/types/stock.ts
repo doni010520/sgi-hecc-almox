@@ -57,6 +57,10 @@ export type SaidaAvulsaReason =
   | 'devolucao_fornecedor'
   | 'quebra'
   | 'vencimento'
+  | 'obito_sem_reaproveitamento'
+  | 'defeito_fabricacao'
+  | 'embalagem_violada'
+  | 'falha_fracionamento'
   | 'outro'
 
 export interface StockMovement {
@@ -203,5 +207,9 @@ export const SAIDA_AVULSA_REASON_LABEL: Record<SaidaAvulsaReason, string> = {
   devolucao_fornecedor: 'Devolucao ao fornecedor',
   quebra: 'Quebra',
   vencimento: 'Vencimento',
+  obito_sem_reaproveitamento: 'Obito (sem reaproveitamento)',
+  defeito_fabricacao: 'Defeito de fabricacao',
+  embalagem_violada: 'Embalagem violada',
+  falha_fracionamento: 'Falha no fracionamento',
   outro: 'Outro',
 }

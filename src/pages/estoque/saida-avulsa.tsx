@@ -1,5 +1,5 @@
 // =====================================================================
-// Saida Avulsa de Estoque
+// Baixa de Estoque
 // Permite a coordenadora/farmaceutico (ou warehouse_manager) baixar
 // itens sem solicitacao, informando obrigatoriamente o motivo:
 //   - Emprestimo  (para fora; pode ficar com "aguarda retorno")
@@ -40,6 +40,10 @@ const REASONS: SaidaAvulsaReason[] = [
   'devolucao_fornecedor',
   'quebra',
   'vencimento',
+  'obito_sem_reaproveitamento',
+  'defeito_fabricacao',
+  'embalagem_violada',
+  'falha_fracionamento',
   'outro',
 ]
 
@@ -259,10 +263,12 @@ export function SaidaAvulsa() {
         </button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <PackageMinus size={22} /> Saida Avulsa de Estoque
+            <PackageMinus size={22} /> Baixa de Estoque
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
-            Registre baixas sem solicitacao: emprestimo, devolucao ao fornecedor, quebra, vencimento ou outro.
+            Registre baixas de estoque sem solicitação: empréstimo, devolução ao fornecedor,
+            quebra, vencimento, óbito sem reaproveitamento, defeito de fabricação, embalagem
+            violada, falha no fracionamento ou outro.
           </p>
         </div>
       </div>
@@ -379,7 +385,7 @@ export function SaidaAvulsa() {
         {/* Motivo */}
         <div>
           <label style={labelStyle}>Motivo *</label>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {REASONS.map((r) => (
               <button
                 key={r}

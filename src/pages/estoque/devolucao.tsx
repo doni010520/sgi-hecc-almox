@@ -105,7 +105,11 @@ export function DevolucaoInterna() {
   }
   const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.item_id !== id))
 
-  const canSubmit = !!locationId && !!user?.id && lines.length > 0 && lines.every((l) => l.quantity > 0)
+  // Justificativa obrigatoria (regra da farmacia) - minimo 5 caracteres
+  const canSubmit =
+    !!locationId && !!user?.id && lines.length > 0
+    && lines.every((l) => l.quantity > 0)
+    && notes.trim().length >= 5
 
   const handleSubmit = async () => {
     if (!canSubmit || !user?.id) return
@@ -234,10 +238,17 @@ export function DevolucaoInterna() {
         )}
 
         <div>
-          <label style={labelStyle}>Observacao</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-            placeholder="Motivo da devolucao (ex: paciente alta, medicacao trocada)..."
+          <label style={labelStyle}>
+            Justificativa <span className="text-red-500">*</span>
+          </label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+            placeholder="Explique o motivo da devolucao (obrigatorio, min. 5 caracteres). Ex: paciente recebeu alta antes de iniciar tratamento; medicacao trocada por prescricao revisada; etc."
             style={{ ...inputStyle, resize: 'vertical' as const }} />
+          <p className="text-xs mt-1" style={{ color: txtMut }}>
+            {notes.trim().length < 5
+              ? `${5 - notes.trim().length} caractere(s) faltando para liberar o registro.`
+              : '✓ Justificativa OK'}
+          </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

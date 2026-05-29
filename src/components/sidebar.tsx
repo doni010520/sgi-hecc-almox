@@ -116,7 +116,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     {
       title: 'Operações de Estoque',
       items: [
-        { name: 'Saída Avulsa', icon: PackageMinus, href: '/estoque/saida-avulsa', show: isManager || isAdmin || isAtendente },
+        { name: 'Baixas', icon: PackageMinus, href: '/estoque/saida-avulsa', show: isManager || isAdmin || isAtendente },
         { name: 'Devolução Interna', icon: Undo2, href: '/estoque/devolucao', show: true },
         { name: 'Transferência', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
         { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: isManager || isAdmin || isAtendente },
