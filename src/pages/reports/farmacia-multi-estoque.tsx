@@ -17,11 +17,12 @@ import { stockService } from '@/lib/services/stock'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
-type Tab = 'prontuario' | 'local' | 'global' | 'parado' | 'perdas'
+type Tab = 'prontuario' | 'local' | 'usuario' | 'global' | 'parado' | 'perdas'
 
 const TAB_LABELS: Record<Tab, string> = {
   prontuario: 'Por Prontuario',
   local: 'Por Estoque',
+  usuario: 'Por Usuario',
   global: 'Consumo Global',
   parado: 'Valor Parado',
   perdas: 'Perdas (Quebra/Venc)',
@@ -76,6 +77,7 @@ export function FarmaciaMultiEstoqueReport() {
       const view = {
         prontuario: 'v_consumo_por_prontuario',
         local: 'v_consumo_por_local',
+        usuario: 'v_consumo_por_usuario',
         global: 'v_consumo_global',
         parado: 'v_valor_parado',
         perdas: 'v_perdas',
@@ -246,6 +248,15 @@ export function FarmaciaMultiEstoqueReport() {
                     <th className="text-right p-2">Qtd total</th>
                     <th className="text-right p-2">Custo total</th>
                   </>)}
+                  {tab === 'usuario' && (<>
+                    <th className="text-left p-2">Usuario</th>
+                    <th className="text-left p-2">Mes</th>
+                    <th className="text-left p-2">Tipo de movimento</th>
+                    <th className="text-left p-2">Item</th>
+                    <th className="text-right p-2">Movs.</th>
+                    <th className="text-right p-2">Qtd</th>
+                    <th className="text-right p-2">Custo total</th>
+                  </>)}
                   {tab === 'global' && (<>
                     <th className="text-left p-2">Mes</th>
                     <th className="text-left p-2">Item</th>
@@ -283,6 +294,17 @@ export function FarmaciaMultiEstoqueReport() {
                       <td className="p-2"><span className="px-2 py-0.5 text-xs rounded" style={{
                         background: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                       }}>{r.movement_type}</span></td>
+                      <td className="p-2 text-right">{r.qtd_total}</td>
+                      <td className="p-2 text-right font-semibold">{formatBRL(r.custo_total)}</td>
+                    </>)}
+                    {tab === 'usuario' && (<>
+                      <td className="p-2 font-medium">{r.user_name || (r.user_id ? r.user_id.slice(0, 8) + '...' : '—')}</td>
+                      <td className="p-2" style={{ color: txtSec }}>{formatMonth(r.mes)}</td>
+                      <td className="p-2"><span className="px-2 py-0.5 text-xs rounded" style={{
+                        background: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                      }}>{r.movement_type}</span></td>
+                      <td className="p-2" style={{ color: txtSec }}>{r.item_type === 'pharmacy' ? 'Farmacia' : 'Almoxarifado'}</td>
+                      <td className="p-2 text-right">{r.movimentos}</td>
                       <td className="p-2 text-right">{r.qtd_total}</td>
                       <td className="p-2 text-right font-semibold">{formatBRL(r.custo_total)}</td>
                     </>)}

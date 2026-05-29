@@ -61,6 +61,14 @@ export interface Item {
   last_reorder_date?: string
   lead_time_days?: number
   is_active?: boolean
+  // Campos novos da farmacia (F1):
+  supplier_id?: string | null
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
+  presentation?:
+    | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
+    | 'xarope' | 'supositorio' | 'gotas' | 'outros'
+  is_mav?: boolean
 }
 
 interface StockEntry {

@@ -12,6 +12,11 @@ import { ptBR } from 'date-fns/locale'
 import { itemsService } from '@/lib/services/items'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { Item } from '@/lib/services/items'
+import { supabase } from '@/lib/supabase'
+import {
+  MEDICATION_CLASS_LABEL,
+  PRESENTATION_LABEL,
+} from '@/lib/types/farmacia'
 import { formatRequestNumber } from '@/lib/utils/request'
 import { StockConfigDialog } from './components/stock-config-dialog'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
@@ -52,6 +57,8 @@ export function ItemDetails() {
   const [showEditStockDialog, setShowEditStockDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  // Nome do fornecedor amarrado (busca via FK supplier_id)
+  const [supplierName, setSupplierName] = useState<string | null>(null)
 
   const type = location.pathname.includes('/pharmacy') ? 'pharmacy' : 'warehouse'
 
@@ -72,6 +79,18 @@ export function ItemDetails() {
       setError(null)
       const data = await itemsService.getById(id, type)
       setItem(data)
+      // Carrega o nome do fornecedor (se houver FK)
+      if (data?.supplier_id) {
+        const { data: sup } = await supabase
+          .from('suppliers')
+          .select('name, cnpj')
+          .eq('id', data.supplier_id)
+          .maybeSingle()
+        if (sup) setSupplierName(`${sup.name} (${sup.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')})`)
+        else setSupplierName(null)
+      } else {
+        setSupplierName(data?.supplier_name || null)
+      }
     } catch (error) {
       console.error('Error loading item:', error)
       setError('Erro ao carregar item')
@@ -328,6 +347,47 @@ export function ItemDetails() {
             </div>
           </div>
         </div>
+
+        {/* Informações Farmacêuticas — só para itens de farmácia */}
+        {type === 'pharmacy' && (
+          <div className="mt-6 bg-white p-5 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              <Pill className="w-5 h-5 text-primary-600" />
+              <h3 className="text-base font-semibold text-gray-900">Informações Farmacêuticas</h3>
+              {item.is_mav && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                  <AlertTriangle className="w-3 h-3" /> Medicamento de Alta Vigilância (MAV)
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Classe</p>
+                <p className="font-medium text-gray-900">
+                  {item.medication_class
+                    ? MEDICATION_CLASS_LABEL[item.medication_class]
+                    : '—'}
+                </p>
+              </div>
+              {item.medication_class === 'controlados' && (
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Lista (344/98)</p>
+                  <p className="font-medium text-gray-900">{item.controlled_subclass || '—'}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Apresentação</p>
+                <p className="font-medium text-gray-900">
+                  {item.presentation ? PRESENTATION_LABEL[item.presentation] : '—'}
+                </p>
+              </div>
+              <div className="col-span-2 md:col-span-3">
+                <p className="text-xs uppercase tracking-wide text-gray-500">Fornecedor</p>
+                <p className="font-medium text-gray-900">{supplierName || '—'}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
