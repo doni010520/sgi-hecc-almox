@@ -6,6 +6,7 @@ export type DispatchType =
   | 'doacao'
   | 'permuta'
   | 'transferencia'
+  | 'vencimento'
   | 'outro'
 
 export const DISPATCH_TYPE_LABELS: Record<DispatchType, string> = {
@@ -14,6 +15,7 @@ export const DISPATCH_TYPE_LABELS: Record<DispatchType, string> = {
   doacao: 'Doação',
   permuta: 'Permuta',
   transferencia: 'Transferência',
+  vencimento: 'Saída por vencimento',
   outro: 'Outro',
 }
 
