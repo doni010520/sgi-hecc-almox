@@ -27,7 +27,9 @@ import {
   Undo2,
   ArrowRightLeft,
   Handshake,
-  CalendarX
+  CalendarX,
+  Stethoscope,
+  UsersRound
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -57,6 +59,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: true },
         { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: true }
+      ]
+    },
+    {
+      title: 'Cadastros Farmácia',
+      items: [
+        { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: canManageRequests },
+        { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: canManageRequests },
+        { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: canManageRequests }
       ]
     },
     {

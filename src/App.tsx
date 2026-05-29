@@ -40,6 +40,9 @@ import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
+import { Fornecedores } from '@/pages/farmacia/fornecedores'
+import { Prescritores } from '@/pages/farmacia/prescritores'
+import { Pacientes } from '@/pages/farmacia/pacientes'
 import { SaidaAvulsa } from '@/pages/estoque/saida-avulsa'
 import { DevolucaoInterna } from '@/pages/estoque/devolucao'
 import { Transferencia } from '@/pages/estoque/transferencia'
@@ -325,6 +328,29 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <NewWarehouseDispatch />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+
+              {/* Cadastros da Farmacia */}
+              <Route path="/farmacia/fornecedores" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Fornecedores />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/prescritores" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Prescritores />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/pacientes" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Pacientes />
                   </MainLayout>
                 </ProtectedRoute>
               } />
