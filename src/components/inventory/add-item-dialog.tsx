@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText } from 'lucide-react'
+import { Loader2, FileText, Pill, AlertTriangle } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
 import type { ItemCategory, UnitType } from '@/lib/services/items'
+import { suppliersService } from '@/lib/services/farmacia-cadastros'
+import type { Supplier, MedicationClass, Presentation } from '@/lib/types/farmacia'
+import {
+  MEDICATION_CLASS_LABEL,
+  CONTROLLED_SUBCLASSES,
+  PRESENTATION_LABEL,
+} from '@/lib/types/farmacia'
 
 const itemSchema = z.object({
   code: z.string().min(1, 'Codigo e obrigatorio'),
@@ -37,6 +44,15 @@ const itemSchema = z.object({
   afm_number: z.string().optional(),
   supplier_cnpj: z.string().optional(),
   supplier_name: z.string().optional(),
+  // Farmacia (so usados quando type='pharmacy')
+  supplier_id: z.string().optional(),
+  medication_class: z.enum(['uso_geral', 'antimicrobianos', 'controlados', 'mav']).optional(),
+  controlled_subclass: z.enum(['A1', 'A2', 'A3', 'B1', 'B2', 'C1', 'C2', 'C3', 'C4']).optional(),
+  presentation: z.enum([
+    'comprimidos', 'injetaveis', 'solucoes_orais', 'topicos', 'aerosol',
+    'xarope', 'supositorio', 'gotas', 'outros',
+  ]).optional(),
+  is_mav: z.boolean().optional(),
 })
 
 type ItemFormData = z.infer<typeof itemSchema>
@@ -72,15 +88,30 @@ const unitOptions = [
 export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<ItemFormData>({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
       category: type === 'pharmacy' ? 'MEDICAMENTO' : 'MATERIAL HOSPITALAR',
       unit: 'Un',
       min_stock: 0,
+      medication_class: type === 'pharmacy' ? 'uso_geral' : undefined,
+      is_mav: false,
     }
   })
+
+  const medClass = watch('medication_class')
+  const isMav = watch('is_mav')
+
+  // Carrega fornecedores quando o dialog abre (so para pharmacy)
+  useEffect(() => {
+    if (open && type === 'pharmacy') {
+      suppliersService.list().then(setSuppliers).catch((e) => {
+        console.error('Erro ao carregar fornecedores:', e)
+      })
+    }
+  }, [open, type])
 
   const onSubmit = async (data: ItemFormData) => {
     try {
@@ -110,6 +141,13 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         supplier_cnpj: hasInitial ? data.supplier_cnpj : undefined,
         supplier_name: hasInitial ? data.supplier_name : undefined,
         invoice_total_value: hasInitial ? data.invoice_total_value : undefined,
+        // Farmacia
+        supplier_id: type === 'pharmacy' ? (data.supplier_id || undefined) : undefined,
+        medication_class: type === 'pharmacy' ? data.medication_class : undefined,
+        controlled_subclass: type === 'pharmacy' && data.medication_class === 'controlados'
+          ? data.controlled_subclass : null,
+        presentation: type === 'pharmacy' ? data.presentation : undefined,
+        is_mav: type === 'pharmacy' ? !!data.is_mav : undefined,
       }, type)
 
       reset()
@@ -304,6 +342,97 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
           </div>
 
+          {/* Secao: Classificacao Farmaceutica — so para pharmacy */}
+          {type === 'pharmacy' && (
+            <div className="border border-blue-200 rounded-lg overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border-b border-blue-200">
+                <Pill className="w-4 h-4 text-blue-700" />
+                <span className="text-sm font-medium text-blue-900">
+                  Classificação Farmacêutica
+                </span>
+              </div>
+              <div className="p-4 space-y-4 bg-white">
+                <div>
+                  <Label>Classe do medicamento *</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
+                    {(Object.entries(MEDICATION_CLASS_LABEL) as Array<[MedicationClass, string]>).map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setValue('medication_class', k, { shouldDirty: true })}
+                        className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                          medClass === k
+                            ? 'bg-blue-100 border-blue-500 text-blue-900 font-semibold'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {medClass === 'controlados' && (
+                  <div>
+                    <Label>Lista (Portaria 344/98) *</Label>
+                    <select
+                      {...register('controlled_subclass')}
+                      className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+                    >
+                      <option value="">Selecione a lista</option>
+                      {CONTROLLED_SUBCLASSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      A1/A2/A3=entorpecentes · B1/B2=psicotrópicos · C1=outros · C2=retinoicos · C3=imunossupressores · C4=antirretrovirais
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="presentation">Apresentação *</Label>
+                    <select
+                      id="presentation"
+                      {...register('presentation')}
+                      className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+                    >
+                      <option value="">Selecione...</option>
+                      {(Object.entries(PRESENTATION_LABEL) as Array<[Presentation, string]>).map(([k, label]) => (
+                        <option key={k} value={k}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-start gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        {...register('is_mav')}
+                        className="w-4 h-4 mt-0.5"
+                      />
+                      <span className="text-sm">
+                        <span className="font-medium flex items-center gap-1">
+                          <AlertTriangle size={14} className="text-amber-500" />
+                          É Medicamento de Alta Vigilância (MAV)
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          MAVs exigem dupla checagem na dispensação
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+                {isMav && (
+                  <div className="p-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                    ⚠️ Esse medicamento será marcado como MAV. Na dispensação, o farmacêutico
+                    será obrigado a digitar "CONFIRMO" antes de salvar.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Seção: Estoque Inicial + Origem (NF/fornecedor) — sempre visível */}
           <div className="border border-emerald-200 rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border-b border-emerald-200">
@@ -420,27 +549,56 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {type === 'pharmacy' ? (
                 <div>
-                  <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
-                  <Input
-                    id="supplier_cnpj"
-                    {...register('supplier_cnpj')}
-                    className="mt-1"
-                    placeholder="00.000.000/0000-00"
-                  />
+                  <Label htmlFor="supplier_id">Fornecedor</Label>
+                  <select
+                    id="supplier_id"
+                    {...register('supplier_id')}
+                    onChange={(e) => {
+                      setValue('supplier_id', e.target.value, { shouldDirty: true })
+                      // Auto-preenche name/cnpj a partir do supplier selecionado
+                      const sup = suppliers.find((s) => s.id === e.target.value)
+                      if (sup) {
+                        setValue('supplier_name', sup.name)
+                        setValue('supplier_cnpj', sup.cnpj)
+                      }
+                    }}
+                    className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+                  >
+                    <option value="">Selecione um fornecedor...</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Não está na lista? Cadastre em <strong>/farmacia/fornecedores</strong>.
+                  </p>
                 </div>
-
-                <div>
-                  <Label htmlFor="supplier_name">Nome do Fornecedor</Label>
-                  <Input
-                    id="supplier_name"
-                    {...register('supplier_name')}
-                    className="mt-1"
-                    placeholder="Nome da empresa"
-                  />
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
+                    <Input
+                      id="supplier_cnpj"
+                      {...register('supplier_cnpj')}
+                      className="mt-1"
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="supplier_name">Nome do Fornecedor</Label>
+                    <Input
+                      id="supplier_name"
+                      {...register('supplier_name')}
+                      className="mt-1"
+                      placeholder="Nome da empresa"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

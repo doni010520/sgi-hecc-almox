@@ -106,6 +106,14 @@ interface CreateItemData {
   invoice_total_value?: number
   unit_price?: number
   acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta'
+  // Campos novos (farmacia multi-estoque):
+  supplier_id?: string | null
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
+  presentation?:
+    | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
+    | 'xarope' | 'supositorio' | 'gotas' | 'outros'
+  is_mav?: boolean
 }
 
 interface PaginationOptions {
@@ -133,6 +141,14 @@ interface UpdateItemData {
   invoice_total_value?: number
   lead_time_days?: number
   is_active?: boolean
+  // Campos novos (farmacia multi-estoque):
+  supplier_id?: string | null
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
+  presentation?:
+    | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
+    | 'xarope' | 'supositorio' | 'gotas' | 'outros'
+  is_mav?: boolean
 }
 
 export interface ImportItemData {
@@ -1002,6 +1018,15 @@ class ItemsService {
 
       if (data.invoice_total_value !== undefined && data.invoice_total_value !== null) {
         insertData.invoice_total_value = data.invoice_total_value
+      }
+
+      // Campos novos da farmacia (so se for pharmacy_items)
+      if (table === 'pharmacy_items') {
+        if (data.supplier_id) insertData.supplier_id = data.supplier_id
+        if (data.medication_class) insertData.medication_class = data.medication_class
+        if (data.controlled_subclass !== undefined) insertData.controlled_subclass = data.controlled_subclass
+        if (data.presentation) insertData.presentation = data.presentation
+        if (data.is_mav !== undefined) insertData.is_mav = data.is_mav
       }
 
       console.log('Inserting item into table:', table, 'with data:', insertData)
