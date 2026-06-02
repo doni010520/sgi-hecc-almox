@@ -192,7 +192,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="code">Codigo *</Label>
               <Input
@@ -251,7 +251,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="unit">Unidade de Fornecimento *</Label>
               <select
@@ -286,7 +286,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="batch_number">Numero do Lote</Label>
               <Input
@@ -308,7 +308,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
               <div className="relative mt-1">
@@ -469,7 +469,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="initial_stock">Quantidade Inicial</Label>
                   <Input
@@ -500,7 +500,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="invoice_total_value">Valor Total da NF</Label>
                   <div className="relative mt-1">
@@ -519,7 +519,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 <div></div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="invoice_number">Número da NF</Label>
                   <Input
@@ -580,7 +580,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
                     <Input

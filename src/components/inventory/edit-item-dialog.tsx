@@ -220,7 +220,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Dados do item */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="code">Código *</Label>
               <Input id="code" {...register('code')} className="mt-1" />
@@ -257,7 +257,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="unit">Unidade *</Label>
               <select
@@ -282,7 +282,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="batch_number">Lote</Label>
               <Input id="batch_number" {...register('batch_number')} className="mt-1" />
@@ -293,7 +293,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
               <div className="relative mt-1">
@@ -359,7 +359,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="entry_quantity">Quantidade a adicionar</Label>
                   <Input
@@ -389,7 +389,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="invoice_number">Número da NF</Label>
                   <Input id="invoice_number" {...register('invoice_number')} className="mt-1" placeholder="Ex: NF-123456" />
@@ -400,7 +400,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="invoice_date">Data da NF</Label>
                   <Input id="invoice_date" type="date" {...register('invoice_date')} className="mt-1" />
@@ -422,7 +422,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
                   <Input id="supplier_cnpj" {...register('supplier_cnpj')} className="mt-1" placeholder="00.000.000/0000-00" />
