@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Lock, Edit, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Loader2, Edit, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,9 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { itemsService } from '@/lib/services/items'
 import type { Item } from '@/lib/services/items'
 
-const passwordSchema = z.object({
-  password: z.string().min(1, 'Senha é obrigatória'),
-})
+const CONFIRM_WORD = 'EDITAR'
 
 const stockEditSchema = z.object({
   new_stock: z.number().min(0, 'Estoque deve ser maior ou igual a 0'),
@@ -27,7 +25,6 @@ const stockEditSchema = z.object({
   is_active: z.boolean(),
 })
 
-type PasswordFormData = z.infer<typeof passwordSchema>
 type StockEditFormData = z.infer<typeof stockEditSchema>
 
 interface EditStockDialogProps {
@@ -37,20 +34,17 @@ interface EditStockDialogProps {
   onSuccess: () => void
 }
 
-export function EditStockDialog({ 
-  item, 
-  open, 
-  onOpenChange, 
-  onSuccess 
+export function EditStockDialog({
+  item,
+  open,
+  onOpenChange,
+  onSuccess
 }: EditStockDialogProps) {
-  const [step, setStep] = useState<'password' | 'edit'>('password')
+  const [step, setStep] = useState<'confirm' | 'edit'>('confirm')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema)
-  })
-  
+  const [confirmText, setConfirmText] = useState('')
+
   const stockForm = useForm<StockEditFormData>({
     resolver: zodResolver(stockEditSchema),
     defaultValues: {
@@ -63,23 +57,14 @@ export function EditStockDialog({
   const watchedNewStock = stockForm.watch('new_stock')
   const stockDifference = (watchedNewStock || 0) - item.current_stock
 
-  const handlePasswordSubmit = async (data: PasswordFormData) => {
-    try {
-      setError(null)
-      
-      // Verificar se a senha é "excluir2026"
-      if (data.password !== 'excluir2026') {
-        setError('Senha incorreta. Acesso negado.')
-        return
-      }
-      
-      // Avançar para o próximo passo
-      setStep('edit')
-      passwordForm.reset()
-    } catch (error) {
-      console.error('Error validating password:', error)
-      setError('Erro ao validar senha')
+  const handleConfirm = () => {
+    if (confirmText.trim().toUpperCase() !== CONFIRM_WORD) {
+      setError(`Digite "${CONFIRM_WORD}" para confirmar.`)
+      return
     }
+    setError(null)
+    setStep('edit')
+    setConfirmText('')
   }
 
   const handleStockEdit = async (data: StockEditFormData) => {
@@ -109,9 +94,9 @@ export function EditStockDialog({
   }
 
   const resetDialog = () => {
-    setStep('password')
+    setStep('confirm')
     setError(null)
-    passwordForm.reset()
+    setConfirmText('')
     stockForm.reset({
       new_stock: item.current_stock,
       reason: '',
@@ -134,34 +119,36 @@ export function EditStockDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {step === 'password' && (
-          <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-6">
+        {step === 'confirm' && (
+          <div className="space-y-6">
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
               <div className="flex items-center gap-2 mb-2">
-                <Lock className="w-5 h-5 text-amber-600" />
-                <h3 className="font-medium text-amber-900">Acesso Restrito</h3>
+                <ShieldAlert className="w-5 h-5 text-amber-600" />
+                <h3 className="font-medium text-amber-900">Confirmação Necessária</h3>
               </div>
               <p className="text-sm text-amber-700">
-                Esta funcionalidade requer uma senha especial. Apenas administradores autorizados podem editar o estoque diretamente.
+                Você está prestes a editar o estoque diretamente. Esta ação altera a quantidade atual do item.
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+                <p style={{ color: '#666' }}>Item: <strong>{item.name}</strong></p>
+                <p style={{ color: '#666' }}>Estoque atual: <strong>{item.current_stock} {item.unit}</strong></p>
+              </div>
               <div>
-                <Label htmlFor="password">Senha de Acesso</Label>
+                <Label htmlFor="confirm-text">
+                  Digite <strong className="text-red-600">{CONFIRM_WORD}</strong> para continuar
+                </Label>
                 <Input
-                  id="password"
-                  type="password"
-                  {...passwordForm.register('password')}
+                  id="confirm-text"
+                  value={confirmText}
+                  onChange={(e) => { setConfirmText(e.target.value); if (error) setError(null) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleConfirm() }}
                   className="mt-1"
-                  placeholder="Digite a senha especial"
+                  placeholder={CONFIRM_WORD}
                   autoFocus
                 />
-                {passwordForm.formState.errors.password && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {passwordForm.formState.errors.password.message}
-                  </p>
-                )}
               </div>
 
               {error && (
@@ -178,12 +165,15 @@ export function EditStockDialog({
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button type="submit">
-                <Lock className="w-4 h-4 mr-2" />
-                Verificar Senha
+              <Button
+                type="button"
+                onClick={handleConfirm}
+                disabled={confirmText.trim().toUpperCase() !== CONFIRM_WORD}
+              >
+                Confirmar
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         )}
 
         {step === 'edit' && (
@@ -191,10 +181,10 @@ export function EditStockDialog({
             <div className="p-4 bg-green-50 rounded-lg border border-green-200">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <h3 className="font-medium text-green-900">Acesso Autorizado</h3>
+                <h3 className="font-medium text-green-900">Edição Autorizada</h3>
               </div>
               <p className="text-sm text-green-700">
-                Você pode agora editar o estoque do item. Todas as alterações serão registradas no histórico.
+                Você pode agora editar o estoque do item. Informe o motivo da alteração.
               </p>
             </div>
 
@@ -228,6 +218,7 @@ export function EditStockDialog({
                     min="0"
                     {...stockForm.register('new_stock', { valueAsNumber: true })}
                     className="flex-1"
+                    autoFocus
                   />
                   <span className="text-sm text-gray-500 font-medium">
                     {item.unit}
