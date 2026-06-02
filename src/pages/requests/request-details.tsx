@@ -461,6 +461,55 @@ export function RequestDetails() {
               </div>
             </div>
 
+            {/* Dados do Paciente (Colchão Casca de Ovo e similares) */}
+            {(request as any).notes && (request as any).notes.includes('[Dados do Paciente]') && (
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  Dados do(s) Paciente(s)
+                </h3>
+                <div className="space-y-2">
+                  {((request as any).notes as string).split('\n').filter((line: string) => line.includes('[Dados do Paciente]')).map((line: string, idx: number) => {
+                    const parts: Record<string, string> = {}
+                    line.replace('[Dados do Paciente] ', '').split(' | ').forEach((part: string) => {
+                      const [key, ...vals] = part.split(': ')
+                      if (key && vals.length) parts[key.trim()] = vals.join(': ').trim()
+                    })
+                    return (
+                      <div key={idx} className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <span className="text-blue-600 font-medium">Paciente:</span>{' '}
+                            <span className="text-blue-900 font-semibold">{parts['Nome'] || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 font-medium">Leito:</span>{' '}
+                            <span className="text-blue-900">{parts['Leito'] || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 font-medium">Posto:</span>{' '}
+                            <span className="text-blue-900">{parts['Posto'] || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 font-medium">Enfermeira:</span>{' '}
+                            <span className="text-blue-900">{parts['Enfermeira'] || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Observações gerais (notes sem dados de paciente) */}
+            {(request as any).notes && !(request as any).notes.includes('[Dados do Paciente]') && (
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <p className="text-sm text-gray-500">Observações</p>
+                <p className="font-medium text-gray-900 whitespace-pre-line mt-1">{(request as any).notes}</p>
+              </div>
+            )}
+
           </div>
         </div>
 
