@@ -87,13 +87,6 @@ export function EditStockDialog({
       setLoading(true)
       setError(null)
 
-      // Bloqueia aumento - aumento de estoque deve ser via "Registrar Entrada"
-      if (data.new_stock > item.current_stock) {
-        setError('Para AUMENTAR o estoque, use o botão "Registrar Entrada" (com NF e AFM). Esta tela é apenas para correções e baixas.')
-        setLoading(false)
-        return
-      }
-
       const pharmacyCats = ['Medicamentos', 'Material Hospitalar', 'MEDICAMENTO', 'MAT/MED', 'HIGIENE E LIMPEZA']
       const itemType = pharmacyCats.includes(item.category as string)
         ? 'pharmacy'
@@ -264,7 +257,7 @@ export function EditStockDialog({
                 </div>
                 {stockDifference > 0 && (
                   <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
-                    ⚠️ Para <strong>aumentar</strong> o estoque, use o botão <strong>"Registrar Entrada"</strong> (com NF e AFM). Esta tela é apenas para correções/baixas.
+                    💡 Para entradas com NF/AFM, prefira o botão <strong>"Registrar Entrada"</strong>. Use esta tela para <strong>correções manuais</strong> de estoque.
                   </p>
                 )}
               </div>
