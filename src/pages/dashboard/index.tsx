@@ -1,22 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { 
-  Package2, 
-  Pill, 
-  ClipboardList, 
-  Users, 
+import {
+  Package2,
+  Pill,
+  ClipboardList,
+  Users,
   BarChart3,
   PlayCircle,
   ArrowRight,
   CheckSquare,
   BookOpen,
   ChevronDown,
-  Settings
+  Settings,
+  AlertTriangle,
+  CalendarX,
+  ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/theme'
+import { supabase } from '@/lib/supabase'
 
 export function Dashboard() {
   const navigate = useNavigate()
@@ -39,6 +43,54 @@ export function Dashboard() {
   const canManageRequests = isAdmin || isManager || isAtendente
   const [showGuide, setShowGuide] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [expiringItems, setExpiringItems] = useState<any[]>([])
+  const [loadingExpiry, setLoadingExpiry] = useState(false)
+
+  // Buscar itens com validade próxima (2 meses) ou já vencidos
+  useEffect(() => {
+    if (!canManageRequests) return
+    ;(async () => {
+      setLoadingExpiry(true)
+      try {
+        const twoMonthsFromNow = new Date()
+        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
+        const cutoff = twoMonthsFromNow.toISOString().split('T')[0]
+
+        // Buscar warehouse_items com validade até 2 meses
+        const { data: warehouseExpiring } = await supabase
+          .from('warehouse_items')
+          .select('id, name, code, expiry_date, current_stock')
+          .eq('is_active', true)
+          .not('expiry_date', 'is', null)
+          .lte('expiry_date', cutoff)
+          .gt('current_stock', 0)
+          .order('expiry_date', { ascending: true })
+          .limit(50)
+
+        // Buscar pharmacy_items com validade até 2 meses
+        const { data: pharmacyExpiring } = await supabase
+          .from('pharmacy_items')
+          .select('id, name, code, expiry_date, current_stock')
+          .eq('is_active', true)
+          .not('expiry_date', 'is', null)
+          .lte('expiry_date', cutoff)
+          .gt('current_stock', 0)
+          .order('expiry_date', { ascending: true })
+          .limit(50)
+
+        const all = [
+          ...(warehouseExpiring || []).map(i => ({ ...i, source: 'almoxarifado' })),
+          ...(pharmacyExpiring || []).map(i => ({ ...i, source: 'farmacia' })),
+        ].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
+
+        setExpiringItems(all)
+      } catch (e) {
+        console.error('Error loading expiring items:', e)
+      } finally {
+        setLoadingExpiry(false)
+      }
+    })()
+  }, [canManageRequests])
 
   const glass: React.CSSProperties = {
     background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
@@ -94,6 +146,102 @@ export function Dashboard() {
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
+
+      {/* Alerta de Validade */}
+      {canManageRequests && !loadingExpiry && expiringItems.length > 0 && (() => {
+        const today = new Date().toISOString().split('T')[0]
+        const expired = expiringItems.filter(i => i.expiry_date <= today)
+        const expiringSoon = expiringItems.filter(i => i.expiry_date > today)
+        return (
+          <div className="rounded-2xl overflow-hidden" style={{
+            background: mode === 'dark' ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.04)',
+            border: `1px solid ${mode === 'dark' ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.2)'}`,
+          }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{
+              background: mode === 'dark' ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
+            }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.15)' }}>
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold" style={{ color: mode === 'dark' ? '#fca5a5' : '#991b1b' }}>
+                    Alerta de Validade
+                  </h3>
+                  <p className="text-sm" style={{ color: mode === 'dark' ? 'rgba(252,165,165,0.7)' : 'rgba(153,27,27,0.7)' }}>
+                    {expired.length > 0 && <span className="font-bold">{expired.length} vencido(s)</span>}
+                    {expired.length > 0 && expiringSoon.length > 0 && ' · '}
+                    {expiringSoon.length > 0 && <span>{expiringSoon.length} vencendo em até 2 meses</span>}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/estoque/vencimentos')}
+                className="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{
+                  color: mode === 'dark' ? '#fca5a5' : '#991b1b',
+                  background: mode === 'dark' ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)',
+                  border: `1px solid ${mode === 'dark' ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)'}`,
+                }}
+              >
+                Ver todos <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-3 space-y-2 max-h-64 overflow-y-auto">
+              {expiringItems.slice(0, 8).map((item) => {
+                const isExpired = item.expiry_date <= today
+                const expiryDate = new Date(item.expiry_date + 'T00:00:00')
+                const daysUntil = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                return (
+                  <div key={`${item.source}-${item.id}`} className="flex items-center justify-between py-2 px-3 rounded-lg" style={{
+                    background: mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
+                    border: `1px solid ${isExpired
+                      ? (mode === 'dark' ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)')
+                      : (mode === 'dark' ? 'rgba(251,191,36,0.2)' : 'rgba(251,191,36,0.15)')
+                    }`,
+                  }}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: txt }}>{item.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs" style={{ color: txtMut }}>{item.code}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{
+                          background: item.source === 'farmacia'
+                            ? (mode === 'dark' ? 'rgba(168,85,247,0.15)' : 'rgba(168,85,247,0.1)')
+                            : (mode === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)'),
+                          color: item.source === 'farmacia'
+                            ? (mode === 'dark' ? '#c084fc' : '#7c3aed')
+                            : (mode === 'dark' ? '#93c5fd' : '#2563eb'),
+                        }}>
+                          {item.source === 'farmacia' ? 'Farmácia' : 'Almoxarifado'}
+                        </span>
+                        <span className="text-xs" style={{ color: txtMut }}>Estoque: {item.current_stock}</span>
+                      </div>
+                    </div>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <CalendarX className="w-3.5 h-3.5" style={{ color: isExpired ? '#ef4444' : '#f59e0b' }} />
+                        <span className="text-sm font-semibold" style={{ color: isExpired ? '#ef4444' : '#f59e0b' }}>
+                          {expiryDate.toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <span className="text-xs font-medium" style={{
+                        color: isExpired ? '#ef4444' : '#f59e0b',
+                      }}>
+                        {isExpired ? `Vencido há ${Math.abs(daysUntil)} dias` : `Vence em ${daysUntil} dias`}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              {expiringItems.length > 8 && (
+                <p className="text-center text-sm py-2" style={{ color: txtMut }}>
+                  + {expiringItems.length - 8} item(ns) · <button onClick={() => navigate('/estoque/vencimentos')} className="underline" style={{ color: mode === 'dark' ? '#fca5a5' : '#991b1b' }}>Ver todos</button>
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Main Features */}
       <div className="p-6" style={glass}>
