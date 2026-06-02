@@ -255,7 +255,7 @@ export function NewRequest() {
       const request = await requestService.create({
         type: requestType,
         priority: details.priority,
-        department: details.department,
+        department: details.requesting_department || details.department,
         destination_department: details.destination_department,
         justification: details.justification_option,
         notes: notes || undefined,

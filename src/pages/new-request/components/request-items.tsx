@@ -86,12 +86,21 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     }
   }
 
-  // Filter items based on search term
-  const filteredItems = items.filter(item => {
-    return searchTerm === '' ||
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
-  })
+  // Filter items based on search term, sort items with stock first
+  const filteredItems = items
+    .filter(item => {
+      return searchTerm === '' ||
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
+    })
+    .sort((a, b) => {
+      // Items with stock come first, then 0-stock at the bottom
+      const aStock = (a as any).current_stock || 0
+      const bStock = (b as any).current_stock || 0
+      if (aStock > 0 && bStock <= 0) return -1
+      if (aStock <= 0 && bStock > 0) return 1
+      return 0
+    })
 
   const handleAddItem = (item: Item) => {
     // Colchão Casca de Ovo: permite múltiplas entradas (uma por paciente).
@@ -207,26 +216,33 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
       <div className="space-y-2">
         <Label>Itens Disponíveis</Label>
         <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
-          {filteredItems.map(item => (
-            <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-              <div>
-                <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-gray-500">
-                  {item.code} • {item.category} • {item.unit}
-                </p>
+          {filteredItems.map(item => {
+            const stock = (item as any).current_stock || 0
+            const isOutOfStock = stock <= 0
+            return (
+              <div key={item.id} className={`p-4 flex items-center justify-between ${isOutOfStock ? 'bg-red-50/50 opacity-60' : 'hover:bg-gray-50'}`}>
+                <div>
+                  <p className={`font-medium ${isOutOfStock ? 'text-gray-400' : ''}`}>{item.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {item.code} • {item.category} • {item.unit}
+                    <span className={`ml-2 font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
+                      (Estoque: {stock})
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddItem(item)}
+                  disabled={isOutOfStock || (item.code !== COLCHAO_CASCA_OVO_CODE && selectedItems.some(i => i.id === item.id))}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {isOutOfStock ? 'Sem estoque' : 'Adicionar'}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleAddItem(item)}
-                disabled={item.code !== COLCHAO_CASCA_OVO_CODE && selectedItems.some(i => i.id === item.id)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar
-              </Button>
-            </div>
-          ))}
+            )
+          })}
           {filteredItems.length === 0 && (
             <div className="p-4 text-center text-gray-500">
               Nenhum item encontrado

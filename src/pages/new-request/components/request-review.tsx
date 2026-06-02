@@ -35,21 +35,25 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
   const [loadingItems, setLoadingItems] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [departmentName, setDepartmentName] = useState<string>('')
+  const [requestingDepartmentName, setRequestingDepartmentName] = useState<string>('')
   const [destinationDepartmentName, setDestinationDepartmentName] = useState<string>('')
 
   // Carregar nomes dos departamentos
   useEffect(() => {
     async function loadDepartments() {
-      const ids = [details.department, details.destination_department].filter(Boolean)
+      const ids = [details.department, details.requesting_department, details.destination_department].filter(Boolean)
       if (ids.length === 0) return
       try {
         const { data } = await supabase
           .from('departments')
           .select('id, name')
-          .in('id', ids)
+          .in('id', ids as string[])
         if (data) {
           const map = new Map(data.map(d => [d.id, d.name]))
           setDepartmentName(map.get(details.department) || details.department)
+          if (details.requesting_department) {
+            setRequestingDepartmentName(map.get(details.requesting_department) || details.requesting_department)
+          }
           if (details.destination_department) {
             setDestinationDepartmentName(map.get(details.destination_department) || details.destination_department)
           }
@@ -59,7 +63,7 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
       }
     }
     loadDepartments()
-  }, [details.department, details.destination_department])
+  }, [details.department, details.requesting_department, details.destination_department])
 
   // Carregar dados completos dos itens
   useEffect(() => {
@@ -163,9 +167,15 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
               <p className="font-medium">{departmentName || 'Carregando...'}</p>
             </div>
           </div>
+          {requestingDepartmentName && (
+            <div>
+              <p className="text-sm text-gray-500">Setor Solicitante (entrega)</p>
+              <p className="font-medium">{requestingDepartmentName}</p>
+            </div>
+          )}
           {destinationDepartmentName && (
             <div>
-              <p className="text-sm text-gray-500">Setor Solicitado</p>
+              <p className="text-sm text-gray-500">Setor Solicitado (fornecedor)</p>
               <p className="font-medium">{destinationDepartmentName}</p>
             </div>
           )}
