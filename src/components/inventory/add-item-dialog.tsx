@@ -183,7 +183,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Item</DialogTitle>
           <p className="text-sm text-gray-500 mt-1">
@@ -354,13 +354,16 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
               <div className="p-4 space-y-4 bg-white">
                 <div>
                   <Label>Classe do medicamento *</Label>
+                  {/* min-h garante mesma altura de todos os cards mesmo com textos
+                      de tamanho diferente; leading-tight reduz altura de linha
+                      no MAV que quebra em 2-3 linhas no card estreito. */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
                     {(Object.entries(MEDICATION_CLASS_LABEL) as Array<[MedicationClass, string]>).map(([k, label]) => (
                       <button
                         key={k}
                         type="button"
                         onClick={() => setValue('medication_class', k, { shouldDirty: true })}
-                        className={`px-2 py-2 text-xs rounded-lg border text-center transition-colors ${
+                        className={`px-2 py-2 text-xs rounded-lg border text-center leading-tight transition-colors flex items-center justify-center min-h-[60px] ${
                           medClass === k
                             ? 'bg-blue-100 border-blue-500 text-blue-900 font-semibold'
                             : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -390,39 +393,38 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="presentation">Apresentação *</Label>
-                    <select
-                      id="presentation"
-                      {...register('presentation')}
-                      className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
-                    >
-                      <option value="">Selecione...</option>
-                      {(Object.entries(PRESENTATION_LABEL) as Array<[Presentation, string]>).map(([k, label]) => (
-                        <option key={k} value={k}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-end">
-                    <label className="flex items-start gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        {...register('is_mav')}
-                        className="w-4 h-4 mt-0.5"
-                      />
-                      <span className="text-sm">
-                        <span className="font-medium flex items-center gap-1">
-                          <AlertTriangle size={14} className="text-amber-500" />
-                          É Medicamento de Alta Vigilância (MAV)
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          MAVs exigem dupla checagem na dispensação
-                        </span>
-                      </span>
-                    </label>
-                  </div>
+                <div>
+                  <Label htmlFor="presentation">Apresentação *</Label>
+                  <select
+                    id="presentation"
+                    {...register('presentation')}
+                    className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
+                  >
+                    <option value="">Selecione...</option>
+                    {(Object.entries(PRESENTATION_LABEL) as Array<[Presentation, string]>).map(([k, label]) => (
+                      <option key={k} value={k}>{label}</option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* MAV em linha propria — antes ficava espremido lado a lado
+                    com Apresentacao e o texto vazava do card. */}
+                <label className="flex items-start gap-3 p-3 rounded-lg cursor-pointer select-none border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    {...register('is_mav')}
+                    className="w-4 h-4 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium flex items-center gap-1 text-gray-900">
+                      <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
+                      É Medicamento de Alta Vigilância (MAV)
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      MAVs exigem dupla checagem na dispensação (digitar "CONFIRMO")
+                    </p>
+                  </div>
+                </label>
                 {isMav && (
                   <div className="p-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
                     ⚠️ Esse medicamento será marcado como MAV. Na dispensação, o farmacêutico
