@@ -34,6 +34,10 @@ const schema = z.object({
     (v) => (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? 0 : Number(v)),
     z.number().min(0),
   ),
+  current_stock: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? 0 : Number(v)),
+    z.number().min(0, 'Estoque deve ser maior ou igual a 0'),
+  ),
   batch_number: z.string().optional(),
   expiry_date: z.string().optional(),
   last_purchase_price: optionalNumber,
@@ -80,6 +84,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
       category: item.category,
       unit: item.unit,
       min_stock: item.min_stock ?? 0,
+      current_stock: item.current_stock ?? 0,
       batch_number: (item as any).batch_number || '',
       expiry_date: item.expiry_date || '',
       last_purchase_price: (item as any).last_purchase_price ?? undefined,
@@ -97,6 +102,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
       category: item.category,
       unit: item.unit,
       min_stock: item.min_stock ?? 0,
+      current_stock: item.current_stock ?? 0,
       batch_number: (item as any).batch_number || '',
       expiry_date: item.expiry_date || '',
       last_purchase_price: (item as any).last_purchase_price ?? undefined,
@@ -137,7 +143,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
 
       const hasEntry = (data.entry_quantity ?? 0) > 0
 
-      // 1) Atualiza dados do item (mantém current_stock — pode mudar abaixo)
+      // 1) Atualiza dados do item incluindo estoque atual
       const updatePayload: any = {
         code: data.code,
         name: data.name,
@@ -145,6 +151,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
         category: data.category as ItemCategory,
         unit: data.unit as UnitType,
         min_stock: data.min_stock,
+        current_stock: data.current_stock,
         batch_number: data.batch_number || null,
         expiry_date: data.expiry_date || null,
         last_purchase_price: data.last_purchase_price ?? null,
@@ -184,8 +191,8 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
         const { error: entryError } = await supabase.from('stock_entries').insert(entry)
         if (entryError) throw entryError
 
-        // Soma no estoque atual
-        const newStock = (item.current_stock ?? 0) + data.entry_quantity!
+        // Soma no estoque atual (usa o valor editado pelo usuário como base)
+        const newStock = (data.current_stock ?? item.current_stock ?? 0) + data.entry_quantity!
         const tableName = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
         const { error: stockErr } = await supabase
           .from(tableName)
@@ -280,6 +287,19 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                 className="mt-1"
               />
             </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <Label htmlFor="current_stock" className="text-blue-900 font-semibold">Estoque Atual</Label>
+            <p className="text-xs text-blue-600 mb-2">Valor atual em sistema. Altere para corrigir manualmente.</p>
+            <Input
+              id="current_stock"
+              type="number"
+              min="0"
+              {...register('current_stock', { valueAsNumber: true })}
+              className="bg-white"
+            />
+            {errors.current_stock && <p className="text-sm text-red-500 mt-1">{errors.current_stock.message}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
