@@ -121,6 +121,7 @@ export function RequestProcessing() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm">
               <Building2 className="w-4 h-4 text-gray-500" />
+              <span className="text-xs text-gray-400 mr-1">Solicitante:</span>
               <span className="text-sm font-medium text-gray-700">
                 {getDepartmentName(request.department)}
               </span>
@@ -128,6 +129,7 @@ export function RequestProcessing() {
             {request.destination_department && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-sm">
                 <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                <span className="text-xs text-blue-400 mr-1">Solicitado:</span>
                 <span className="text-sm font-medium text-blue-700">
                   {getDepartmentName(request.destination_department)}
                 </span>
