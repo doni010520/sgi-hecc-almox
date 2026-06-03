@@ -119,7 +119,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       items: [
         { name: 'Baixas', icon: PackageMinus, href: '/estoque/saida-avulsa', show: isManager || isAdmin || isAtendente },
         { name: 'Devolução da Enfermagem', icon: Undo2, href: '/estoque/devolucao', show: true },
-        { name: 'Transferência', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
+        { name: 'Transferência para CAF', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
         { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: isManager || isAdmin || isAtendente },
         { name: 'Vencimentos a Baixar', icon: CalendarX, href: '/estoque/vencimentos', show: isManager || isAdmin || isAtendente }
       ]

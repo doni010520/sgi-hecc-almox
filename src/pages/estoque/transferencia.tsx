@@ -69,13 +69,14 @@ export function Transferencia() {
     ;(async () => {
       try {
         const locs = await stockService.getLocations()
-        // Transferencia entre satelites (e CAF como apoio).
-        // Excluimos ALMOX para focar no fluxo de farmacia.
-        setLocations(locs.filter((l) => l.code !== 'ALMOX'))
+        // Esta tela so movimenta SAT_1/SAT_2 -> CAF.
+        // Source: somente SAT_1 e SAT_2.
+        // Target: sempre CAF (fixo).
+        setLocations(locs.filter((l) => l.code === 'SAT_1' || l.code === 'SAT_2'))
         const s1 = locs.find((l) => l.code === 'SAT_1')
-        const s2 = locs.find((l) => l.code === 'SAT_2')
+        const caf = locs.find((l) => l.code === 'CAF')
         if (s1) setSourceId(s1.id)
-        if (s2) setTargetId(s2.id)
+        if (caf) setTargetId(caf.id)
       } catch (e: any) {
         setError(e?.message || 'Erro ao carregar locais')
       }
@@ -183,10 +184,10 @@ export function Transferencia() {
         }}><ArrowLeft size={18} /></button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <ArrowRightLeft size={22} /> Transferencia entre Estoques
+            <ArrowRightLeft size={22} /> Transferência para CAF
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
-            Movimente itens de uma farmacia satelite para outra (ou da CAF para uma satelite).
+            Devolva itens da Farmácia Satélite 1 ou Satélite 2 para o estoque central (CAF).
           </p>
         </div>
       </div>
@@ -208,10 +209,23 @@ export function Transferencia() {
           </div>
           <div>
             <label style={labelStyle}>Para *</label>
-            <select value={targetId} onChange={(e) => setTargetId(e.target.value)} style={inputStyle as any}>
-              <option value="">Selecione...</option>
-              {locations.filter((l) => l.id !== sourceId).map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
-            </select>
+            <div
+              style={{
+                ...inputStyle,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: mode === 'dark' ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)',
+                borderColor: 'rgba(16,185,129,0.3)',
+                color: txt,
+                fontWeight: 600,
+              }}
+            >
+              🏥 CAF — Central de Abastecimento Farmacêutico
+            </div>
+            <p className="text-xs mt-1" style={{ color: txtMut }}>
+              Destino sempre fixo. Esta tela só transfere para a CAF.
+            </p>
           </div>
         </div>
 
