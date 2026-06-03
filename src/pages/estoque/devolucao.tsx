@@ -149,7 +149,7 @@ export function DevolucaoInterna() {
         }}><ArrowLeft size={18} /></button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <Undo2 size={22} /> Devolucao Interna
+            <Undo2 size={22} /> Devolução da Enfermagem
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             Registre itens devolvidos pela enfermagem. O saldo volta para o estoque escolhido.
