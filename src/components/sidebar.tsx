@@ -52,9 +52,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [deptCode, setDeptCode] = useState<string | null>(null)
   useEffect(() => {
     if (!user?.department_id) { setDeptCode(null); return }
-    supabase.from('departments').select('code').eq('id', user.department_id).maybeSingle()
-      .then(({ data }) => setDeptCode((data as { code?: string } | null)?.code ?? null))
-      .catch(() => setDeptCode(null))
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('departments').select('code').eq('id', user.department_id!).maybeSingle()
+        if (!cancelled) setDeptCode((data as { code?: string } | null)?.code ?? null)
+      } catch {
+        if (!cancelled) setDeptCode(null)
+      }
+    })()
+    return () => { cancelled = true }
   }, [user?.department_id])
   // Admin nunca eh tratado como enfermagem (mantem acesso total).
   const isEnfermagem = !!deptCode && deptCode.startsWith('ENF') && !isAdmin
