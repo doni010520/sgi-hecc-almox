@@ -53,7 +53,8 @@ export function Pacientes() {
   const [fBirth, setFBirth] = useState('')
   const [fRecord, setFRecord] = useState('')
   const [fMother, setFMother] = useState('')
-  const [fAdmit, setFAdmit] = useState(false)
+  // Todo paciente novo eh criado ja com uma admissao (regra de negocio).
+  // Data default = hoje, mas o usuario pode mudar.
   const [fAdmitDate, setFAdmitDate] = useState(new Date().toISOString().slice(0, 10))
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
@@ -90,14 +91,14 @@ export function Pacientes() {
   function openNew() {
     setEditing(null)
     setFName(''); setFBirth(''); setFRecord(''); setFMother('')
-    setFAdmit(false); setFAdmitDate(new Date().toISOString().slice(0, 10))
+    setFAdmitDate(new Date().toISOString().slice(0, 10))
     setFormError(''); setShowForm(true)
   }
 
   function openEdit(p: Patient) {
     setEditing(p)
     setFName(p.full_name); setFBirth(p.birth_date); setFRecord(p.medical_record_number)
-    setFMother(p.mother_name || ''); setFAdmit(false)
+    setFMother(p.mother_name || '')
     setFormError(''); setShowForm(true)
   }
 
@@ -110,10 +111,11 @@ export function Pacientes() {
           medical_record_number: fRecord, mother_name: fMother,
         })
       } else {
+        // Sempre cria com admissao (regra de negocio).
         await patientsService.create({
           full_name: fName, birth_date: fBirth,
           medical_record_number: fRecord, mother_name: fMother,
-          already_admitted: fAdmit, admission_date: fAdmit ? fAdmitDate : undefined,
+          already_admitted: true, admission_date: fAdmitDate,
         })
       }
       setShowForm(false); await load()
@@ -291,17 +293,12 @@ export function Pacientes() {
               <input value={fMother} onChange={(e) => setFMother(e.target.value)} style={input} />
             </div>
             {!editing && (
-              <div className="space-y-2 p-3 rounded-lg" style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
-                <label className="flex items-center gap-2 text-sm cursor-pointer select-none" style={{ color: txt }}>
-                  <input type="checkbox" checked={fAdmit} onChange={(e) => setFAdmit(e.target.checked)} className="w-4 h-4" />
-                  Já internado agora? (cria admissão)
-                </label>
-                {fAdmit && (
-                  <div>
-                    <label style={lbl}>Data de internação</label>
-                    <input type="date" value={fAdmitDate} onChange={(e) => setFAdmitDate(e.target.value)} style={input} />
-                  </div>
-                )}
+              <div className="p-3 rounded-lg" style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}>
+                <label style={lbl}>Data de internação *</label>
+                <input type="date" value={fAdmitDate} onChange={(e) => setFAdmitDate(e.target.value)} style={input} />
+                <p className="text-xs mt-1" style={{ color: txtMut }}>
+                  Todo paciente novo é criado já com uma admissão. Se já estiver internado antes, ajuste a data.
+                </p>
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
