@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
+import { supabase } from '@/lib/supabase'
 // Button removed - using native button with inline styles
 import {
   Building2,
@@ -44,13 +46,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isAdmin = user?.role === 'administrador'
   const isManager = user?.role === 'gestor'
   const isAtendente = user?.role === 'atendente'
-  const canManageRequests = isAdmin || isManager || isAtendente
+
+  // Detecta se o usuario eh de um posto de enfermagem (ENF1/ENF2/ENF3).
+  // Esses usuarios so podem ver Solicitacoes e Devolucao da Enfermagem.
+  const [deptCode, setDeptCode] = useState<string | null>(null)
+  useEffect(() => {
+    if (!user?.department_id) { setDeptCode(null); return }
+    supabase.from('departments').select('code').eq('id', user.department_id).maybeSingle()
+      .then(({ data }) => setDeptCode((data as { code?: string } | null)?.code ?? null))
+      .catch(() => setDeptCode(null))
+  }, [user?.department_id])
+  // Admin nunca eh tratado como enfermagem (mantem acesso total).
+  const isEnfermagem = !!deptCode && deptCode.startsWith('ENF') && !isAdmin
+
+  // canManageRequests considera enfermagem como nao-gestao mesmo se tiver outra role
+  const canManageRequests = !isEnfermagem && (isAdmin || isManager || isAtendente)
 
   const menuItems = [
     {
       title: 'Principal',
       items: [
-        { name: 'Dashboard', icon: LayoutDashboard, href: '/', show: true },
+        { name: 'Dashboard', icon: LayoutDashboard, href: '/', show: !isEnfermagem },
         { name: 'Painel TV - Almoxarifado', icon: Tv, href: '/tv/warehouse', show: isManager || isAdmin || isAtendente },
         { name: 'Painel TV - Farmácia', icon: Tv, href: '/tv/pharmacy', show: isManager || isAdmin || isAtendente }
       ]
@@ -152,7 +168,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       title: 'Configurações',
       items: [
         { name: 'Meu Perfil', icon: UserCircle, href: '/profile', show: true },
-        { name: 'Configurações', icon: Settings, href: '/settings', show: true }
+        { name: 'Configurações', icon: Settings, href: '/settings', show: !isEnfermagem }
       ]
     }
   ]
