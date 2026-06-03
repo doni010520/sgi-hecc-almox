@@ -35,12 +35,12 @@ interface PharmacyItemRow {
   price: number | null
 }
 
+// Motivos disponiveis nesta tela. Emprestimo, Devolucao ao fornecedor e
+// Obito sem reaproveitamento foram removidos a pedido da farmacia
+// (continuam aceitos no banco para nao quebrar historico).
 const REASONS: SaidaAvulsaReason[] = [
-  'emprestimo',
-  'devolucao_fornecedor',
   'quebra',
   'vencimento',
-  'obito_sem_reaproveitamento',
   'defeito_fabricacao',
   'embalagem_violada',
   'falha_fracionamento',
