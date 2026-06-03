@@ -519,20 +519,6 @@ class RequestService {
         throw new Error('Tipo de solicitação inválido')
       }
 
-      // Bloqueio temporario: solicitacoes de farmacia estao desabilitadas
-      // ate o novo modelo multi-estoque estar com estoque carregado e
-      // roteamento completo. Quando liberar, remover este bloco e a flag
-      // PHARMACY_REQUESTS_BLOCKED em src/pages/new-request/components/request-type.tsx.
-      // Comparacao via String() para evitar que o TS-narrow elimine o tipo
-      // 'pharmacy' do restante do metodo (usado em ramos a frente).
-      if (String(data.type) === 'pharmacy') {
-        throw new Error(
-          'Solicitações de farmácia estão temporariamente bloqueadas. ' +
-          'O sistema está em migração para o novo modelo de múltiplos estoques. ' +
-          'Use o canal alternativo definido pela coordenação.'
-        )
-      }
-      
       if (!data.priority || !['low', 'medium', 'high'].includes(data.priority)) {
         throw new Error('Prioridade inválida')
       }
