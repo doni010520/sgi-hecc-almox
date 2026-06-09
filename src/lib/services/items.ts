@@ -1039,15 +1039,43 @@ class ItemsService {
 
       console.log('Inserting item into table:', table, 'with data:', insertData)
 
-      const { data: item, error } = await supabase
+      // Check if an inactive item with the same code exists — reactivate instead of creating
+      const { data: existingInactive } = await supabase
         .from(table)
-        .insert(insertData)
-        .select()
-        .single()
+        .select('id')
+        .eq('code', data.code)
+        .eq('is_active', false)
+        .maybeSingle()
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
+      let item: any
+
+      if (existingInactive) {
+        // Reactivate the soft-deleted item with updated data
+        const { data: reactivated, error: reactivateError } = await supabase
+          .from(table)
+          .update({ ...insertData, is_active: true, updated_at: new Date().toISOString() })
+          .eq('id', existingInactive.id)
+          .select()
+          .single()
+
+        if (reactivateError) {
+          console.error('Supabase reactivation error:', reactivateError)
+          throw reactivateError
+        }
+        item = reactivated
+        console.log('Reactivated existing inactive item:', existingInactive.id)
+      } else {
+        const { data: created, error } = await supabase
+          .from(table)
+          .insert(insertData)
+          .select()
+          .single()
+
+        if (error) {
+          console.error('Supabase error:', error)
+          throw error
+        }
+        item = created
       }
 
       // Create an entry in expiry_tracking to record the initial stock with all details

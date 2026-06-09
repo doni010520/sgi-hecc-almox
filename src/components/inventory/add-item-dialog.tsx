@@ -155,7 +155,10 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
       onOpenChange(false)
     } catch (error: any) {
       console.error('Error creating item:', error)
-      const errorMessage = error?.message || 'Erro ao criar item. Por favor, tente novamente.'
+      let errorMessage = error?.message || 'Erro ao criar item. Por favor, tente novamente.'
+      if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint') || errorMessage.includes('code_unique')) {
+        errorMessage = 'Já existe um item ativo com esse código. Verifique a lista de itens ou use um código diferente.'
+      }
       setError(errorMessage)
     } finally {
       setLoading(false)
