@@ -1,3 +1,5 @@
+export type DispensationStatus = 'pending_approval' | 'completed' | 'cancelled'
+
 export interface PharmacyDispensation {
   id: string
   dispensation_number: number
@@ -6,15 +8,18 @@ export interface PharmacyDispensation {
   medical_record_number: string
   prescribing_doctor: string
   prescription_number: string
+  prescription_date?: string | null
   sector?: string
   notes?: string
-  status: 'completed' | 'cancelled'
+  status: DispensationStatus
   created_by: string
   created_by_name?: string
   created_at: string
   cancelled_at?: string
   cancellation_reason?: string
-  // FKs novas (F1):
+  approved_by?: string | null
+  approved_at?: string | null
+  approved_by_name?: string | null
   patient_id?: string | null
   admission_id?: string | null
   prescriber_id?: string | null
@@ -28,32 +33,33 @@ export interface PharmacyDispensationItem {
   item_code: string
   item_unit: string
   quantity: number
-  // Lote snapshot (F1):
   expiry_tracking_id?: string | null
   batch_number?: string | null
   expiry_date?: string | null
+  medication_class?: string | null
+  is_mav?: boolean
 }
 
 export interface CreateDispensationData {
-  // Compat: campos texto continuam aceitos
   patient_name: string
   patient_bed_room?: string
   medical_record_number: string
   prescribing_doctor: string
   prescription_number: string
+  prescription_date?: string | null
   sector?: string
   notes?: string
-
-  // Novos vinculos (recomendado preencher):
   patient_id?: string | null
   admission_id?: string | null
   prescriber_id?: string | null
-
+  needs_approval?: boolean
   items: Array<{
     item_id: string
     quantity: number
     expiry_tracking_id?: string | null
     batch_number?: string | null
     expiry_date?: string | null
+    medication_class?: string | null
+    is_mav?: boolean
   }>
 }

@@ -41,6 +41,8 @@ import { NewDispensation } from '@/pages/dispensacao/new'
 import { DispensationDetails } from '@/pages/dispensacao/details'
 import { PatientSelect } from '@/pages/dispensacao/patient-select'
 import { PatientDischarge } from '@/pages/dispensacao/patient-discharge'
+import { FilaAprovacaoFarmaceutica } from '@/pages/dispensacao/fila-aprovacao'
+import { HistoricoDispensacoes } from '@/pages/dispensacao/historico'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { Fornecedores } from '@/pages/farmacia/fornecedores'
@@ -329,6 +331,20 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <PatientDischarge />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/fila-aprovacao" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <FilaAprovacaoFarmaceutica />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dispensacao/historico" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <HistoricoDispensacoes />
                   </MainLayout>
                 </ProtectedRoute>
               } />

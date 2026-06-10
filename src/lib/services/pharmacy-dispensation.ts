@@ -178,7 +178,7 @@ class PharmacyDispensationService {
     }
   }
 
-  async create(data: CreateDispensationData): Promise<{ id: string } | null> {
+  async create(data: CreateDispensationData): Promise<{ id: string; needsApproval?: boolean } | null> {
     try {
       const { data: authData } = await supabase.auth.getUser()
       if (!authData?.user) throw new Error('User not authenticated')
@@ -190,6 +190,19 @@ class PharmacyDispensationService {
         throw new Error('Local CAF nao encontrado em stock_locations.')
       }
 
+      // Buscar medication_class e is_mav de todos os itens para determinar
+      // se a dispensacao precisa de aprovacao farmaceutica.
+      const itemIds = data.items.map((i) => i.item_id)
+      const { data: itemDetails } = await supabase
+        .from('pharmacy_items')
+        .select('id, medication_class, is_mav')
+        .in('id', itemIds)
+
+      const REQUIRES_APPROVAL_CLASSES = new Set(['mav', 'controlados', 'antimicrobianos', 'anticoagulante'])
+      const needsApproval = (itemDetails || []).some((item: any) =>
+        item.is_mav || REQUIRES_APPROVAL_CLASSES.has(item.medication_class)
+      )
+
       // Insert dispensation header (ja com source_location_id no novo modelo)
       const { data: dispensation, error: dispError } = await supabase
         .from('pharmacy_dispensations')
@@ -199,10 +212,12 @@ class PharmacyDispensationService {
           medical_record_number: data.medical_record_number.trim(),
           prescribing_doctor: data.prescribing_doctor.trim(),
           prescription_number: data.prescription_number.trim(),
+          prescription_date: data.prescription_date ?? null,
           sector: data.sector?.trim() || null,
           notes: data.notes?.trim() || null,
           created_by: authData.user.id,
           source_location_id: cafLocation.id,
+          status: needsApproval ? 'pending_approval' : 'completed',
           // Novos vinculos
           patient_id: data.patient_id ?? null,
           admission_id: data.admission_id ?? null,
@@ -215,7 +230,6 @@ class PharmacyDispensationService {
       if (!dispensation) throw new Error('Failed to create dispensation')
 
       // Snapshot de precos unitarios para registrar custo em stock_movements
-      const itemIds = data.items.map((i) => i.item_id)
       const { data: priceRows } = await supabase
         .from('pharmacy_items')
         .select('id, price')
@@ -237,6 +251,8 @@ class PharmacyDispensationService {
         expiry_tracking_id: item.expiry_tracking_id ?? null,
         batch_number: item.batch_number ?? null,
         expiry_date: item.expiry_date ?? null,
+        medication_class: item.medication_class ?? null,
+        is_mav: item.is_mav ?? false,
       }))
 
       const { error: itemsError } = await supabase
@@ -250,6 +266,12 @@ class PharmacyDispensationService {
           .delete()
           .eq('id', dispensation.id)
         throw itemsError
+      }
+
+      // Se precisa de aprovacao, nao debitar estoque agora.
+      // O debito ocorre quando o farmaceutico aprovar via approveDispensation().
+      if (needsApproval) {
+        return { id: dispensation.id, needsApproval: true }
       }
 
       // Registra cada saida no livro-razao do novo modelo.
@@ -300,6 +322,172 @@ class PharmacyDispensationService {
     } catch (error) {
       console.error('Error creating dispensation:', error)
       throw error
+    }
+  }
+
+  async approveDispensation(dispensationId: string): Promise<void> {
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      if (!authData?.user) throw new Error('User not authenticated')
+
+      // Buscar nome do aprovador
+      let approverName = 'Desconhecido'
+      const { data: approverData } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', authData.user.id)
+        .single()
+      if (approverData) approverName = approverData.full_name
+
+      // Buscar a dispensacao com seus items
+      const dispensation = await this.getById(dispensationId)
+      if (!dispensation) throw new Error('Dispensacao nao encontrada')
+      if (dispensation.status !== 'pending_approval') {
+        throw new Error('Dispensacao nao esta pendente de aprovacao')
+      }
+
+      const cafLocation = await stockService.getLocationByCode('CAF')
+      if (!cafLocation) {
+        throw new Error('Local CAF nao encontrado em stock_locations.')
+      }
+
+      // Snapshot de precos
+      const itemIds = dispensation.items.map((i) => i.item_id)
+      const { data: priceRows } = await supabase
+        .from('pharmacy_items')
+        .select('id, price')
+        .in('id', itemIds)
+      const priceMap = new Map<string, number | null>(
+        (priceRows || []).map((p: any) => [p.id, p.price ?? null])
+      )
+
+      const today = new Date().toISOString().slice(0, 10)
+
+      // Debitar estoque para cada item
+      for (const item of dispensation.items) {
+        await stockService.dispenseFromPrescription({
+          item_id: item.item_id,
+          quantity: item.quantity,
+          unit_cost: priceMap.get(item.item_id) ?? null,
+          source_location_id: cafLocation.id,
+          medical_record_number: dispensation.medical_record_number,
+          prescription_date: today,
+          dispensation_id: dispensationId,
+        })
+
+        if (item.expiry_tracking_id) {
+          const { error: trackErr } = await supabase.rpc('decrement_expiry_tracking', {
+            p_tracking_id: item.expiry_tracking_id,
+            p_qty: item.quantity,
+          })
+          if (trackErr) {
+            throw new Error(`Falha ao baixar lote: ${trackErr.message}`)
+          }
+        }
+      }
+
+      // Marcar dispensacao como aprovada/concluida
+      const { error } = await supabase
+        .from('pharmacy_dispensations')
+        .update({
+          status: 'completed',
+          approved_by: authData.user.id,
+          approved_at: new Date().toISOString(),
+          approved_by_name: approverName,
+        })
+        .eq('id', dispensationId)
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error approving dispensation:', error)
+      throw error
+    }
+  }
+
+  async getPendingApprovals(): Promise<PharmacyDispensation[]> {
+    try {
+      const { data, error } = await supabase
+        .from('pharmacy_dispensations')
+        .select(`
+          *,
+          items:pharmacy_dispensation_items(
+            id,
+            item_id,
+            quantity,
+            expiry_tracking_id,
+            batch_number,
+            expiry_date,
+            medication_class,
+            is_mav,
+            item:pharmacy_items(
+              id,
+              name,
+              code,
+              unit,
+              medication_class,
+              is_mav
+            )
+          )
+        `)
+        .eq('status', 'pending_approval')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      if (!data) return []
+
+      // Buscar nomes dos criadores
+      const userIds = [...new Set(data.map((d: any) => d.created_by).filter(Boolean))]
+      let userMap: Record<string, string> = {}
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .in('id', userIds)
+        if (users) {
+          userMap = Object.fromEntries(users.map((u: any) => [u.id, u.full_name]))
+        }
+      }
+
+      return data.map((d: any) => ({
+        id: d.id,
+        dispensation_number: d.dispensation_number,
+        patient_name: d.patient_name,
+        patient_bed_room: d.patient_bed_room,
+        medical_record_number: d.medical_record_number,
+        prescribing_doctor: d.prescribing_doctor,
+        prescription_number: d.prescription_number,
+        prescription_date: d.prescription_date,
+        sector: d.sector,
+        notes: d.notes,
+        status: d.status,
+        created_by: d.created_by,
+        created_by_name: userMap[d.created_by] || 'Desconhecido',
+        created_at: d.created_at,
+        cancelled_at: d.cancelled_at,
+        cancellation_reason: d.cancellation_reason,
+        approved_by: d.approved_by,
+        approved_at: d.approved_at,
+        approved_by_name: d.approved_by_name,
+        patient_id: d.patient_id,
+        admission_id: d.admission_id,
+        prescriber_id: d.prescriber_id,
+        items: (d.items || []).map((i: any) => ({
+          id: i.id,
+          item_id: i.item_id,
+          item_name: i.item?.name || '',
+          item_code: i.item?.code || '',
+          item_unit: i.item?.unit || 'UN',
+          quantity: i.quantity,
+          expiry_tracking_id: i.expiry_tracking_id,
+          batch_number: i.batch_number,
+          expiry_date: i.expiry_date,
+          medication_class: i.medication_class ?? i.item?.medication_class ?? null,
+          is_mav: i.is_mav ?? i.item?.is_mav ?? false,
+        })),
+      })) as PharmacyDispensation[]
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error)
+      return []
     }
   }
 

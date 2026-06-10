@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { useTheme } from '@/contexts/theme'
+import { ExpiryAlertPopup } from '@/components/expiry-alert-popup'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -26,6 +27,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </main>
       </div>
+
+      <ExpiryAlertPopup />
 
       {mode === 'dark' && (
         <style>{`

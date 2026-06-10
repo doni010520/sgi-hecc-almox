@@ -133,6 +133,15 @@ export interface StockReturn {
   notes: string | null
   returned_at: string
   created_at: string
+  // Campos adicionados em G1:
+  return_status: 'pending' | 'confirmed'
+  confirmed_by: string | null
+  confirmed_at: string | null
+  patient_name: string | null
+  patient_prontuario: string | null
+  return_reason: string | null
+  source_location_id: string | null
+  divergence_notes: string | null
 }
 
 export interface StockReturnItem {
@@ -212,4 +221,29 @@ export const SAIDA_AVULSA_REASON_LABEL: Record<SaidaAvulsaReason, string> = {
   embalagem_violada: 'Embalagem violada',
   falha_fracionamento: 'Falha no fracionamento',
   outro: 'Outro',
+}
+
+// ---------- Itens a vencer (view v_itens_a_vencer) ----------
+export type ExpiryColorBand = '6m' | '3m' | '1m'
+
+export interface ExpiringAlertRow {
+  expiry_tracking_id: string
+  item_id: string
+  item_name: string
+  medication_class: string | null
+  batch_number: string
+  expiry_date: string
+  current_quantity: number
+  unit_cost: number | null
+  estimated_value: number | null
+  color_band: ExpiryColorBand
+}
+
+export interface ExpiryAlertResolution {
+  id: string
+  expiry_tracking_id: string
+  color_band: ExpiryColorBand
+  resolved_by: string
+  resolved_at: string
+  notes: string | null
 }

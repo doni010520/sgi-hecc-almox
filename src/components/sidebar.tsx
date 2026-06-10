@@ -32,7 +32,8 @@ import {
   CalendarX,
   Stethoscope,
   UsersRound,
-  CalendarClock
+  CalendarClock,
+  Clock
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -98,7 +99,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       title: 'Dispensação',
       items: [
         { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: canManageRequests }
+        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: canManageRequests },
+        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: canManageRequests },
+        { name: 'Histórico de Prescrições', icon: History, href: '/dispensacao/historico', show: canManageRequests }
       ]
     },
     {
@@ -145,7 +148,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Devolução da Enfermagem', icon: Undo2, href: '/estoque/devolucao', show: true },
         { name: 'Transferência para CAF', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
         { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: isManager || isAdmin || isAtendente },
-        { name: 'Vencimentos a Baixar', icon: CalendarX, href: '/estoque/vencimentos', show: isManager || isAdmin || isAtendente }
+        { name: 'Itens a Vencer', icon: CalendarX, href: '/estoque/vencimentos', show: isManager || isAdmin || isAtendente }
       ]
     },
     {
