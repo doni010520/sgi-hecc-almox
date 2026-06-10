@@ -251,8 +251,6 @@ class PharmacyDispensationService {
         expiry_tracking_id: item.expiry_tracking_id ?? null,
         batch_number: item.batch_number ?? null,
         expiry_date: item.expiry_date ?? null,
-        medication_class: item.medication_class ?? null,
-        is_mav: item.is_mav ?? false,
       }))
 
       const { error: itemsError } = await supabase
@@ -417,8 +415,6 @@ class PharmacyDispensationService {
             expiry_tracking_id,
             batch_number,
             expiry_date,
-            medication_class,
-            is_mav,
             item:pharmacy_items(
               id,
               name,
@@ -481,8 +477,8 @@ class PharmacyDispensationService {
           expiry_tracking_id: i.expiry_tracking_id,
           batch_number: i.batch_number,
           expiry_date: i.expiry_date,
-          medication_class: i.medication_class ?? i.item?.medication_class ?? null,
-          is_mav: i.is_mav ?? i.item?.is_mav ?? false,
+          medication_class: i.item?.medication_class ?? null,
+          is_mav: i.item?.is_mav ?? false,
         })),
       })) as PharmacyDispensation[]
     } catch (error) {
