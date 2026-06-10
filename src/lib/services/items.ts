@@ -63,7 +63,7 @@ export interface Item {
   is_active?: boolean
   // Campos novos da farmacia (F1):
   supplier_id?: string | null
-  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
@@ -116,7 +116,7 @@ interface CreateItemData {
   acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta'
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
-  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
@@ -151,7 +151,7 @@ interface UpdateItemData {
   is_active?: boolean
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
-  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav'
+  medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'

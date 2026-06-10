@@ -46,7 +46,7 @@ const itemSchema = z.object({
   supplier_name: z.string().optional(),
   // Farmacia (so usados quando type='pharmacy')
   supplier_id: z.string().optional(),
-  medication_class: z.enum(['uso_geral', 'antimicrobianos', 'controlados', 'mav']).optional(),
+  medication_class: z.enum(['uso_geral', 'antimicrobianos', 'controlados', 'mav', 'sgv', 'curativo', 'anticoagulante']).optional(),
   controlled_subclass: z.enum(['A1', 'A2', 'A3', 'B1', 'B2', 'C1', 'C2', 'C3', 'C4']).optional(),
   presentation: z.enum([
     'comprimidos', 'injetaveis', 'solucoes_orais', 'topicos', 'aerosol',
