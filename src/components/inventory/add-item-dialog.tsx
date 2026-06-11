@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
 import type { ItemCategory, UnitType } from '@/lib/services/items'
@@ -314,32 +315,22 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
-                <Input
+              <div className="mt-1">
+                <CurrencyInput
                   id="last_purchase_price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('last_purchase_price', { valueAsNumber: true })}
-                  className="pl-9"
-                  placeholder="0,00"
+                  value={watch('last_purchase_price')}
+                  onChange={(v) => setValue('last_purchase_price', v)}
                 />
               </div>
             </div>
 
             <div>
               <Label htmlFor="reference_price">Valor Referencial</Label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
-                <Input
+              <div className="mt-1">
+                <CurrencyInput
                   id="reference_price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('reference_price', { valueAsNumber: true })}
-                  className="pl-9"
-                  placeholder="0,00"
+                  value={watch('reference_price')}
+                  onChange={(v) => setValue('reference_price', v)}
                 />
               </div>
             </div>
@@ -488,16 +479,11 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
                 <div>
                   <Label htmlFor="unit_price">Valor Unitário</Label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
-                    <Input
+                  <div className="mt-1">
+                    <CurrencyInput
                       id="unit_price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register('unit_price', { valueAsNumber: true })}
-                      className="pl-9"
-                      placeholder="0,00"
+                      value={watch('unit_price')}
+                      onChange={(v) => setValue('unit_price', v)}
                     />
                   </div>
                 </div>
@@ -506,16 +492,11 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="invoice_total_value">Valor Total da NF</Label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">R$</span>
-                    <Input
+                  <div className="mt-1">
+                    <CurrencyInput
                       id="invoice_total_value"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register('invoice_total_value', { valueAsNumber: true })}
-                      className="pl-9"
-                      placeholder="0,00"
+                      value={watch('invoice_total_value')}
+                      onChange={(v) => setValue('invoice_total_value', v)}
                     />
                   </div>
                 </div>

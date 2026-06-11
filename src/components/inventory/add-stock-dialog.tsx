@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import type { Item } from '@/lib/services/items'
@@ -51,7 +52,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
   const today = new Date().toISOString().split('T')[0]
   const defaultExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<StockEntryFormData>({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<StockEntryFormData>({
     resolver: zodResolver(stockEntrySchema),
     defaultValues: {
       quantity: 1,
@@ -244,16 +245,14 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
               </div>
 
               <div>
-                <Label htmlFor="invoice_total_value">Valor Total da Nota (R$) *</Label>
-                <Input
-                  id="invoice_total_value"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('invoice_total_value', { valueAsNumber: true })}
-                  className="mt-1"
-                  placeholder="0.00"
-                />
+                <Label htmlFor="invoice_total_value">Valor Total da Nota *</Label>
+                <div className="mt-1">
+                  <CurrencyInput
+                    id="invoice_total_value"
+                    value={watch('invoice_total_value')}
+                    onChange={(v) => setValue('invoice_total_value', v as any)}
+                  />
+                </div>
                 {errors.invoice_total_value && (
                   <p className="text-sm text-red-500 mt-1">{errors.invoice_total_value.message}</p>
                 )}
@@ -335,16 +334,14 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
               </div>
 
               <div>
-                <Label htmlFor="unit_price">Valor Unitario (R$) *</Label>
-                <Input
-                  id="unit_price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('unit_price', { valueAsNumber: true })}
-                  className="mt-1"
-                  placeholder="0.00"
-                />
+                <Label htmlFor="unit_price">Valor Unitário *</Label>
+                <div className="mt-1">
+                  <CurrencyInput
+                    id="unit_price"
+                    value={watch('unit_price')}
+                    onChange={(v) => setValue('unit_price', v as any)}
+                  />
+                </div>
                 {errors.unit_price && (
                   <p className="text-sm text-red-500 mt-1">{errors.unit_price.message}</p>
                 )}
@@ -353,7 +350,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
               <div>
                 <Label>Valor Total do Item</Label>
                 <div className="mt-1 h-9 px-3 py-2 bg-gray-100 rounded-md text-sm font-medium text-gray-700">
-                  R$ {totalValue.toFixed(2)}
+                  R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
