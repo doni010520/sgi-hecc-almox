@@ -47,6 +47,7 @@ export function PharmacyItems() {
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [hideZeroStock, setHideZeroStock] = useState(true)
+  const [hideNoLot, setHideNoLot] = useState(true)
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
   // Saldos por local (CAF, SAT_1, SAT_2, SAT_T) carregados em uma chamada.
   // Map<itemId, Map<locationCode, quantity>>
@@ -200,8 +201,15 @@ export function PharmacyItems() {
     return 0
   })
 
+  const hasLotInfo = (item: Item) => {
+    const lots = lotsByItem.get(item.id) ?? []
+    if (lots.length > 0) return true
+    return !!((item as any).batch_number) && !!item.expiry_date
+  }
+
   const filteredItems = sortedItems
     .filter(item => !hideZeroStock || (item.current_stock ?? 0) > 0)
+    .filter(item => !hideNoLot || hasLotInfo(item))
     .filter(item =>
       searchTerm === '' ||
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -209,6 +217,7 @@ export function PharmacyItems() {
     )
 
   const zeroStockCount = sortedItems.filter(item => (item.current_stock ?? 0) === 0).length
+  const noLotCount = sortedItems.filter(item => (item.current_stock ?? 0) > 0 && !hasLotInfo(item)).length
 
   if (loading) {
     return (
@@ -283,7 +292,7 @@ export function PharmacyItems() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap">
           <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
             <input
               type="checkbox"
@@ -294,6 +303,18 @@ export function PharmacyItems() {
             Ocultar itens zerados
             {hideZeroStock && zeroStockCount > 0 && (
               <span className="text-xs text-gray-500">({zeroStockCount} ocultos)</span>
+            )}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideNoLot}
+              onChange={(e) => setHideNoLot(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+            />
+            Ocultar itens sem lote/validade
+            {hideNoLot && noLotCount > 0 && (
+              <span className="text-xs text-gray-500">({noLotCount} ocultos)</span>
             )}
           </label>
         </div>
