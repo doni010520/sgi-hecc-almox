@@ -305,32 +305,6 @@ export function PharmacyItems() {
 
       {/* Inventory Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap px-4 py-3 border-b border-gray-100 bg-gray-50/40">
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hideZeroStock}
-              onChange={(e) => setHideZeroStock(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-            />
-            Ocultar itens zerados
-            {hideZeroStock && zeroStockCount > 0 && (
-              <span className="text-xs text-gray-500">({zeroStockCount} ocultos)</span>
-            )}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hideNoLot}
-              onChange={(e) => setHideNoLot(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-            />
-            Ocultar itens sem lote/validade
-            {hideNoLot && noLotCount > 0 && (
-              <span className="text-xs text-gray-500">({noLotCount} ocultos)</span>
-            )}
-          </label>
-        </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
@@ -560,6 +534,32 @@ export function PharmacyItems() {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap px-4 py-3 border-t border-gray-100 bg-gray-50/40">
+          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideZeroStock}
+              onChange={(e) => setHideZeroStock(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+            />
+            Ocultar itens zerados
+            {hideZeroStock && zeroStockCount > 0 && (
+              <span className="text-xs text-gray-500">({zeroStockCount} ocultos)</span>
+            )}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideNoLot}
+              onChange={(e) => setHideNoLot(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+            />
+            Ocultar itens sem lote/validade
+            {hideNoLot && noLotCount > 0 && (
+              <span className="text-xs text-gray-500">({noLotCount} ocultos)</span>
+            )}
+          </label>
         </div>
       </div>
 
