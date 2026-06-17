@@ -366,6 +366,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function handleSignOut() {
     try {
       setState(prev => ({ ...prev, error: null }))
+      // Limpa o módulo ativo para que o próximo login force escolha explícita
+      localStorage.removeItem('sgi-active-module')
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Sign out error:', error)
