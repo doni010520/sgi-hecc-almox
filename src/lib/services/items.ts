@@ -61,6 +61,7 @@ export interface Item {
   last_reorder_date?: string
   lead_time_days?: number
   is_active?: boolean
+  barcode?: string | null
   // Campos novos da farmacia (F1):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
@@ -114,6 +115,7 @@ interface CreateItemData {
   invoice_total_value?: number
   unit_price?: number
   acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta'
+  barcode?: string | null
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
@@ -149,6 +151,7 @@ interface UpdateItemData {
   invoice_total_value?: number
   lead_time_days?: number
   is_active?: boolean
+  barcode?: string | null
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
@@ -942,13 +945,14 @@ class ItemsService {
       // Check authentication first
       const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-      if (authError) {
+      if (authError || !user) {
         console.error('Auth error:', authError)
-        throw new Error('Erro de autenticação')
-      }
-
-      if (!user) {
-        throw new Error('Usuário não autenticado')
+        // Sessão expirou silenciosamente — força re-login para evitar que o usuário fique travado
+        await supabase.auth.signOut().catch(() => {})
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?session_expired=1'
+        }
+        throw new Error('Sua sessão expirou. Faça login novamente para cadastrar o item.')
       }
 
       // Enhanced input validation
@@ -1026,6 +1030,11 @@ class ItemsService {
 
       if (data.invoice_total_value !== undefined && data.invoice_total_value !== null) {
         insertData.invoice_total_value = data.invoice_total_value
+      }
+
+      // Código de barras (opcional, para leitor de scanner)
+      if (data.barcode !== undefined && data.barcode !== null && data.barcode.trim() !== '') {
+        insertData.barcode = data.barcode.trim()
       }
 
       // Campos novos da farmacia (so se for pharmacy_items)
@@ -1180,6 +1189,33 @@ class ItemsService {
       console.error('Error updating item:', error)
       throw error
     }
+  }
+
+  /**
+   * Busca um item pelo código de barras (EAN-13, Code 128, etc.).
+   * Procura nas duas tabelas se `type` não for informado.
+   * Retorna null se não encontrar.
+   */
+  async findByBarcode(
+    barcode: string,
+    type?: 'pharmacy' | 'warehouse',
+  ): Promise<{ item: Item; type: 'pharmacy' | 'warehouse' } | null> {
+    const tables: Array<'pharmacy' | 'warehouse'> = type ? [type] : ['pharmacy', 'warehouse']
+
+    for (const t of tables) {
+      const table = this.getTableName(t)
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq('barcode', barcode)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (error) console.error(`findByBarcode error (${table}):`, error)
+      if (data) return { item: data as Item, type: t }
+    }
+
+    return null
   }
 
   async updateStock(id: string, quantity: number, type: 'pharmacy' | 'warehouse') {
