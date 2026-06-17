@@ -22,7 +22,11 @@ import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/theme'
 import { supabase } from '@/lib/supabase'
 
-export function Dashboard() {
+interface DashboardProps {
+  module?: 'farmacia' | 'almoxarifado'
+}
+
+export function Dashboard({ module: activeModule }: DashboardProps) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { mode } = useTheme()
@@ -56,31 +60,38 @@ export function Dashboard() {
         twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
         const cutoff = twoMonthsFromNow.toISOString().split('T')[0]
 
-        // Buscar warehouse_items com validade até 2 meses
-        const { data: warehouseExpiring } = await supabase
-          .from('warehouse_items')
-          .select('id, name, code, expiry_date, current_stock')
-          .eq('is_active', true)
-          .not('expiry_date', 'is', null)
-          .lte('expiry_date', cutoff)
-          .gt('current_stock', 0)
-          .order('expiry_date', { ascending: true })
-          .limit(50)
+        let warehouseExpiring: any[] = []
+        let pharmacyExpiring: any[] = []
 
-        // Buscar pharmacy_items com validade até 2 meses
-        const { data: pharmacyExpiring } = await supabase
-          .from('pharmacy_items')
-          .select('id, name, code, expiry_date, current_stock')
-          .eq('is_active', true)
-          .not('expiry_date', 'is', null)
-          .lte('expiry_date', cutoff)
-          .gt('current_stock', 0)
-          .order('expiry_date', { ascending: true })
-          .limit(50)
+        if (activeModule !== 'farmacia') {
+          const { data } = await supabase
+            .from('warehouse_items')
+            .select('id, name, code, expiry_date, current_stock')
+            .eq('is_active', true)
+            .not('expiry_date', 'is', null)
+            .lte('expiry_date', cutoff)
+            .gt('current_stock', 0)
+            .order('expiry_date', { ascending: true })
+            .limit(50)
+          warehouseExpiring = data || []
+        }
+
+        if (activeModule !== 'almoxarifado') {
+          const { data } = await supabase
+            .from('pharmacy_items')
+            .select('id, name, code, expiry_date, current_stock')
+            .eq('is_active', true)
+            .not('expiry_date', 'is', null)
+            .lte('expiry_date', cutoff)
+            .gt('current_stock', 0)
+            .order('expiry_date', { ascending: true })
+            .limit(50)
+          pharmacyExpiring = data || []
+        }
 
         const all = [
-          ...(warehouseExpiring || []).map(i => ({ ...i, source: 'almoxarifado' })),
-          ...(pharmacyExpiring || []).map(i => ({ ...i, source: 'farmacia' })),
+          ...warehouseExpiring.map(i => ({ ...i, source: 'almoxarifado' })),
+          ...pharmacyExpiring.map(i => ({ ...i, source: 'farmacia' })),
         ].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
 
         setExpiringItems(all)
@@ -90,7 +101,7 @@ export function Dashboard() {
         setLoadingExpiry(false)
       }
     })()
-  }, [canManageRequests])
+  }, [canManageRequests, activeModule])
 
   const glass: React.CSSProperties = {
     background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
@@ -267,19 +278,36 @@ export function Dashboard() {
           {(isManager || isAdmin || isAtendente) && (
             <div className="p-5 rounded-xl flex flex-col" style={cardStyle}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg" style={iconBg}><Package2 className="w-5 h-5" style={iconColor} /></div>
-                <h3 className="font-semibold" style={{ color: txt }}>Estoque</h3>
+                <div className="p-2 rounded-lg" style={iconBg}>
+                  {activeModule === 'farmacia'
+                    ? <Pill className="w-5 h-5" style={iconColor} />
+                    : <Package2 className="w-5 h-5" style={iconColor} />
+                  }
+                </div>
+                <h3 className="font-semibold" style={{ color: txt }}>
+                  {activeModule === 'farmacia' ? 'Estoque — Farmácia'
+                    : activeModule === 'almoxarifado' ? 'Estoque — Almoxarifado'
+                    : 'Estoque'}
+                </h3>
               </div>
               <p className="text-sm mb-4 flex-1" style={{ color: txtSec }}>
-                Gerencie o estoque de materiais e medicamentos. Acompanhe niveis e movimentacoes.
+                {activeModule === 'farmacia'
+                  ? 'Gerencie o estoque de medicamentos. Acompanhe niveis, validades e movimentacoes.'
+                  : activeModule === 'almoxarifado'
+                  ? 'Gerencie o estoque de materiais. Acompanhe niveis e movimentacoes.'
+                  : 'Gerencie o estoque de materiais e medicamentos. Acompanhe niveis e movimentacoes.'}
               </p>
               <div className="flex gap-2">
-                <button onClick={() => navigate('/inventory/pharmacy')} style={btnStyle}>
-                  <Pill className="w-4 h-4 mr-1" /> Farmacia
-                </button>
-                <button onClick={() => navigate('/inventory/warehouse')} style={btnStyle}>
-                  <Package2 className="w-4 h-4 mr-1" /> Almoxarifado
-                </button>
+                {activeModule !== 'almoxarifado' && (
+                  <button onClick={() => navigate(activeModule ? '/farmacia/inventory' : '/inventory/pharmacy')} style={btnStyle}>
+                    <Pill className="w-4 h-4 mr-1" /> Farmacia
+                  </button>
+                )}
+                {activeModule !== 'farmacia' && (
+                  <button onClick={() => navigate(activeModule ? '/almox/inventory' : '/inventory/warehouse')} style={btnStyle}>
+                    <Package2 className="w-4 h-4 mr-1" /> Almoxarifado
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -295,8 +323,12 @@ export function Dashboard() {
                 Visualize relatorios de consumo, estoque e solicitacoes. Exporte dados.
               </p>
               <div className="flex gap-2">
-                <button onClick={() => navigate('/reports/pharmacy-consumption')} style={btnStyle}>Farmacia</button>
-                <button onClick={() => navigate('/reports/warehouse-consumption')} style={btnStyle}>Almoxarifado</button>
+                {activeModule !== 'almoxarifado' && (
+                  <button onClick={() => navigate(activeModule ? '/farmacia/reports/pharmacy-consumption' : '/reports/pharmacy-consumption')} style={btnStyle}>Farmacia</button>
+                )}
+                {activeModule !== 'farmacia' && (
+                  <button onClick={() => navigate(activeModule ? '/almox/reports/warehouse-consumption' : '/reports/warehouse-consumption')} style={btnStyle}>Almoxarifado</button>
+                )}
               </div>
             </div>
           )}

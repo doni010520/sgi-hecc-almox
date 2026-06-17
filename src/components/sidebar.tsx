@@ -1,40 +1,11 @@
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
+import { useModule } from '@/contexts/module'
 import { supabase } from '@/lib/supabase'
-// Button removed - using native button with inline styles
-import {
-  Building2,
-  ClipboardList,
-  UserCircle,
-  LogOut,
-  LayoutDashboard,
-  Settings,
-  Users,
-  FileText,
-  BarChart3,
-  InboxIcon,
-  CheckSquare,
-  History,
-  AlertCircle,
-  ListChecks,
-  Database,
-  Pill,
-  Package2,
-  X,
-  Tv,
-  Syringe,
-  PackageMinus,
-  Undo2,
-  ArrowRightLeft,
-  Handshake,
-  CalendarX,
-  Stethoscope,
-  UsersRound,
-  CalendarClock,
-  Clock
-} from 'lucide-react'
+import { buildSidebarSections, type VisibilityFlags, type SidebarSection } from '@/lib/constants/sidebar-menu'
+import { LogOut, X, Pill, Package2, ArrowLeftRight } from 'lucide-react'
 
 interface SidebarProps {
   isOpen: boolean
@@ -44,12 +15,13 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, signOut } = useAuth()
   const { colors } = useTheme()
+  const { activeModule, setActiveModule, isModuleUser } = useModule()
+  const navigate = useNavigate()
+
   const isAdmin = user?.role === 'administrador'
   const isManager = user?.role === 'gestor'
   const isAtendente = user?.role === 'atendente'
 
-  // Detecta se o usuario eh de um posto de enfermagem (ENF1/ENF2/ENF3).
-  // Esses usuarios so podem ver Solicitacoes e Devolucao da Enfermagem.
   const [deptCode, setDeptCode] = useState<string | null>(null)
   useEffect(() => {
     if (!user?.department_id) { setDeptCode(null); return }
@@ -65,124 +37,76 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     })()
     return () => { cancelled = true }
   }, [user?.department_id])
-  // Admin nunca eh tratado como enfermagem (mantem acesso total).
-  const isEnfermagem = !!deptCode && deptCode.startsWith('ENF') && !isAdmin
 
-  // canManageRequests considera enfermagem como nao-gestao mesmo se tiver outra role
+  const isEnfermagem = !!deptCode && deptCode.startsWith('ENF') && !isAdmin
   const canManageRequests = !isEnfermagem && (isAdmin || isManager || isAtendente)
 
-  const menuItems = [
-    {
-      title: 'Principal',
-      items: [
-        { name: 'Dashboard', icon: LayoutDashboard, href: '/', show: !isEnfermagem },
-        { name: 'Painel TV - Almoxarifado', icon: Tv, href: '/tv/warehouse', show: isManager || isAdmin || isAtendente },
-        { name: 'Painel TV - Farmácia', icon: Tv, href: '/tv/pharmacy', show: isManager || isAdmin || isAtendente }
-      ]
-    },
-    {
-      title: 'Solicitações',
-      items: [
-        { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: true },
-        { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: true }
-      ]
-    },
-    {
-      title: 'Cadastros Farmácia',
-      items: [
-        { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: canManageRequests },
-        { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: canManageRequests },
-        { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Dispensação',
-      items: [
-        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: canManageRequests },
-        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: canManageRequests },
-        { name: 'Histórico de Prescrições', icon: History, href: '/dispensacao/historico', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Movimentação entre Unidades — Farmácia',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Movimentação entre Unidades — Almoxarifado',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Saída Direta — Almoxarifado',
-      items: [
-        { name: 'Saídas Registradas', icon: Package2, href: '/saida-direta', show: canManageRequests },
-        { name: 'Nova Saída', icon: ListChecks, href: '/saida-direta/new', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Gestão de Solicitações',
-      items: [
-        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: canManageRequests },
-        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: canManageRequests },
-        { name: 'Histórico', icon: History, href: '/requests/history', show: canManageRequests },
-        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: canManageRequests }
-      ]
-    },
-    {
-      title: 'Estoque',
-      items: [
-        { name: 'Farmácia', icon: Pill, href: '/inventory/pharmacy', show: isManager || isAdmin || isAtendente },
-        { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: isManager || isAdmin || isAtendente }
-      ]
-    },
-    {
-      title: 'Operações de Estoque',
-      items: [
-        { name: 'Baixas', icon: PackageMinus, href: '/estoque/saida-avulsa', show: isManager || isAdmin || isAtendente },
-        { name: 'Devolução da Enfermagem', icon: Undo2, href: '/estoque/devolucao', show: true },
-        { name: 'Transferência para CAF', icon: ArrowRightLeft, href: '/estoque/transferencia', show: isManager || isAdmin || isAtendente },
-        { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: isManager || isAdmin || isAtendente },
-        { name: 'Itens a Vencer', icon: CalendarX, href: '/estoque/vencimentos', show: isManager || isAdmin || isAtendente }
-      ]
-    },
-    {
-      title: 'Relatórios',
-      items: [
-        { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: isManager || isAdmin || isAtendente },
-        { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: isManager || isAdmin || isAtendente },
-        { name: 'Validade de Estoque', icon: CalendarClock, href: '/reports/stock-expiry', show: isManager || isAdmin || isAtendente },
-        { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: isManager || isAdmin || isAtendente },
-        { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: isManager || isAdmin || isAtendente },
-        { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: isAdmin },
-        { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: isAdmin },
-        { name: 'Farmácia (Multi-Estoque)', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: isManager || isAdmin || isAtendente },
-        { name: 'Movimentações e Consumo', icon: BarChart3, href: '/reports/movimentacoes', show: isManager || isAdmin || isAtendente }
-      ]
-    },
-    {
-      title: 'Administração',
-      items: [
-        { name: 'Usuários', icon: Users, href: '/users-advanced', show: isAdmin },
-        {
-          name: 'Tabelas', icon: Database, href: '/tables', show: isAdmin,
-          submenu: [{ name: 'Setores', href: '/tables/departments', icon: Building2 }]
-        }
-      ]
-    },
-    {
-      title: 'Configurações',
-      items: [
-        { name: 'Meu Perfil', icon: UserCircle, href: '/profile', show: true },
-        { name: 'Configurações', icon: Settings, href: '/settings', show: !isEnfermagem }
-      ]
-    }
-  ]
+  const flags: VisibilityFlags = { isAdmin, isManager, isAtendente, isEnfermagem, canManageRequests }
+
+  const allSections = buildSidebarSections()
+
+  const filteredSections = filterSectionsByModule(allSections, activeModule)
+
+  function filterSectionsByModule(sections: SidebarSection[], mod: typeof activeModule): SidebarSection[] {
+    if (!mod) return sections
+    return sections.filter(s =>
+      s.module === 'shared' || s.module === 'admin' || s.module === mod
+    )
+  }
+
+  const modulePrefix = activeModule
+    ? (activeModule === 'farmacia' ? '/farmacia' : '/almox')
+    : ''
+
+  const PATH_MAP: Record<string, string> = activeModule ? {
+    '/': `${modulePrefix}/dashboard`,
+    '/inventory/pharmacy': `${modulePrefix}/inventory`,
+    '/inventory/warehouse': `${modulePrefix}/inventory`,
+    '/dispensacao': `${modulePrefix}/dispensacao`,
+    '/dispensacao/paciente': `${modulePrefix}/dispensacao/paciente`,
+    '/dispensacao/fila-aprovacao': `${modulePrefix}/dispensacao/fila-aprovacao`,
+    '/dispensacao/historico': `${modulePrefix}/dispensacao/historico`,
+    '/farmacia/fornecedores': `${modulePrefix}/cadastros/fornecedores`,
+    '/farmacia/prescritores': `${modulePrefix}/cadastros/prescritores`,
+    '/farmacia/pacientes': `${modulePrefix}/cadastros/pacientes`,
+    '/farmacia/movimentacoes': `${modulePrefix}/movimentacoes`,
+    '/farmacia/movimentacoes/new': `${modulePrefix}/movimentacoes/new`,
+    '/almoxarifado/movimentacoes': `${modulePrefix}/movimentacoes`,
+    '/almoxarifado/movimentacoes/new': `${modulePrefix}/movimentacoes/new`,
+    '/saida-direta': `${modulePrefix}/saida-direta`,
+    '/saida-direta/new': `${modulePrefix}/saida-direta/new`,
+    '/requests': `${modulePrefix}/requests`,
+    '/requests/new': `${modulePrefix}/requests/new`,
+    '/requests/inbox': `${modulePrefix}/requests/inbox`,
+    '/requests/processing': `${modulePrefix}/requests/processing`,
+    '/requests/history': `${modulePrefix}/requests/history`,
+    '/requests/pending': `${modulePrefix}/requests/pending`,
+    '/estoque/saida-avulsa': `${modulePrefix}/estoque/saida-avulsa`,
+    '/estoque/devolucao': `${modulePrefix}/estoque/devolucao`,
+    '/estoque/transferencia': `${modulePrefix}/estoque/transferencia`,
+    '/estoque/emprestimos': `${modulePrefix}/estoque/emprestimos`,
+    '/estoque/vencimentos': `${modulePrefix}/estoque/vencimentos`,
+    '/reports/pharmacy-stock': `${modulePrefix}/reports/pharmacy-stock`,
+    '/reports/warehouse-stock': `${modulePrefix}/reports/warehouse-stock`,
+    '/reports/stock-expiry': `${modulePrefix}/reports/stock-expiry`,
+    '/reports/pharmacy-consumption': `${modulePrefix}/reports/pharmacy-consumption`,
+    '/reports/warehouse-consumption': `${modulePrefix}/reports/warehouse-consumption`,
+    '/reports/pharmacy-admin-consumption': `${modulePrefix}/reports/pharmacy-admin-consumption`,
+    '/reports/warehouse-admin-consumption': `${modulePrefix}/reports/warehouse-admin-consumption`,
+    '/reports/farmacia-multi-estoque': `${modulePrefix}/reports/farmacia-multi-estoque`,
+    '/reports/movimentacoes': `${modulePrefix}/reports/movimentacoes`,
+  } : {}
+
+  function prefixHref(href: string): string {
+    if (!isModuleUser || !activeModule) return href
+    return PATH_MAP[href] ?? href
+  }
+
+  function handleSwitchModule() {
+    setActiveModule(null)
+    navigate('/')
+    onClose()
+  }
 
   return (
     <div
@@ -196,7 +120,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         transition: 'background 0.4s, border-color 0.4s',
       }}
     >
-      {/* Close button for mobile */}
       <button className="absolute top-4 right-4 md:hidden" onClick={onClose}>
         <X className="h-5 w-5" style={{ color: colors.sidebarTextMuted }} />
       </button>
@@ -218,6 +141,42 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <h2 style={{ fontSize: 12, fontWeight: 500, color: colors.sidebarTextMuted, transition: 'color 0.4s' }}>
           Hospital Estadual Costa dos Coqueiros
         </h2>
+
+        {/* Module indicator */}
+        {isModuleUser && activeModule && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '6px 10px', borderRadius: 8,
+            background: activeModule === 'farmacia'
+              ? 'rgba(45, 163, 98, 0.15)'
+              : 'rgba(0, 204, 187, 0.15)',
+            marginTop: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {activeModule === 'farmacia'
+                ? <Pill className="w-4 h-4" style={{ color: '#2da362' }} />
+                : <Package2 className="w-4 h-4" style={{ color: '#00CCBB' }} />
+              }
+              <span style={{
+                fontSize: 12, fontWeight: 600,
+                color: activeModule === 'farmacia' ? '#2da362' : '#00CCBB',
+              }}>
+                {activeModule === 'farmacia' ? 'Farmácia' : 'Almoxarifado'}
+              </span>
+            </div>
+            <button
+              onClick={handleSwitchModule}
+              title="Trocar módulo"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 2, borderRadius: 4, display: 'flex',
+              }}
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" style={{ color: colors.sidebarTextMuted }} />
+            </button>
+          </div>
+        )}
+
         <div style={{ paddingTop: 8, borderTop: `1px solid ${colors.sidebarBorder}` }}>
           <p style={{ fontSize: 14, fontWeight: 500, color: colors.sidebarText, transition: 'color 0.4s' }}>{user?.full_name}</p>
           <p style={{ fontSize: 12, color: colors.sidebarTextMuted, textTransform: 'capitalize', transition: 'color 0.4s' }}>{user?.role}</p>
@@ -226,12 +185,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-5 overflow-y-auto" style={{ marginRight: -8, paddingRight: 8 }}>
-        {menuItems.map((section) => {
-          const visibleItems = section.items.filter(item => item.show)
+        {filteredSections.map((section) => {
+          const visibleItems = section.items.filter(item => item.show(flags))
           if (visibleItems.length === 0) return null
 
           return (
-            <div key={section.title}>
+            <div key={`${section.module}--${section.title}`}>
               <h3 style={{
                 padding: '0 8px', fontSize: 11, fontWeight: 600,
                 color: colors.sidebarTextMuted, textTransform: 'uppercase',
@@ -240,10 +199,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 {section.title}
               </h3>
               <div className="mt-2 space-y-1">
-                {visibleItems.map((item) => (
+                {visibleItems.map((item) => {
+                  const resolvedHref = prefixHref(item.href)
+                  return (
                   <div key={item.href}>
                     <NavLink
-                      to={item.href}
+                      to={resolvedHref}
                       style={({ isActive }) => ({
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 10px', fontSize: 14, fontWeight: 500,
@@ -272,7 +233,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         {item.submenu.map((subitem) => (
                           <NavLink
                             key={subitem.href}
-                            to={subitem.href}
+                            to={prefixHref(subitem.href)}
                             style={({ isActive }) => ({
                               display: 'flex', alignItems: 'center', gap: 8,
                               padding: '6px 10px', fontSize: 13,
@@ -290,7 +251,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       </div>
                     )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )

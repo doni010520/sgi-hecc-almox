@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  Search, Filter, Download, AlertCircle, 
+import {
+  Search, Filter, Download, AlertCircle,
   Loader2, Package2, Pill, Building2, ArrowRightLeft,
-  Calendar, Users, Activity, CheckCircle2
+  Calendar, Users, Activity, CheckCircle2, Barcode, X,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import { itemsService } from '@/lib/services/items'
+import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -29,9 +32,78 @@ export function RequestProcessing() {
   const [showPeriodDialog, setShowPeriodDialog] = useState(false)
   const [dateRange, setDateRange] = useState(getDefaultDateRange())
 
+  // Scanner: mapa requestId → Set de item_ids já verificados
+  const [scannerMode, setScannerMode] = useState(false)
+  const [verifiedItems, setVerifiedItems] = useState<Record<string, Set<string>>>({})
+  const [scannerLookup, setScannerLookup] = useState(false)
+  const scanInputRef = useRef<HTMLInputElement>(null)
+  // Ref para filteredRequests (evita closure stale no handleScan)
+  const filteredRequestsRef = useRef<Request[]>([])
+
   useEffect(() => {
     loadRequests()
   }, [])
+
+  // Foca input de scan quando ativa o modo
+  useEffect(() => {
+    if (scannerMode && scanInputRef.current) scanInputRef.current.focus()
+  }, [scannerMode])
+
+  // Verifica um item via barcode: procura nos itens de todos os pedidos visíveis
+  const handleScan = useCallback(
+    async (barcode: string) => {
+      if (!scannerMode) return
+      setScannerLookup(true)
+      try {
+        // Busca o item pelo barcode no banco
+        const result = await itemsService.findByBarcode(barcode)
+        const foundItemId = result?.item?.id
+
+        // Também tenta match pelo campo code direto (caso sem barcode cadastrado)
+        let matched = false
+        for (const req of filteredRequestsRef.current) {
+          for (const ri of req.request_items) {
+            const itemId = ri.item?.id
+            const itemCode = ri.item?.code
+            const itemBarcode = (ri.item as any)?.barcode
+
+            if (
+              itemId &&
+              (itemId === foundItemId ||
+                itemBarcode === barcode ||
+                itemCode?.toLowerCase() === barcode.toLowerCase())
+            ) {
+              setVerifiedItems((prev) => {
+                const reqSet = new Set(prev[req.id] || [])
+                reqSet.add(itemId)
+                return { ...prev, [req.id]: reqSet }
+              })
+              toast.success(`✔ ${ri.item.name}`, {
+                description: `Pedido #${(req as any).request_number || req.id.slice(0, 8)} — item verificado`,
+                duration: 2000,
+              })
+              matched = true
+              break
+            }
+          }
+          if (matched) break
+        }
+
+        if (!matched) {
+          toast.error('Item não encontrado neste pedido', {
+            description: `Código "${barcode}" não está nos pedidos em processamento.`,
+            duration: 3000,
+          })
+        }
+        scanInputRef.current?.focus()
+      } finally {
+        setScannerLookup(false)
+      }
+    },
+    [scannerMode],
+  )
+
+  useBarcodeScanner({ onScan: handleScan, enabled: scannerMode })
 
   async function loadRequests() {
     try {
@@ -73,18 +145,21 @@ export function RequestProcessing() {
   }
 
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       request.requester?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.request_items.some(item => 
+      request.request_items.some(item =>
         item.item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.item.code.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    
+
     const matchesTab = activeTab === 'all' || request.type === activeTab
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
 
     return matchesSearch && matchesTab && matchesDate
   })
+
+  // Mantém a ref sempre atualizada
+  filteredRequestsRef.current = filteredRequests
 
   const renderRequestCard = (request: Request, index: number) => (
     <div 
@@ -178,14 +253,32 @@ export function RequestProcessing() {
 
       {/* Request Items */}
       <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 shadow-sm">
+        {scannerMode && (
+          <div className="mb-3 flex items-center gap-2 text-xs text-gray-500">
+            <Barcode className="w-3.5 h-3.5" />
+            {(verifiedItems[request.id]?.size || 0)} / {request.request_items.length} itens verificados
+            {verifiedItems[request.id]?.size === request.request_items.length && (
+              <span className="ml-2 text-emerald-600 font-medium">✔ Todos verificados</span>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {request.request_items.map((item) => (
+          {request.request_items.map((item) => {
+            const isVerified = scannerMode && verifiedItems[request.id]?.has(item.item?.id)
+            return (
             <div
               key={item.id}
-              className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 hover:border-primary-200 transition-colors"
+              className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                isVerified
+                  ? 'bg-emerald-50 border-emerald-300'
+                  : 'bg-white border-gray-200 hover:border-primary-200'
+              }`}
             >
-              <div>
-                <p className="font-medium text-gray-900">{item.item.name}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  {isVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
+                  <p className="font-medium text-gray-900 truncate">{item.item.name}</p>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
                     {item.item.code}
@@ -193,7 +286,7 @@ export function RequestProcessing() {
                   <span className="text-xs text-gray-500">{item.item.category}</span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right ml-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">
                     Qtd: {item.quantity}
@@ -205,15 +298,16 @@ export function RequestProcessing() {
                   )}
                 </div>
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                  item.status === 'available' 
-                    ? 'bg-green-50 text-green-600' 
+                  item.status === 'available'
+                    ? 'bg-green-50 text-green-600'
                     : 'bg-yellow-50 text-yellow-600'
                 }`}>
                   {item.status === 'available' ? 'Disponível' : 'Estoque baixo'}
                 </span>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
@@ -243,21 +337,33 @@ export function RequestProcessing() {
               Solicitações que estão sendo atendidas
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setScannerMode((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                scannerMode
+                  ? 'bg-blue-600 text-white border-blue-700 shadow-md'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <Barcode className="w-4 h-4" />
+              {scannerMode ? 'Scanner ativo' : 'Verificar com Scanner'}
+            </button>
             <Button variant="outline" size="sm">
               <Filter className="w-4 h-4 mr-2" />
               Filtros
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowPeriodDialog(true)}
             >
               <Calendar className="w-4 h-4 mr-2" />
               Período
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowExportDialog(true)}
             >
@@ -341,6 +447,38 @@ export function RequestProcessing() {
           />
         </div>
       </div>
+
+      {/* Barra do Scanner */}
+      {scannerMode && (
+        <div className="bg-blue-600 text-white rounded-xl px-5 py-4 flex items-center gap-4 shadow-md">
+          <Barcode className="w-6 h-6 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">Modo Verificação por Scanner ativo</p>
+            <p className="text-xs text-blue-200 mt-0.5">
+              Aponte o leitor para cada produto ao separar o pedido. Itens verificados ficam marcados com ✔.
+            </p>
+          </div>
+          <input
+            ref={scanInputRef}
+            data-barcode-input="true"
+            readOnly
+            placeholder={scannerLookup ? 'Buscando...' : 'Aguardando scan...'}
+            className={`w-36 h-8 px-2 text-xs rounded border text-center text-gray-900 ${
+              scannerLookup ? 'bg-yellow-100 border-yellow-400' : 'bg-white border-blue-300'
+            } focus:outline-none focus:ring-2 focus:ring-white`}
+            onBlur={() => setTimeout(() => scanInputRef.current?.focus(), 100)}
+          />
+          {scannerLookup && <Loader2 className="w-4 h-4 animate-spin" />}
+          <button
+            type="button"
+            onClick={() => setScannerMode(false)}
+            className="ml-2 p-1 rounded hover:bg-blue-700"
+            title="Fechar modo scanner"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Requests List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">

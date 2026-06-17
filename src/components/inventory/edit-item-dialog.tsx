@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, Pencil } from 'lucide-react'
+import { Loader2, FileText, Pencil, Barcode } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ const optionalNumber = z.preprocess(
 const schema = z.object({
   // Dados do item
   code: z.string().min(1, 'Código é obrigatório'),
+  barcode: z.string().optional(),
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   description: z.string().optional(),
   category: z.string(),
@@ -75,11 +76,14 @@ const unitOptions = [
 export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: EditItemDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scanningBarcode, setScanningBarcode] = useState(false)
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       code: item.code,
+      barcode: (item as any).barcode || '',
       name: item.name,
       description: item.description || '',
       category: item.category,
@@ -98,6 +102,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
   useEffect(() => {
     reset({
       code: item.code,
+      barcode: (item as any).barcode || '',
       name: item.name,
       description: item.description || '',
       category: item.category,
@@ -147,6 +152,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
       // 1) Atualiza dados do item incluindo estoque atual
       const updatePayload: any = {
         code: data.code,
+        barcode: data.barcode?.trim() || null,
         name: data.name,
         description: data.description || null,
         category: data.category as ItemCategory,
@@ -254,6 +260,43 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
             <Label htmlFor="name">Nome *</Label>
             <Input id="name" {...register('name')} className="mt-1" />
             {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>}
+          </div>
+
+          {/* Código de barras */}
+          <div>
+            <Label htmlFor="barcode" className="flex items-center gap-1.5">
+              <Barcode className="w-3.5 h-3.5 text-gray-500" />
+              Código de Barras
+              <span className="text-xs text-gray-400 font-normal">(opcional)</span>
+            </Label>
+            <div className="flex gap-2 mt-1">
+              <input
+                id="barcode"
+                {...register('barcode')}
+                ref={(el) => {
+                  (register('barcode') as any).ref(el)
+                  ;(barcodeInputRef as any).current = el
+                }}
+                data-barcode-input="true"
+                className="flex-1 h-9 rounded-md border border-input bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder={scanningBarcode ? 'Aguardando scan...' : 'EAN-13, Code 128, etc.'}
+                onFocus={() => setScanningBarcode(true)}
+                onBlur={() => setScanningBarcode(false)}
+              />
+              <button
+                type="button"
+                onClick={() => { setScanningBarcode(true); barcodeInputRef.current?.focus() }}
+                className="px-3 h-9 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Barcode className="w-3.5 h-3.5" />
+                Escanear
+              </button>
+            </div>
+            {scanningBarcode && (
+              <p className="text-xs text-primary-600 mt-1 animate-pulse">
+                🔵 Campo ativo — aponte o scanner para ler o código de barras do produto
+              </p>
+            )}
           </div>
 
           <div>

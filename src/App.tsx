@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '@/contexts/auth'
 import { ThemeProvider } from '@/contexts/theme'
+import { ModuleProvider } from '@/contexts/module'
 import { ProtectedRoute } from '@/components/protected-route'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Suspense } from 'react'
@@ -34,6 +35,7 @@ import { PharmacyTVDashboard } from '@/pages/dashboard/pharmacy-tv-dashboard'
 import { TVRequestDetail } from '@/pages/dashboard/tv-request-detail'
 import { TVHistory } from '@/pages/dashboard/tv-history'
 import { Dashboard } from '@/pages/dashboard'
+import { ModuleSelector } from '@/pages/module-selector'
 import { PharmacyStockReport, WarehouseStockReport } from '@/pages/reports/stock-report'
 import { StockExpiryReport } from '@/pages/reports/stock-expiry-report'
 import { DispensationList } from '@/pages/dispensacao/index'
@@ -59,8 +61,16 @@ import { PharmacyLoansList } from '@/pages/farmacia/movimentacoes/index'
 import { NewPharmacyLoan } from '@/pages/farmacia/movimentacoes/new'
 import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
 import { ChangePassword } from '@/pages/change-password'
+import { useModule } from '@/contexts/module'
+import { ModuleLayout } from '@/components/module-layout-wrapper'
 
 const queryClient = new QueryClient()
+
+function DashboardOrSelector() {
+  const { activeModule, isModuleUser } = useModule()
+  if (isModuleUser && !activeModule) return <ModuleSelector />
+  return <Dashboard />
+}
 
 // Loading fallback component
 function LoadingFallback() {
@@ -82,6 +92,7 @@ export default function App() {
           <BrowserRouter>
             <ThemeProvider>
             <AuthProvider>
+            <ModuleProvider>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -95,7 +106,7 @@ export default function App() {
                 <Route path="/" element={
                   <ProtectedRoute>
                     <MainLayout>
-                      <Dashboard />
+                      <DashboardOrSelector />
                     </MainLayout>
                   </ProtectedRoute>
                 } />
@@ -510,7 +521,82 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+
+              {/* ===== Module-prefixed routes (admin/gestor) ===== */}
+
+              {/* Farmácia module */}
+              <Route path="/farmacia" element={<ModuleLayout module="farmacia" />}>
+                <Route path="dashboard" element={<Dashboard module="farmacia" />} />
+                <Route path="inventory" element={<PharmacyItems />} />
+                <Route path="inventory/:id" element={<ItemDetails />} />
+                <Route path="inventory/:id/edit" element={<ItemDetails />} />
+                <Route path="inventory/:id/delete" element={<ItemDetails />} />
+                <Route path="dispensacao" element={<DispensationList />} />
+                <Route path="dispensacao/paciente" element={<PatientSelect />} />
+                <Route path="dispensacao/paciente/:id/alta" element={<PatientDischarge />} />
+                <Route path="dispensacao/new" element={<NewDispensation />} />
+                <Route path="dispensacao/fila-aprovacao" element={<FilaAprovacaoFarmaceutica />} />
+                <Route path="dispensacao/historico" element={<HistoricoDispensacoes />} />
+                <Route path="dispensacao/:id" element={<DispensationDetails />} />
+                <Route path="cadastros/fornecedores" element={<Fornecedores />} />
+                <Route path="cadastros/prescritores" element={<Prescritores />} />
+                <Route path="cadastros/pacientes" element={<Pacientes />} />
+                <Route path="movimentacoes" element={<PharmacyLoansList scope="pharmacy" />} />
+                <Route path="movimentacoes/new" element={<NewPharmacyLoan scope="pharmacy" />} />
+                <Route path="movimentacoes/:id" element={<PharmacyLoanDetail />} />
+                <Route path="requests" element={<MyRequests />} />
+                <Route path="requests/new" element={<NewRequest />} />
+                <Route path="requests/inbox" element={<RequestInbox />} />
+                <Route path="requests/processing" element={<RequestProcessing />} />
+                <Route path="requests/history" element={<RequestHistory />} />
+                <Route path="requests/pending" element={<RequestPending />} />
+                <Route path="requests/:id" element={<RequestDetails />} />
+                <Route path="estoque/saida-avulsa" element={<SaidaAvulsa />} />
+                <Route path="estoque/devolucao" element={<DevolucaoInterna />} />
+                <Route path="estoque/transferencia" element={<Transferencia />} />
+                <Route path="estoque/emprestimos" element={<EmprestimosAbertos />} />
+                <Route path="estoque/vencimentos" element={<VencimentosABaixar />} />
+                <Route path="reports/pharmacy-stock" element={<PharmacyStockReport />} />
+                <Route path="reports/pharmacy-consumption" element={<PharmacyConsumptionReport />} />
+                <Route path="reports/pharmacy-admin-consumption" element={<AdminConsumptionManagement />} />
+                <Route path="reports/farmacia-multi-estoque" element={<FarmaciaMultiEstoqueReport />} />
+                <Route path="reports/stock-expiry" element={<StockExpiryReport />} />
+                <Route path="reports/movimentacoes" element={<MovementsReport />} />
+              </Route>
+
+              {/* Almoxarifado module */}
+              <Route path="/almox" element={<ModuleLayout module="almoxarifado" />}>
+                <Route path="dashboard" element={<Dashboard module="almoxarifado" />} />
+                <Route path="inventory" element={<WarehouseItems />} />
+                <Route path="inventory/:id" element={<ItemDetails />} />
+                <Route path="inventory/:id/edit" element={<ItemDetails />} />
+                <Route path="inventory/:id/delete" element={<ItemDetails />} />
+                <Route path="saida-direta" element={<WarehouseDispatchList />} />
+                <Route path="saida-direta/new" element={<NewWarehouseDispatch />} />
+                <Route path="movimentacoes" element={<PharmacyLoansList scope="warehouse" />} />
+                <Route path="movimentacoes/new" element={<NewPharmacyLoan scope="warehouse" />} />
+                <Route path="movimentacoes/:id" element={<PharmacyLoanDetail />} />
+                <Route path="requests" element={<MyRequests />} />
+                <Route path="requests/new" element={<NewRequest />} />
+                <Route path="requests/inbox" element={<RequestInbox />} />
+                <Route path="requests/processing" element={<RequestProcessing />} />
+                <Route path="requests/history" element={<RequestHistory />} />
+                <Route path="requests/pending" element={<RequestPending />} />
+                <Route path="requests/:id" element={<RequestDetails />} />
+                <Route path="estoque/saida-avulsa" element={<SaidaAvulsa />} />
+                <Route path="estoque/devolucao" element={<DevolucaoInterna />} />
+                <Route path="estoque/transferencia" element={<Transferencia />} />
+                <Route path="estoque/emprestimos" element={<EmprestimosAbertos />} />
+                <Route path="estoque/vencimentos" element={<VencimentosABaixar />} />
+                <Route path="reports/warehouse-stock" element={<WarehouseStockReport />} />
+                <Route path="reports/warehouse-consumption" element={<WarehouseConsumptionReport />} />
+                <Route path="reports/warehouse-admin-consumption" element={<AdminWarehouseConsumptionManagement />} />
+                <Route path="reports/stock-expiry" element={<StockExpiryReport />} />
+                <Route path="reports/movimentacoes" element={<MovementsReport />} />
+              </Route>
+
               </Routes>
+            </ModuleProvider>
             </AuthProvider>
             </ThemeProvider>
           </BrowserRouter>

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, Pill, AlertTriangle } from 'lucide-react'
+import { Loader2, FileText, Pill, AlertTriangle, Barcode } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import {
 
 const itemSchema = z.object({
   code: z.string().min(1, 'Codigo e obrigatorio'),
+  barcode: z.string().optional(),
   name: z.string().min(3, 'Nome deve ter no minimo 3 caracteres'),
   description: z.string().optional(),
   category: z.string(),
@@ -90,6 +91,8 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [scanningBarcode, setScanningBarcode] = useState(false)
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -122,6 +125,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
       const hasInitial = (data.initial_stock ?? 0) > 0
       await itemsService.create({
         code: data.code,
+        barcode: data.barcode || undefined,
         name: data.name,
         description: data.description,
         category: data.category as ItemCategory,
@@ -239,6 +243,47 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             />
             {errors.name && (
               <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* Código de barras */}
+          <div>
+            <Label htmlFor="barcode" className="flex items-center gap-1.5">
+              <Barcode className="w-3.5 h-3.5 text-gray-500" />
+              Código de Barras
+              <span className="text-xs text-gray-400 font-normal">(opcional — EAN-13, Code 128, etc.)</span>
+            </Label>
+            <div className="flex gap-2 mt-1">
+              <input
+                id="barcode"
+                {...register('barcode')}
+                ref={(el) => {
+                  (register('barcode') as any).ref(el)
+                  ;(barcodeInputRef as any).current = el
+                }}
+                data-barcode-input="true"
+                className="flex-1 h-9 rounded-md border border-input bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder={scanningBarcode ? 'Aguardando scan...' : 'Digite ou escaneie o código'}
+                onFocus={() => setScanningBarcode(true)}
+                onBlur={() => setScanningBarcode(false)}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setScanningBarcode(true)
+                  barcodeInputRef.current?.focus()
+                }}
+                className="px-3 h-9 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 whitespace-nowrap"
+                title="Clique e aponte o scanner para este campo"
+              >
+                <Barcode className="w-3.5 h-3.5" />
+                Escanear
+              </button>
+            </div>
+            {scanningBarcode && (
+              <p className="text-xs text-primary-600 mt-1 animate-pulse">
+                🔵 Campo ativo — aponte o scanner e leia o código de barras do produto
+              </p>
             )}
           </div>
 
