@@ -9,7 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { itemsService } from '@/lib/services/items'
 import { stockService } from '@/lib/services/stock'
+import { supabase } from '@/lib/supabase'
 import type { ItemStockWithLocation } from '@/lib/types/stock'
+
+interface LotRow {
+  batch_number: string
+  expiry_date: string | null
+  current_quantity: number
+}
 import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
@@ -44,6 +51,8 @@ export function PharmacyItems() {
   // Saldos por local (CAF, SAT_1, SAT_2, SAT_T) carregados em uma chamada.
   // Map<itemId, Map<locationCode, quantity>>
   const [stocksByItem, setStocksByItem] = useState<Map<string, Record<string, number>>>(new Map())
+  // Lotes ativos por item, ordenados por validade (FEFO).
+  const [lotsByItem, setLotsByItem] = useState<Map<string, LotRow[]>>(new Map())
 
   const handleRegisterEntry = (item: Item) => {
     setSelectedItem(item)
@@ -66,14 +75,16 @@ export function PharmacyItems() {
     try {
       setLoading(true)
       setError(null)
-      // Carrega itens e saldos por local em paralelo
-      const [pharmacyItems, allStocks] = await Promise.all([
+      // Carrega itens, saldos por local e lotes ativos em paralelo
+      const [pharmacyItems, allStocks, allLots] = await Promise.all([
         itemsService.getByType('pharmacy', filters),
         loadAllPharmacyStocks(),
+        loadAllLots(),
       ])
 
       setItems(pharmacyItems)
       setStocksByItem(allStocks)
+      setLotsByItem(allLots)
     } catch (error) {
       console.error('Error loading items:', error)
       setError('Erro ao carregar itens. Por favor, tente novamente.')
@@ -108,6 +119,34 @@ export function PharmacyItems() {
       return result
     } catch (e) {
       console.error('loadAllPharmacyStocks failed (continuando sem saldos por local):', e)
+      return new Map()
+    }
+  }
+
+  // Busca todos os lotes ativos (saldo > 0) e agrupa por item_id, ordenados por validade (FEFO).
+  async function loadAllLots(): Promise<Map<string, LotRow[]>> {
+    try {
+      const result = new Map<string, LotRow[]>()
+      // Paginação simples — 5000 lotes deve ser suficiente para o estoque atual.
+      const { data, error } = await supabase
+        .from('expiry_tracking')
+        .select('item_id, batch_number, expiry_date, current_quantity')
+        .gt('current_quantity', 0)
+        .order('expiry_date', { ascending: true, nullsFirst: false })
+        .limit(5000)
+      if (error) throw error
+      for (const row of (data || []) as Array<LotRow & { item_id: string }>) {
+        const list = result.get(row.item_id) ?? []
+        list.push({
+          batch_number: row.batch_number,
+          expiry_date: row.expiry_date,
+          current_quantity: row.current_quantity,
+        })
+        result.set(row.item_id, list)
+      }
+      return result
+    } catch (e) {
+      console.error('loadAllLots failed (continuando sem lotes):', e)
       return new Map()
     }
   }
@@ -380,12 +419,32 @@ export function PharmacyItems() {
                     <td className="px-2 py-2 text-sm font-medium text-gray-900">{item.name}</td>
                     <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">{item.category}</td>
                     <td className="px-2 py-2 text-xs text-center text-gray-700 font-medium">{item.unit}</td>
-                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
-                      {(item as any).batch_number || '-'}
-                    </td>
-                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
-                      {item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
-                    </td>
+                    {(() => {
+                      // Lote FEFO + contagem de lotes adicionais (preferência: expiry_tracking).
+                      const lots = lotsByItem.get(item.id) ?? []
+                      const fefo = lots[0]
+                      const extra = Math.max(lots.length - 1, 0)
+                      const batchDisplay = fefo?.batch_number || (item as any).batch_number || '-'
+                      const expiryDisplay = fefo?.expiry_date || item.expiry_date || null
+                      return (
+                        <>
+                          <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
+                            <span className="font-medium">{batchDisplay}</span>
+                            {extra > 0 && (
+                              <span
+                                className="ml-1 inline-block px-1.5 py-0 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium"
+                                title={`Mais ${extra} lote(s) — clique para ver detalhes`}
+                              >
+                                +{extra}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
+                            {expiryDisplay ? new Date(expiryDisplay + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
+                          </td>
+                        </>
+                      )
+                    })()}
                     <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {(item as any).last_purchase_price != null
                         ? Number((item as any).last_purchase_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
