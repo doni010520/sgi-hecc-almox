@@ -49,59 +49,59 @@ export function Dashboard({ module: activeModule }: DashboardProps) {
   const [showVideo, setShowVideo] = useState(false)
   const [expiringItems, setExpiringItems] = useState<any[]>([])
   const [loadingExpiry, setLoadingExpiry] = useState(false)
+  const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set())
 
-  // Buscar itens com validade próxima (2 meses) ou já vencidos
+  const canResolveExpiry = String(user?.role) === 'pharmacist' || isAdmin || isManager
+  // Alerta de validades só faz sentido no contexto farmácia
+  const showPharmacyExpiry = activeModule !== 'almoxarifado'
+
+  async function loadExpiring() {
+    setLoadingExpiry(true)
+    try {
+      const [alertRes, resolutionsRes] = await Promise.all([
+        supabase.from('v_itens_a_vencer').select('*').order('expiry_date'),
+        supabase.from('expiry_alert_resolutions').select('expiry_tracking_id, color_band'),
+      ])
+      const resolved = new Set<string>(
+        (resolutionsRes.data || []).map((r: any) => `${r.expiry_tracking_id}__${r.color_band}`)
+      )
+      const unresolved = (alertRes.data || []).filter(
+        (r: any) => !resolved.has(`${r.expiry_tracking_id}__${r.color_band}`)
+      )
+      setExpiringItems(unresolved)
+    } catch (e) {
+      console.error('Error loading expiring items:', e)
+    } finally {
+      setLoadingExpiry(false)
+    }
+  }
+
   useEffect(() => {
-    if (!canManageRequests) return
-    ;(async () => {
-      setLoadingExpiry(true)
-      try {
-        const twoMonthsFromNow = new Date()
-        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2)
-        const cutoff = twoMonthsFromNow.toISOString().split('T')[0]
+    if (!canManageRequests || !showPharmacyExpiry) {
+      setExpiringItems([])
+      return
+    }
+    loadExpiring()
+  }, [canManageRequests, showPharmacyExpiry])
 
-        let warehouseExpiring: any[] = []
-        let pharmacyExpiring: any[] = []
-
-        if (activeModule !== 'farmacia') {
-          const { data } = await supabase
-            .from('warehouse_items')
-            .select('id, name, code, expiry_date, current_stock')
-            .eq('is_active', true)
-            .not('expiry_date', 'is', null)
-            .lte('expiry_date', cutoff)
-            .gt('current_stock', 0)
-            .order('expiry_date', { ascending: true })
-            .limit(50)
-          warehouseExpiring = data || []
-        }
-
-        if (activeModule !== 'almoxarifado') {
-          const { data } = await supabase
-            .from('pharmacy_items')
-            .select('id, name, code, expiry_date, current_stock')
-            .eq('is_active', true)
-            .not('expiry_date', 'is', null)
-            .lte('expiry_date', cutoff)
-            .gt('current_stock', 0)
-            .order('expiry_date', { ascending: true })
-            .limit(50)
-          pharmacyExpiring = data || []
-        }
-
-        const all = [
-          ...warehouseExpiring.map(i => ({ ...i, source: 'almoxarifado' })),
-          ...pharmacyExpiring.map(i => ({ ...i, source: 'farmacia' })),
-        ].sort((a, b) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
-
-        setExpiringItems(all)
-      } catch (e) {
-        console.error('Error loading expiring items:', e)
-      } finally {
-        setLoadingExpiry(false)
-      }
-    })()
-  }, [canManageRequests, activeModule])
+  async function handleResolve(trackingId: string, colorBand: string) {
+    if (!canResolveExpiry || !user?.id) return
+    const key = `${trackingId}__${colorBand}`
+    setResolvingIds(prev => new Set(prev).add(key))
+    try {
+      await supabase.from('expiry_alert_resolutions').insert({
+        expiry_tracking_id: trackingId,
+        color_band: colorBand,
+        resolved_by: user.id,
+      })
+      // Remove imediatamente da lista
+      setExpiringItems(prev => prev.filter(i => `${i.expiry_tracking_id}__${i.color_band}` !== key))
+    } catch (e) {
+      console.error('Error resolving expiry alert:', e)
+    } finally {
+      setResolvingIds(prev => { const n = new Set(prev); n.delete(key); return n })
+    }
+  }
 
   const glass: React.CSSProperties = {
     background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
@@ -158,11 +158,16 @@ export function Dashboard({ module: activeModule }: DashboardProps) {
         </Button>
       </div>
 
-      {/* Alerta de Validade */}
-      {canManageRequests && !loadingExpiry && expiringItems.length > 0 && (() => {
-        const today = new Date().toISOString().split('T')[0]
-        const expired = expiringItems.filter(i => i.expiry_date <= today)
-        const expiringSoon = expiringItems.filter(i => i.expiry_date > today)
+      {/* Alerta de Validade — somente quando módulo farmácia (ou não-modular) */}
+      {canManageRequests && showPharmacyExpiry && !loadingExpiry && expiringItems.length > 0 && (() => {
+        const bandLabel: Record<string, string> = { '1m': 'Vence em até 1 mês', '3m': 'Vence em até 3 meses', '6m': 'Vence em até 6 meses' }
+        const bandColor: Record<string, { fg: string; bg: string; border: string }> = {
+          '1m': { fg: '#ef4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' },
+          '3m': { fg: '#f97316', bg: 'rgba(251,146,60,0.12)', border: 'rgba(251,146,60,0.3)' },
+          '6m': { fg: '#ca8a04', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.3)' },
+        }
+        const byBand = { '1m': 0, '3m': 0, '6m': 0 } as Record<string, number>
+        expiringItems.forEach(i => { byBand[i.color_band] = (byBand[i.color_band] || 0) + 1 })
         return (
           <div className="rounded-2xl overflow-hidden" style={{
             background: mode === 'dark' ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.04)',
@@ -177,12 +182,14 @@ export function Dashboard({ module: activeModule }: DashboardProps) {
                 </div>
                 <div>
                   <h3 className="font-semibold" style={{ color: mode === 'dark' ? '#fca5a5' : '#991b1b' }}>
-                    Alerta de Validade
+                    Itens próximos de vencer — Farmácia
                   </h3>
                   <p className="text-sm" style={{ color: mode === 'dark' ? 'rgba(252,165,165,0.7)' : 'rgba(153,27,27,0.7)' }}>
-                    {expired.length > 0 && <span className="font-bold">{expired.length} vencido(s)</span>}
-                    {expired.length > 0 && expiringSoon.length > 0 && ' · '}
-                    {expiringSoon.length > 0 && <span>{expiringSoon.length} vencendo em até 2 meses</span>}
+                    {byBand['1m'] > 0 && <span className="font-bold">{byBand['1m']} em 1 mês</span>}
+                    {byBand['1m'] > 0 && (byBand['3m'] > 0 || byBand['6m'] > 0) && ' · '}
+                    {byBand['3m'] > 0 && <span>{byBand['3m']} em 3 meses</span>}
+                    {byBand['3m'] > 0 && byBand['6m'] > 0 && ' · '}
+                    {byBand['6m'] > 0 && <span>{byBand['6m']} em 6 meses</span>}
                   </p>
                 </div>
               </div>
@@ -198,55 +205,58 @@ export function Dashboard({ module: activeModule }: DashboardProps) {
                 Ver todos <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="px-6 py-3 space-y-2 max-h-64 overflow-y-auto">
-              {expiringItems.slice(0, 8).map((item) => {
-                const isExpired = item.expiry_date <= today
+            <div className="px-6 py-3 space-y-2 max-h-72 overflow-y-auto">
+              {expiringItems.slice(0, 10).map((item) => {
+                const colors = bandColor[item.color_band] || bandColor['6m']
                 const expiryDate = new Date(item.expiry_date + 'T00:00:00')
-                const daysUntil = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                const key = `${item.expiry_tracking_id}__${item.color_band}`
+                const resolving = resolvingIds.has(key)
                 return (
-                  <div key={`${item.source}-${item.id}`} className="flex items-center justify-between py-2 px-3 rounded-lg" style={{
+                  <div key={key} className="flex items-center justify-between py-2 px-3 rounded-lg gap-3" style={{
                     background: mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.7)',
-                    border: `1px solid ${isExpired
-                      ? (mode === 'dark' ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)')
-                      : (mode === 'dark' ? 'rgba(251,191,36,0.2)' : 'rgba(251,191,36,0.15)')
-                    }`,
+                    border: `1px solid ${colors.border}`,
                   }}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: txt }}>{item.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs" style={{ color: txtMut }}>{item.code}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{
-                          background: item.source === 'farmacia'
-                            ? (mode === 'dark' ? 'rgba(168,85,247,0.15)' : 'rgba(168,85,247,0.1)')
-                            : (mode === 'dark' ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)'),
-                          color: item.source === 'farmacia'
-                            ? (mode === 'dark' ? '#c084fc' : '#7c3aed')
-                            : (mode === 'dark' ? '#93c5fd' : '#2563eb'),
-                        }}>
-                          {item.source === 'farmacia' ? 'Farmácia' : 'Almoxarifado'}
+                      <p className="text-sm font-medium truncate" style={{ color: txt }}>{item.item_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: colors.bg, color: colors.fg, border: `1px solid ${colors.border}` }}>
+                          {bandLabel[item.color_band]}
                         </span>
-                        <span className="text-xs" style={{ color: txtMut }}>Estoque: {item.current_stock}</span>
+                        <span className="text-xs" style={{ color: txtMut }}>Lote {item.batch_number}</span>
+                        <span className="text-xs" style={{ color: txtMut }}>Saldo: {item.current_quantity}</span>
                       </div>
                     </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarX className="w-3.5 h-3.5" style={{ color: isExpired ? '#ef4444' : '#f59e0b' }} />
-                        <span className="text-sm font-semibold" style={{ color: isExpired ? '#ef4444' : '#f59e0b' }}>
-                          {expiryDate.toLocaleDateString('pt-BR')}
-                        </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-right">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarX className="w-3.5 h-3.5" style={{ color: colors.fg }} />
+                          <span className="text-sm font-semibold" style={{ color: colors.fg }}>
+                            {expiryDate.toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-xs font-medium" style={{
-                        color: isExpired ? '#ef4444' : '#f59e0b',
-                      }}>
-                        {isExpired ? `Vencido há ${Math.abs(daysUntil)} dias` : `Vence em ${daysUntil} dias`}
-                      </span>
+                      {canResolveExpiry && (
+                        <button
+                          onClick={() => handleResolve(item.expiry_tracking_id, item.color_band)}
+                          disabled={resolving}
+                          className="text-xs font-medium px-2.5 py-1 rounded-md transition-colors disabled:opacity-50"
+                          style={{
+                            background: mode === 'dark' ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)',
+                            color: mode === 'dark' ? '#5ee8b8' : '#059669',
+                            border: `1px solid ${mode === 'dark' ? 'rgba(16,185,129,0.3)' : 'rgba(16,185,129,0.25)'}`,
+                          }}
+                          title="Marcar como resolvido"
+                        >
+                          {resolving ? '...' : '✓ Resolver'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
               })}
-              {expiringItems.length > 8 && (
+              {expiringItems.length > 10 && (
                 <p className="text-center text-sm py-2" style={{ color: txtMut }}>
-                  + {expiringItems.length - 8} item(ns) · <button onClick={() => navigate('/estoque/vencimentos')} className="underline" style={{ color: mode === 'dark' ? '#fca5a5' : '#991b1b' }}>Ver todos</button>
+                  + {expiringItems.length - 10} item(ns) · <button onClick={() => navigate('/estoque/vencimentos')} className="underline" style={{ color: mode === 'dark' ? '#fca5a5' : '#991b1b' }}>Ver todos</button>
                 </p>
               )}
             </div>

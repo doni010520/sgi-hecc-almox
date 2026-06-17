@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
 import { useTheme } from '@/contexts/theme'
 import { AlertTriangle, X, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -90,12 +91,17 @@ export function useExpiryAlerts() {
 export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: number) => void }) {
   const { user } = useAuth()
   const { mode } = useTheme()
+  const { activeModule, isModuleUser } = useModule()
   const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<ExpiringAlertRow[]>([])
 
   const canNavigate = !!user?.role && NAVIGATE_ROLES.has(user.role)
+  // Popup só faz sentido no contexto de farmácia.
+  // Para admin/gestor (isModuleUser=true): só aparece quando activeModule==='farmacia'.
+  // Para demais perfis (atendente/solicitante/enfermagem): sempre — eles não escolhem módulo.
+  const moduleAllowsPopup = !isModuleUser || activeModule === 'farmacia'
 
   const isDark = mode === 'dark'
   const overlayBg = 'rgba(0,0,0,0.55)'
@@ -107,6 +113,8 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
   const dividerColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'
 
   useEffect(() => {
+    // Não abre se não estamos no módulo farmácia
+    if (!moduleAllowsPopup) return
     // Skip if session already shown
     if (sessionStorage.getItem(SESSION_KEY)) return
 
@@ -139,7 +147,7 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
       }
     })()
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [moduleAllowsPopup]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleClose() {
     sessionStorage.setItem(SESSION_KEY, '1')
