@@ -945,14 +945,13 @@ class ItemsService {
       // Check authentication first
       const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-      if (authError || !user) {
+      if (authError) {
         console.error('Auth error:', authError)
-        // Sessão expirou silenciosamente — força re-login para evitar que o usuário fique travado
-        await supabase.auth.signOut().catch(() => {})
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login?session_expired=1'
-        }
-        throw new Error('Sua sessão expirou. Faça login novamente para cadastrar o item.')
+        throw new Error('Erro de autenticação')
+      }
+
+      if (!user) {
+        throw new Error('Usuário não autenticado')
       }
 
       // Enhanced input validation

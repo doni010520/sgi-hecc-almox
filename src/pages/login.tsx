@@ -20,18 +20,27 @@ export function Login() {
     // Check for success message from registration
     if (location.state?.message && location.state?.type === 'success') {
       setSuccessMessage(location.state.message)
-      
+
       // Clear the location state
       navigate(location.pathname, { replace: true, state: {} })
-      
+
       // Clear success message after 5 seconds
       const timer = setTimeout(() => {
         setSuccessMessage('')
       }, 5000)
-      
+
       return () => clearTimeout(timer)
     }
   }, [location, navigate])
+
+  // Mensagem quando o usuário foi deslogado automaticamente por sessão expirada
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('session_expired') === '1') {
+      setError('Sua sessão expirou por inatividade. Faça login novamente para continuar.')
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate])
 
   const handleConnectionCheck = async () => {
     setIsCheckingConnection(true)
