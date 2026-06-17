@@ -292,7 +292,20 @@ export function PharmacyItems() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Buscar por nome, código..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Inventory Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap px-4 py-3 border-b border-gray-100 bg-gray-50/40">
           <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
             <input
               type="checkbox"
@@ -318,20 +331,6 @@ export function PharmacyItems() {
             )}
           </label>
         </div>
-
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Buscar por nome, código..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Inventory Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
