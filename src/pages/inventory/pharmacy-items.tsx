@@ -276,8 +276,8 @@ export function PharmacyItems() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th 
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                <th
+                  className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('code')}
                 >
                   <div className="flex items-center gap-2">
@@ -376,7 +376,7 @@ export function PharmacyItems() {
                 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.code}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.code}</td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
                     <td className="px-4 py-3 text-sm text-center text-gray-700 font-medium">{item.unit}</td>
