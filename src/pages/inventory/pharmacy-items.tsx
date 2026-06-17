@@ -277,88 +277,88 @@ export function PharmacyItems() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
+                  className="px-2 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('code')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     Código
                     {sortColumn === 'code' && (
-                      <ArrowUpDown className="w-4 h-4" />
+                      <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                <th
+                  className="px-2 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('name')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     Nome
                     {sortColumn === 'name' && (
-                      <ArrowUpDown className="w-4 h-4" />
+                      <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                <th
+                  className="px-2 py-2 text-left text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('category')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     Categoria
                     {sortColumn === 'category' && (
-                      <ArrowUpDown className="w-4 h-4" />
+                      <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 whitespace-nowrap">
                   Unidade
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 whitespace-nowrap">
                   Lote
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 whitespace-nowrap">
                   Validade
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                  Valor da Última Compra
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-600 whitespace-nowrap">
+                  Última Compra
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                  Valor Referencial
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-600 whitespace-nowrap">
+                  Valor Ref.
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                  Consumo Médio
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-600 whitespace-nowrap">
+                  Consumo
                 </th>
                 <th
-                  className="px-4 py-3 text-right text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                  className="px-2 py-2 text-right text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('current_stock')}
                 >
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1">
                     Estoque CAF
                     {sortColumn === 'current_stock' && (
-                      <ArrowUpDown className="w-4 h-4" />
+                      <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600" title="Saldo nos demais estoques (Satelite 1, Satelite 2, Satelite T)">
-                  Outros Estoques
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 whitespace-nowrap" title="Saldo nos demais estoques (Satelite 1, Satelite 2, Satelite T)">
+                  Sat. 1/2/T
                 </th>
                 <th
-                  className="px-4 py-3 text-right text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-100"
+                  className="px-2 py-2 text-right text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('min_stock')}
                 >
-                  <div className="flex items-center justify-end gap-2">
-                    Estoque Mínimo
+                  <div className="flex items-center justify-end gap-1">
+                    Mín.
                     {sortColumn === 'min_stock' && (
-                      <ArrowUpDown className="w-4 h-4" />
+                      <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
-                  Ponto de Suprimento
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-600 whitespace-nowrap">
+                  Pto. Sup.
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 whitespace-nowrap">
                   Status
                 </th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-600 whitespace-nowrap">
                   Ações
                 </th>
               </tr>
@@ -376,33 +376,33 @@ export function PharmacyItems() {
                 
                 return (
                   <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{item.code}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-700 font-medium">{item.unit}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">{item.code}</td>
+                    <td className="px-2 py-2 text-sm font-medium text-gray-900">{item.name}</td>
+                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">{item.category}</td>
+                    <td className="px-2 py-2 text-xs text-center text-gray-700 font-medium">{item.unit}</td>
+                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
                       {(item as any).batch_number || '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
                       {item.expiry_date ? new Date(item.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {(item as any).last_purchase_price != null
                         ? Number((item as any).last_purchase_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {(item as any).reference_price != null
                         ? Number((item as any).reference_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {Math.round(avgConsumption)} {item.unit}/mês
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">
+                    <td className="px-2 py-2 text-sm text-right font-medium whitespace-nowrap">
                       {item.current_stock} {item.unit}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       {(() => {
                         const bucket = stocksByItem.get(item.id) ?? {}
                         // Mostra apenas locais satelite que tem saldo > 0 ou existem como chave.
@@ -413,7 +413,7 @@ export function PharmacyItems() {
                         const chip = (label: string, value: number) => (
                           <span
                             key={label}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${
+                            className={`inline-flex items-center gap-0.5 px-1.5 py-0 text-[10px] rounded border whitespace-nowrap ${
                               value > 0
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                 : 'bg-gray-50 border-gray-200 text-gray-400'
@@ -425,34 +425,34 @@ export function PharmacyItems() {
                           </span>
                         )
                         return (
-                          <div className="flex flex-wrap gap-1 justify-start">
-                            {chip('Sat 1', sat1)}
-                            {chip('Sat 2', sat2)}
-                            {chip('Sat T', satT)}
+                          <div className="flex flex-wrap gap-0.5 justify-start">
+                            {chip('S1', sat1)}
+                            {chip('S2', sat2)}
+                            {chip('ST', satT)}
                           </div>
                         )
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {item.min_stock} {item.unit}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">
+                    <td className="px-2 py-2 text-xs text-right text-gray-600 whitespace-nowrap">
                       {supplyPoint} {item.unit}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       <div className="flex justify-center">
                         {item.current_stock === 0 ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200">Sem Estoque</span>
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-50 text-red-600 border border-red-200 whitespace-nowrap">Sem Estoque</span>
                         ) : item.current_stock <= item.min_stock ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200">Estoque Baixo</span>
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200 whitespace-nowrap">Estoque Baixo</span>
                         ) : item.current_stock <= supplyPoint ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">Ponto de Pedido</span>
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">Ponto Pedido</span>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
+                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       <div className="flex justify-center">
                         <div className="flex items-center gap-1">
                           {canEdit && (
