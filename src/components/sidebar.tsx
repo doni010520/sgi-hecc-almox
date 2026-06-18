@@ -69,6 +69,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     '/farmacia/fornecedores': `${modulePrefix}/cadastros/fornecedores`,
     '/farmacia/prescritores': `${modulePrefix}/cadastros/prescritores`,
     '/farmacia/pacientes': `${modulePrefix}/cadastros/pacientes`,
+    '/farmacia/antimicrobianos': `${modulePrefix}/antimicrobianos`,
+    '/farmacia/intervencao-farmaceutica': `${modulePrefix}/intervencao-farmaceutica`,
     '/farmacia/movimentacoes': `${modulePrefix}/movimentacoes`,
     '/farmacia/movimentacoes/new': `${modulePrefix}/movimentacoes/new`,
     '/almoxarifado/movimentacoes': `${modulePrefix}/movimentacoes`,

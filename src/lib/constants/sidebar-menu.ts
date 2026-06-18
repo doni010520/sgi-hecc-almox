@@ -26,6 +26,9 @@ import {
   UsersRound,
   CalendarClock,
   Clock,
+  BookOpen,
+  AlertOctagon,
+  Shield,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -94,6 +97,22 @@ export function buildSidebarSections(): SidebarSection[] {
       ],
     },
     {
+      title: 'Controle Legal — Portaria 344/98',
+      module: 'farmacia',
+      items: [
+        { name: 'Livro de Controlados', icon: BookOpen, href: '/farmacia/livro-controlados', show: (f) => f.canManageRequests },
+        { name: 'Talidomida', icon: AlertOctagon, href: '/farmacia/talidomida', show: (f) => f.canManageRequests },
+      ],
+    },
+    {
+      title: 'Conformidade e CCIH',
+      module: 'farmacia',
+      items: [
+        { name: 'Controle de Antimicrobianos', icon: Shield, href: '/farmacia/antimicrobianos', show: (f) => f.canManageRequests },
+        { name: 'Intervenção Farmacêutica', icon: Stethoscope, href: '/farmacia/intervencao-farmaceutica', show: (f) => f.canManageRequests },
+      ],
+    },
+    {
       title: 'Dispensação',
       module: 'farmacia',
       items: [
@@ -155,11 +174,10 @@ export function buildSidebarSections(): SidebarSection[] {
       title: 'Operações de Estoque',
       module: 'shared',
       items: [
-        { name: 'Baixas', icon: PackageMinus, href: '/estoque/saida-avulsa', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Devolução da Enfermagem', icon: Undo2, href: '/estoque/devolucao', show: () => true },
-        { name: 'Transferência para CAF', icon: ArrowRightLeft, href: '/estoque/transferencia', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Empréstimos em Aberto', icon: Handshake, href: '/estoque/emprestimos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Itens a Vencer', icon: CalendarX, href: '/estoque/vencimentos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Quebras e Avarias', icon: PackageMinus, href: '/estoque/saida-avulsa', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Devoluções', icon: Undo2, href: '/estoque/devolucao', show: () => true },
+        { name: 'Empréstimos', icon: Handshake, href: '/estoque/emprestimos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Vencimentos', icon: CalendarX, href: '/estoque/vencimentos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     {

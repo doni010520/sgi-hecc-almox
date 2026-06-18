@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  Search, Filter, Download, AlertCircle, 
-  Loader2, Package2, Pill, Building2, ArrowRightLeft,
+import {
+  Search, Filter, Download, AlertCircle,
+  Loader2, Building2, ArrowRightLeft,
   Calendar, Users, Activity,
   Clock
 } from 'lucide-react'
@@ -14,22 +14,26 @@ import { ptBR } from 'date-fns/locale'
 import { requestService } from '@/lib/services/requests'
 import { RequestStatusBadge } from '@/components/request-status-badge'
 import { getDepartmentName } from '@/lib/constants/departments'
+import { useModule } from '@/contexts/module'
 import { ExportDialog } from '@/components/export-dialog'
 import { PeriodFilterDialog } from '@/components/period-filter-dialog'
 import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
-import type { Request, RequestType } from '@/lib/services/requests'
+import type { Request } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 
 export function RequestInbox() {
   const navigate = useNavigate()
+  const { activeModule } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'urgent' | 'today'>('all')
-  const [requestType, setRequestType] = useState<RequestType>('pharmacy')
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showPeriodDialog, setShowPeriodDialog] = useState(false)
   const [dateRange, setDateRange] = useState(getDefaultDateRange())
+
+  // Derive the request type from the active module
+  const moduleRequestType = activeModule === 'almoxarifado' ? 'warehouse' : 'pharmacy'
 
   useEffect(() => {
     loadRequests()
@@ -48,7 +52,7 @@ export function RequestInbox() {
   }
 
   const getRequestStats = () => {
-    const filteredByType = requests.filter(r => r.type === requestType)
+    const filteredByType = requests.filter(r => r.type === moduleRequestType)
     const total = filteredByType.length
     const pending = filteredByType.filter(r => r.status === 'pending').length
     const urgent = filteredByType.filter(r => r.status === 'pending' && r.priority === 'high').length
@@ -79,7 +83,7 @@ export function RequestInbox() {
       (activeTab === 'today' && new Date(request.created_at).toDateString() === new Date().toDateString())
 
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
-    const matchesType = request.type === requestType
+    const matchesType = request.type === moduleRequestType
 
     return matchesSearch && matchesTab && matchesDate && matchesType
   })
@@ -254,59 +258,6 @@ export function RequestInbox() {
               Exportar
             </Button>
           </div>
-        </div>
-
-        {/* Request Type Selection */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <button
-            className={`p-4 rounded-lg border-2 transition-all ${
-              requestType === 'pharmacy'
-                ? 'border-blue-500 bg-blue-50 shadow-lg'
-                : 'border-gray-200 hover:border-blue-200 hover:bg-gray-50'
-            }`}
-            onClick={() => setRequestType('pharmacy')}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                requestType === 'pharmacy' ? 'bg-blue-100' : 'bg-gray-100'
-              }`}>
-                <Pill className={`w-5 h-5 ${
-                  requestType === 'pharmacy' ? 'text-blue-600' : 'text-gray-500'
-                }`} />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Farmácia</p>
-                <p className="text-sm text-gray-500">
-                  {requests.filter(r => r.type === 'pharmacy').length} solicitações
-                </p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            className={`p-4 rounded-lg border-2 transition-all ${
-              requestType === 'warehouse'
-                ? 'border-purple-500 bg-purple-50 shadow-lg'
-                : 'border-gray-200 hover:border-purple-200 hover:bg-gray-50'
-            }`}
-            onClick={() => setRequestType('warehouse')}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                requestType === 'warehouse' ? 'bg-purple-100' : 'bg-gray-100'
-              }`}>
-                <Package2 className={`w-5 h-5 ${
-                  requestType === 'warehouse' ? 'text-purple-600' : 'text-gray-500'
-                }`} />
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-gray-900">Almoxarifado</p>
-                <p className="text-sm text-gray-500">
-                  {requests.filter(r => r.type === 'warehouse').length} solicitações
-                </p>
-              </div>
-            </div>
-          </button>
         </div>
 
         {/* Stats Grid */}

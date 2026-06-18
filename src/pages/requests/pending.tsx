@@ -15,6 +15,7 @@ import { requestService } from '@/lib/services/requests'
 import { RequestStatusBadge } from '@/components/request-status-badge'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
 import { ExportDialog } from '@/components/export-dialog'
 import { PeriodFilterDialog } from '@/components/period-filter-dialog'
 import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
@@ -24,7 +25,11 @@ import { formatRequestNumber } from '@/lib/utils/request'
 export function RequestPending() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { activeModule } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
+
+  // Derive the request type from the active module
+  const moduleRequestType = activeModule === 'almoxarifado' ? 'warehouse' : 'pharmacy'
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'pharmacy' | 'warehouse'>('all')
@@ -59,13 +64,14 @@ export function RequestPending() {
   }
 
   const getRequestStats = () => {
-    const total = requests.length
-    const pending = requests.filter(r => r.status === 'pending').length
-    const approved = requests.filter(r => r.status === 'approved').length
-    const pharmacy = requests.filter(r => r.type === 'pharmacy').length
-    const warehouse = requests.filter(r => r.type === 'warehouse').length
-    const urgent = requests.filter(r => r.priority === 'high').length
-    const today = requests.filter(r => {
+    const moduleFiltered = requests.filter(r => r.type === moduleRequestType)
+    const total = moduleFiltered.length
+    const pending = moduleFiltered.filter(r => r.status === 'pending').length
+    const approved = moduleFiltered.filter(r => r.status === 'approved').length
+    const pharmacy = moduleFiltered.filter(r => r.type === 'pharmacy').length
+    const warehouse = moduleFiltered.filter(r => r.type === 'warehouse').length
+    const urgent = moduleFiltered.filter(r => r.priority === 'high').length
+    const today = moduleFiltered.filter(r => {
       const requestDate = new Date(r.created_at)
       const today = new Date()
       return requestDate.toDateString() === today.toDateString()
@@ -79,23 +85,24 @@ export function RequestPending() {
   }
 
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       request.requester?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.request_items.some(item => 
+      request.request_items.some(item =>
         item.item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.item.code.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    
-    const matchesTab = 
-      activeTab === 'all' || 
+
+    const matchesTab =
+      activeTab === 'all' ||
       (activeTab === 'pending' && request.status === 'pending') ||
       (activeTab === 'approved' && request.status === 'approved') ||
       (activeTab === 'pharmacy' && request.type === 'pharmacy') ||
       (activeTab === 'warehouse' && request.type === 'warehouse')
-    
-    const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
 
-    return matchesSearch && matchesTab && matchesDate
+    const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
+    const matchesModule = request.type === moduleRequestType
+
+    return matchesSearch && matchesTab && matchesDate && matchesModule
   })
 
   const renderRequestCard = (request: Request, index: number) => (

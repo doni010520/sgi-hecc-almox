@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
 import {
   ArrowLeft, ArrowRight, Search, Plus, Trash2, Loader2, AlertCircle, AlertTriangle,
-  UserCheck, Stethoscope, Pill, CheckCircle2, ClipboardList,
+  UserCheck, Stethoscope, Pill, CheckCircle2, ClipboardList, FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import { patientsService, prescribersService } from '@/lib/services/farmacia-cadastros'
 import type { Patient, Prescriber, PatientAdmission } from '@/lib/types/farmacia'
+
+type NotificacaoReceitaTipo = 'amarela_A' | 'azul_B' | 'branca'
 
 interface SelectedItem {
   item_id: string
@@ -23,6 +25,8 @@ interface SelectedItem {
   expiry_date: string | null
   available_in_batch: number
   quantity: number
+  notificacao_receita_tipo?: NotificacaoReceitaTipo
+  notificacao_receita_numero?: string
 }
 
 interface PharmacyItemRow {
@@ -47,8 +51,13 @@ const STEPS = [
   { label: 'Prescrição', icon: ClipboardList },
   { label: 'Prescritor', icon: Stethoscope },
   { label: 'Medicamentos', icon: Pill },
+  { label: 'Receita', icon: FileText },
   { label: 'Resumo', icon: CheckCircle2 },
 ]
+
+// Step indexes
+const STEP_RESUMO = 5
+const STEP_RECEITA = 4
 
 const APPROVAL_CLASSES = new Set(['mav', 'controlados', 'antimicrobianos', 'anticoagulante'])
 
@@ -108,7 +117,19 @@ export function NewDispensation() {
   const [expandedItem, setExpandedItem] = useState<PharmacyItemRow | null>(null)
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
 
-  // Etapa 5
+  // Etapa 5 — Notificação de Receita (apenas para controlados)
+  const hasControlados = useMemo(
+    () => selectedItems.some((i) => i.medication_class === 'controlados'),
+    [selectedItems]
+  )
+
+  function setItemReceita(idx: number, tipo: NotificacaoReceitaTipo | undefined, numero: string | undefined) {
+    setSelectedItems(prev => prev.map((it, i) =>
+      i === idx ? { ...it, notificacao_receita_tipo: tipo, notificacao_receita_numero: numero } : it
+    ))
+  }
+
+  // Etapa 6
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showMavConfirm, setShowMavConfirm] = useState(false)
@@ -272,11 +293,19 @@ export function NewDispensation() {
     }
   }
 
+  // canAdvance[4] = receita: if any controlados item, all must have tipo+numero filled
+  const receitaValid = useMemo(() => {
+    const controladosItems = selectedItems.filter(i => i.medication_class === 'controlados')
+    if (controladosItems.length === 0) return true
+    return controladosItems.every(i => i.notificacao_receita_tipo && i.notificacao_receita_numero?.trim())
+  }, [selectedItems])
+
   const canAdvance: boolean[] = [
     !!selectedPatient,
     !!prescriptionDate,
     !!selectedPresc,
     selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
+    receitaValid,
     true,
   ]
 
@@ -676,8 +705,92 @@ export function NewDispensation() {
               <ArrowLeft size={14} className="mr-2" /> Voltar
             </Button>
             <Button
-              onClick={() => setStep(4)}
+              onClick={() => setStep(STEP_RECEITA)}
               disabled={!canAdvance[3]}
+              className="bg-blue-600 hover:bg-blue-700 text-white">
+              {hasControlados ? 'Notificação de Receita' : 'Revisar Resumo'} <ArrowRight size={14} className="ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Etapa 5 — Notificação de Receita (controlados) */}
+      {step === STEP_RECEITA && (
+        <div className="p-6 space-y-4" style={card}>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 5 — Notificação de Receita</h2>
+
+          {!hasControlados ? (
+            <div className="p-4 rounded-xl"
+              style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <p className="text-sm" style={{ color: txt }}>
+                Nenhum item controlado nesta dispensação. Esta etapa não é obrigatória.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl flex items-start gap-2"
+                style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <FileText className="text-indigo-500 flex-shrink-0 mt-0.5" size={16} />
+                <p className="text-sm" style={{ color: txt }}>
+                  Um ou mais medicamentos desta dispensação são <strong>Controlados (Portaria 344/98)</strong>.
+                  Informe o tipo e número da notificação de receita para cada item controlado.
+                </p>
+              </div>
+
+              {selectedItems
+                .map((it, idx) => ({ it, idx }))
+                .filter(({ it }) => it.medication_class === 'controlados')
+                .map(({ it, idx }) => (
+                  <div key={idx} className="p-4 rounded-xl space-y-3"
+                    style={{
+                      background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                      border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                    }}>
+                    <p className="text-sm font-semibold flex items-center gap-2" style={{ color: txt }}>
+                      <Pill size={14} /> {it.name}
+                      <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                        Controlado
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label style={lbl}>Tipo de Notificação *</label>
+                        <select
+                          value={it.notificacao_receita_tipo ?? ''}
+                          onChange={e => setItemReceita(
+                            idx,
+                            e.target.value as NotificacaoReceitaTipo || undefined,
+                            it.notificacao_receita_numero
+                          )}
+                          style={inputStyle as React.CSSProperties}>
+                          <option value="">— selecionar —</option>
+                          <option value="amarela_A">Notificação Amarela — Lista A</option>
+                          <option value="azul_B">Notificação Azul — Lista B</option>
+                          <option value="branca">Receita de Controle Especial (Branca)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={lbl}>Número da Notificação *</label>
+                        <input
+                          value={it.notificacao_receita_numero ?? ''}
+                          onChange={e => setItemReceita(idx, it.notificacao_receita_tipo, e.target.value)}
+                          style={inputStyle}
+                          placeholder="Ex: AA123456"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          <div className="flex justify-between pt-2">
+            <Button variant="outline" onClick={() => setStep(3)}>
+              <ArrowLeft size={14} className="mr-2" /> Voltar
+            </Button>
+            <Button
+              onClick={() => setStep(STEP_RESUMO)}
+              disabled={!canAdvance[4]}
               className="bg-blue-600 hover:bg-blue-700 text-white">
               Revisar Resumo <ArrowRight size={14} className="ml-2" />
             </Button>
@@ -685,10 +798,10 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 5 — Resumo */}
-      {step === 4 && (
+      {/* Etapa 6 — Resumo */}
+      {step === STEP_RESUMO && (
         <div className="p-6 space-y-5" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 5 — Resumo</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 6 — Resumo</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl space-y-1"
@@ -757,7 +870,7 @@ export function NewDispensation() {
 
           <div className="flex justify-between pt-2">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(3)}>
+              <Button variant="outline" onClick={() => setStep(STEP_RECEITA)}>
                 <ArrowLeft size={14} className="mr-2" /> Voltar
               </Button>
               <Button variant="outline" onClick={() => setStep(0)}>

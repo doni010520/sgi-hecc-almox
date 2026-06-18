@@ -198,7 +198,7 @@ class PharmacyDispensationService {
         .select('id, medication_class, is_mav')
         .in('id', itemIds)
 
-      const REQUIRES_APPROVAL_CLASSES = new Set(['mav', 'controlados', 'antimicrobianos', 'anticoagulante'])
+      const REQUIRES_APPROVAL_CLASSES = new Set(['controlados', 'antimicrobianos'])
       const needsApproval = (itemDetails || []).some((item: any) =>
         item.is_mav || REQUIRES_APPROVAL_CLASSES.has(item.medication_class)
       )

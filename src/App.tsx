@@ -50,6 +50,8 @@ import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { Fornecedores } from '@/pages/farmacia/fornecedores'
 import { Prescritores } from '@/pages/farmacia/prescritores'
 import { Pacientes } from '@/pages/farmacia/pacientes'
+import { IntervencaoFarmaceutica } from '@/pages/farmacia/intervencao-farmaceutica'
+import { Antimicrobianos } from '@/pages/farmacia/antimicrobianos'
 import { SaidaAvulsa } from '@/pages/estoque/saida-avulsa'
 import { DevolucaoInterna } from '@/pages/estoque/devolucao'
 import { Transferencia } from '@/pages/estoque/transferencia'
@@ -61,6 +63,8 @@ import { PharmacyLoansList } from '@/pages/farmacia/movimentacoes/index'
 import { NewPharmacyLoan } from '@/pages/farmacia/movimentacoes/new'
 import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
 import { ChangePassword } from '@/pages/change-password'
+import { LivroControlados } from '@/pages/farmacia/livro-controlados'
+import { Talidomida } from '@/pages/farmacia/talidomida'
 import { useModule } from '@/contexts/module'
 import { ModuleLayout } from '@/components/module-layout-wrapper'
 
@@ -405,6 +409,34 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/farmacia/intervencao-farmaceutica" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <IntervencaoFarmaceutica />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/antimicrobianos" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Antimicrobianos />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/livro-controlados" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <LivroControlados />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/talidomida" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Talidomida />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
 
               {/* Estoque - Operacoes (multi-estoque) */}
               <Route path="/estoque/saida-avulsa" element={
@@ -541,6 +573,8 @@ export default function App() {
                 <Route path="cadastros/fornecedores" element={<Fornecedores />} />
                 <Route path="cadastros/prescritores" element={<Prescritores />} />
                 <Route path="cadastros/pacientes" element={<Pacientes />} />
+                <Route path="intervencao-farmaceutica" element={<IntervencaoFarmaceutica />} />
+                <Route path="antimicrobianos" element={<Antimicrobianos />} />
                 <Route path="movimentacoes" element={<PharmacyLoansList scope="pharmacy" />} />
                 <Route path="movimentacoes/new" element={<NewPharmacyLoan scope="pharmacy" />} />
                 <Route path="movimentacoes/:id" element={<PharmacyLoanDetail />} />

@@ -1,5 +1,5 @@
 // =====================================================================
-// Devolucao Interna — 2 etapas por perfil
+// Devolucao da Enfermagem — 2 etapas por perfil
 // Enfermagem: cria devolucao com status 'pending'
 // Farmacia: cria direto como 'confirmed' ou confirma pendentes
 // =====================================================================
@@ -12,6 +12,18 @@ import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, Cl
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+
+const MOTIVO_OPTIONS = [
+  { value: 'melhora_clinica', label: 'Melhora clínica' },
+  { value: 'suspensao_medica', label: 'Suspensão médica' },
+  { value: 'erro_dispensacao', label: 'Erro de dispensação' },
+  { value: 'alta_paciente', label: 'Alta do paciente' },
+  { value: 'obito', label: 'Óbito' },
+  { value: 'troca_terapeutica', label: 'Troca terapêutica' },
+  { value: 'outro', label: 'Outro' },
+] as const
+
+type MotivoValue = typeof MOTIVO_OPTIONS[number]['value'] | ''
 
 interface ItemRow {
   id: string
@@ -90,7 +102,8 @@ export function DevolucaoInterna() {
   // ---- Form state ----
   const [patientName, setPatientName] = useState('')
   const [prontuario, setProntuario] = useState('')
-  const [returnReason, setReturnReason] = useState('')
+  const [motivo, setMotivo] = useState<MotivoValue>('')
+  const [observacao, setObservacao] = useState('')
   const [lines, setLines] = useState<ReturnLine[]>([])
   const [search, setSearch] = useState('')
   const [items, setItems] = useState<ItemRow[]>([])
@@ -200,7 +213,8 @@ export function DevolucaoInterna() {
     lines.length > 0 &&
     lines.every((l) => l.quantity > 0) &&
     patientName.trim().length >= 2 &&
-    returnReason.trim().length >= 5
+    prontuario.trim().length >= 1 &&
+    motivo !== ''
 
   const handleSubmit = async () => {
     if (!canSubmit || !user?.id) return
@@ -215,9 +229,11 @@ export function DevolucaoInterna() {
         .insert({
           target_location_id: cafLocationId,
           returned_by_user_id: user.id,
+          created_by: user.id,
           patient_name: patientName.trim(),
-          patient_prontuario: prontuario.trim() || null,
-          return_reason: returnReason.trim(),
+          patient_prontuario: prontuario.trim(),
+          return_reason: motivo,
+          observacao: observacao.trim() || null,
           return_status: returnStatus,
         })
         .select('id')
@@ -259,7 +275,8 @@ export function DevolucaoInterna() {
       )
       setPatientName('')
       setProntuario('')
-      setReturnReason('')
+      setMotivo('')
+      setObservacao('')
       setLines([])
     } catch (e: any) {
       setError(e?.message || 'Erro ao registrar devolucao')
@@ -327,12 +344,12 @@ export function DevolucaoInterna() {
         </button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <Undo2 size={22} /> Devolucao Interna
+            <Undo2 size={22} /> Devolução da Enfermagem
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             {isPharmacy
-              ? 'Registre ou confirme devolucoes da enfermagem.'
-              : 'Solicite devolucao de itens ao estoque da farmacia.'}
+              ? 'Registre ou confirme devoluções da enfermagem.'
+              : 'Solicite devolução de itens ao estoque da farmácia.'}
           </p>
         </div>
       </div>
@@ -381,6 +398,15 @@ export function DevolucaoInterna() {
           {/* Paciente */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label style={labelStyle}>Prontuário <span style={{ color: '#ef4444' }}>*</span></label>
+              <input
+                value={prontuario}
+                onChange={(e) => setProntuario(e.target.value)}
+                placeholder="Número do prontuário"
+                style={inputStyle}
+              />
+            </div>
+            <div>
               <label style={labelStyle}>Nome do Paciente <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 value={patientName}
@@ -389,34 +415,41 @@ export function DevolucaoInterna() {
                 style={inputStyle}
               />
             </div>
-            <div>
-              <label style={labelStyle}>Prontuario (opcional)</label>
-              <input
-                value={prontuario}
-                onChange={(e) => setProntuario(e.target.value)}
-                placeholder="Numero do prontuario"
-                style={inputStyle}
-              />
-            </div>
           </div>
 
-          {/* Motivo */}
+          {/* Motivo (dropdown) */}
           <div>
             <label style={labelStyle}>
-              Motivo da Devolucao <span style={{ color: '#ef4444' }}>*</span>
+              Motivo da Devolução <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <select
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value as MotivoValue)}
+              style={{
+                ...inputStyle,
+                appearance: 'auto',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="" disabled>Selecione o motivo...</option>
+              {MOTIVO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Observação (opcional) */}
+          <div>
+            <label style={labelStyle}>
+              Observação <span style={{ color: txtMut, fontWeight: 400 }}>(opcional)</span>
             </label>
             <textarea
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              rows={3}
-              placeholder="Descreva o motivo da devolucao (minimo 5 caracteres). Ex: paciente recebeu alta antes de iniciar tratamento."
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              rows={2}
+              placeholder="Informações adicionais sobre a devolução, como lote, estado dos itens, etc."
               style={{ ...inputStyle, resize: 'vertical' as const }}
             />
-            <p className="text-xs mt-1" style={{ color: txtMut }}>
-              {returnReason.trim().length < 5
-                ? `${5 - returnReason.trim().length} caractere(s) faltando`
-                : '✓ Motivo OK'}
-            </p>
           </div>
 
           {/* Busca item */}
@@ -572,12 +605,12 @@ export function DevolucaoInterna() {
                     </p>
                     {p.patient_prontuario && (
                       <p className="text-sm" style={{ color: txtSec }}>
-                        Prontuario: {p.patient_prontuario}
+                        Prontuário: {p.patient_prontuario}
                       </p>
                     )}
                     {p.return_reason && (
                       <p className="text-sm" style={{ color: txtSec }}>
-                        Motivo: {p.return_reason}
+                        Motivo: {MOTIVO_OPTIONS.find((o) => o.value === p.return_reason)?.label ?? p.return_reason}
                       </p>
                     )}
                   </div>

@@ -1,25 +1,86 @@
 // =====================================================================
-// Emprestimos em Aberto
-// Lista todos os SAIDA_AVULSA com reason=emprestimo e awaits_return=true
-// que ainda nao foram fechados. Permite "fechar" o emprestimo, gerando
-// um RETORNO_EMPRESTIMO (entrada de volta ao estoque).
+// Emprestimos / Doacoes / Permutas
+// Gerencia a tabela `loans` (com `loan_items`).
+// Permite criar novos registros e gerar PDF para impressao.
+// Categorias: emprestimo | doacao | permuta | troca_validade
 // =====================================================================
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertCircle, Loader2, Handshake, CornerDownLeft } from 'lucide-react'
+import {
+  ArrowLeft,
+  AlertCircle,
+  Loader2,
+  Handshake,
+  Plus,
+  X,
+  Printer,
+  Search,
+  Trash2,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { stockService } from '@/lib/services/stock'
-import type { OpenLoanRow, StockLocation } from '@/lib/types/stock'
 
-interface LoanRowExtended extends OpenLoanRow {
-  item_name?: string
-  item_code?: string | null
-  item_unit?: string
+// ---------- Tipos ----------
+
+type LoanCategory = 'emprestimo' | 'doacao' | 'permuta' | 'troca_validade'
+
+const CATEGORY_LABEL: Record<LoanCategory, string> = {
+  emprestimo: 'Emprestimo',
+  doacao: 'Doacao',
+  permuta: 'Permuta',
+  troca_validade: 'Troca de Validade',
 }
+
+interface LoanItem {
+  id?: string
+  loan_id?: string
+  item_id: string | null
+  item_nome: string
+  batch_number: string
+  expiry_date: string
+  quantity: number
+  valor_unit: number | null
+  valor_total: number | null
+}
+
+interface Loan {
+  id: string
+  loan_number: number
+  destino: string
+  categoria: LoanCategory
+  status: 'pending' | 'closed' | 'cancelled'
+  observacao: string | null
+  created_by: string | null
+  created_at: string
+  loan_items: LoanItem[]
+}
+
+interface PharmacyItemRow {
+  id: string
+  code: string | null
+  name: string
+  unit: string
+  price: number | null
+}
+
+// ---------- Helpers ----------
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+
+const fmtCurrency = (v: number | null) =>
+  v != null
+    ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : '—'
+
+// ---------- Componente principal ----------
 
 export function EmprestimosAbertos() {
   const navigate = useNavigate()
@@ -27,64 +88,88 @@ export function EmprestimosAbertos() {
   const { mode } = useTheme()
 
   const txt = mode === 'dark' ? '#fff' : '#0d2e1c'
-  const txtSec = mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
-  const txtMut = mode === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(13,46,28,0.45)'
+  const txtSec =
+    mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
+  const txtMut =
+    mode === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(13,46,28,0.45)'
 
   const glass: React.CSSProperties = {
-    background: mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
+    background:
+      mode === 'dark' ? 'rgba(10,15,20,0.55)' : 'rgba(255,255,255,0.65)',
     backdropFilter: 'blur(30px)',
     WebkitBackdropFilter: 'blur(30px)',
     border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.5)'}`,
     borderRadius: 16,
   }
 
-  const [loans, setLoans] = useState<LoanRowExtended[]>([])
-  const [locations, setLocations] = useState<StockLocation[]>([])
+  const inputStyle: React.CSSProperties = {
+    background:
+      mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)',
+    border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
+    borderRadius: 10,
+    padding: '9px 13px',
+    fontSize: 14,
+    color: txt,
+    outline: 'none',
+    width: '100%',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    color: txtSec,
+    fontSize: 12,
+    fontWeight: 600,
+    marginBottom: 4,
+    display: 'block',
+  }
+
+  // ---------- Estado principal ----------
+  const [loans, setLoans] = useState<Loan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [closing, setClosing] = useState<string | null>(null)
-  const [closeQty, setCloseQty] = useState<Record<string, number>>({})
-  const [closeTo, setCloseTo] = useState<Record<string, string>>({})
 
-  const load = async () => {
+  // ---------- Modal ----------
+  const [showModal, setShowModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const [destino, setDestino] = useState('')
+  const [categoria, setCategoria] = useState<LoanCategory>('emprestimo')
+  const [observacao, setObservacao] = useState('')
+
+  const emptyItem = (): LoanItem => ({
+    item_id: null,
+    item_nome: '',
+    batch_number: '',
+    expiry_date: '',
+    quantity: 1,
+    valor_unit: null,
+    valor_total: null,
+  })
+  const [formItems, setFormItems] = useState<LoanItem[]>([emptyItem()])
+  const [itemSearches, setItemSearches] = useState<Record<number, string>>({})
+  const [showDropdowns, setShowDropdowns] = useState<Record<number, boolean>>({})
+
+  // Itens da farmacia para busca
+  const [pharmacyItems, setPharmacyItems] = useState<PharmacyItemRow[]>([])
+
+  // Loan selecionado para impressao
+  const [printLoan, setPrintLoan] = useState<Loan | null>(null)
+
+  // ---------- Carga de dados ----------
+
+  const loadLoans = async () => {
     setLoading(true)
     try {
-      const [rawLoans, locs] = await Promise.all([
-        stockService.listOpenLoans(),
-        stockService.getLocations(),
-      ])
-      setLocations(locs)
-
-      // Junta nome do item para exibicao
-      const pharmIds = rawLoans.filter((l) => l.item_type === 'pharmacy').map((l) => l.item_id)
-      const wareIds = rawLoans.filter((l) => l.item_type === 'warehouse').map((l) => l.item_id)
-      const itemMap = new Map<string, { name: string; code: string | null; unit: string }>()
-      if (pharmIds.length > 0) {
-        const { data } = await supabase.from('pharmacy_items').select('id, name, code, unit').in('id', pharmIds)
-        ;(data || []).forEach((r: any) => itemMap.set(r.id, { name: r.name, code: r.code, unit: r.unit }))
-      }
-      if (wareIds.length > 0) {
-        const { data } = await supabase.from('warehouse_items').select('id, name, code, unit').in('id', wareIds)
-        ;(data || []).forEach((r: any) => itemMap.set(r.id, { name: r.name, code: r.code, unit: r.unit }))
-      }
-
-      const enriched = rawLoans.map((l) => ({
-        ...l,
-        item_name: itemMap.get(l.item_id)?.name,
-        item_code: itemMap.get(l.item_id)?.code ?? null,
-        item_unit: itemMap.get(l.item_id)?.unit,
-      }))
-      setLoans(enriched)
-
-      // Defaults: qty igual ao emprestado, local de retorno = origem
-      const qDefaults: Record<string, number> = {}
-      const tDefaults: Record<string, string> = {}
-      enriched.forEach((l) => {
-        qDefaults[l.movement_id] = l.quantity
-        tDefaults[l.movement_id] = l.source_location_id
-      })
-      setCloseQty(qDefaults)
-      setCloseTo(tDefaults)
+      const { data, error: err } = await supabase
+        .from('loans')
+        .select(
+          `id, loan_number, destino, categoria, status, observacao, created_by, created_at,
+           loan_items ( id, loan_id, item_id, item_nome, batch_number, expiry_date, quantity, valor_unit, valor_total )`
+        )
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (err) throw err
+      setLoans((data || []) as Loan[])
     } catch (e: any) {
       setError(e?.message || 'Erro ao carregar emprestimos')
     } finally {
@@ -92,150 +177,1101 @@ export function EmprestimosAbertos() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  const loadPharmacyItems = async () => {
+    const { data } = await supabase
+      .from('pharmacy_items')
+      .select('id, code, name, unit, price')
+      .eq('is_active', true)
+      .order('name')
+      .limit(2000)
+    setPharmacyItems((data || []) as PharmacyItemRow[])
+  }
 
-  const handleClose = async (loan: LoanRowExtended) => {
-    if (!user?.id) return
-    const qty = closeQty[loan.movement_id] ?? loan.quantity
-    const targetLoc = closeTo[loan.movement_id] ?? loan.source_location_id
-    if (qty <= 0 || qty > loan.quantity) {
-      alert('Quantidade invalida.')
+  useEffect(() => {
+    loadLoans()
+    loadPharmacyItems()
+  }, [])
+
+  // ---------- Modal helpers ----------
+
+  const openModal = () => {
+    setDestino('')
+    setCategoria('emprestimo')
+    setObservacao('')
+    setFormItems([emptyItem()])
+    setItemSearches({})
+    setShowDropdowns({})
+    setFormError('')
+    setShowModal(true)
+  }
+
+  const updateFormItem = (idx: number, patch: Partial<LoanItem>) => {
+    setFormItems((prev) => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], ...patch }
+      if (patch.quantity !== undefined || patch.valor_unit !== undefined) {
+        const item = next[idx]
+        const vu = item.valor_unit
+        next[idx].valor_total = vu != null ? item.quantity * vu : null
+      }
+      return next
+    })
+  }
+
+  const selectPharmacyItem = (idx: number, pi: PharmacyItemRow) => {
+    const qty = formItems[idx]?.quantity ?? 1
+    updateFormItem(idx, {
+      item_id: pi.id,
+      item_nome: pi.name,
+      valor_unit: pi.price ?? null,
+      valor_total: pi.price != null ? qty * pi.price : null,
+    })
+    setItemSearches((m) => ({ ...m, [idx]: pi.name }))
+    setShowDropdowns((m) => ({ ...m, [idx]: false }))
+  }
+
+  const filteredItems = (search: string) => {
+    if (!search.trim()) return pharmacyItems.slice(0, 20)
+    const q = search.toLowerCase()
+    return pharmacyItems
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.code ?? '').toLowerCase().includes(q)
+      )
+      .slice(0, 20)
+  }
+
+  // ---------- Salvar ----------
+
+  const handleSave = async () => {
+    setFormError('')
+    if (!destino.trim()) {
+      setFormError('Destino obrigatorio.')
       return
     }
-    setClosing(loan.movement_id)
+    if (formItems.length === 0) {
+      setFormError('Adicione pelo menos um item.')
+      return
+    }
+    for (const [i, fi] of formItems.entries()) {
+      if (!fi.item_nome.trim()) {
+        setFormError(`Item ${i + 1}: nome obrigatorio.`)
+        return
+      }
+      if (fi.quantity <= 0) {
+        setFormError(`Item ${i + 1}: quantidade invalida.`)
+        return
+      }
+    }
+
+    setSaving(true)
     try {
-      await stockService.closeLoanFull({
-        original_movement_id: loan.movement_id,
-        item_id: loan.item_id,
-        item_type: loan.item_type,
-        target_location_id: targetLoc,
-        quantity: qty,
-        unit_cost: loan.unit_cost,
-        notes: `Retorno do emprestimo (${loan.borrowed_to || '-'})`,
-      })
-      // Reload (se devolveu parcial, ele aparece de novo com saldo restante? Nao —
-      // a view filtra "existe RETORNO_EMPRESTIMO ligado", entao desaparece da lista.
-      // OK para v1; quem precisa de devolucao parcial pode adicionar saida nova.
-      await load()
+      const { data: loanData, error: loanErr } = await supabase
+        .from('loans')
+        .insert({
+          destino: destino.trim(),
+          categoria,
+          status: 'pending',
+          observacao: observacao.trim() || null,
+          created_by: user?.id ?? null,
+        })
+        .select('id')
+        .single()
+      if (loanErr) throw loanErr
+
+      const loanId = loanData.id
+      const itemsPayload = formItems.map((fi) => ({
+        loan_id: loanId,
+        item_id: fi.item_id,
+        item_nome: fi.item_nome.trim(),
+        batch_number: fi.batch_number.trim() || null,
+        expiry_date: fi.expiry_date || null,
+        quantity: fi.quantity,
+        valor_unit: categoria === 'troca_validade' ? null : fi.valor_unit,
+        valor_total: categoria === 'troca_validade' ? null : fi.valor_total,
+      }))
+
+      const { error: itemsErr } = await supabase
+        .from('loan_items')
+        .insert(itemsPayload)
+      if (itemsErr) throw itemsErr
+
+      setShowModal(false)
+      await loadLoans()
     } catch (e: any) {
-      setError(e?.message || 'Erro ao fechar emprestimo')
+      setFormError(e?.message || 'Erro ao salvar emprestimo')
     } finally {
-      setClosing(null)
+      setSaving(false)
     }
   }
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 40, height: 40, borderRadius: 10, cursor: 'pointer',
-          background: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-          border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
-          color: txt,
-        }}><ArrowLeft size={18} /></button>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <Handshake size={22} /> Emprestimos em Aberto
-          </h1>
-          <p className="text-sm" style={{ color: txtSec }}>
-            Itens emprestados para fora aguardando retorno.
-          </p>
-        </div>
-      </div>
+  // ---------- Impressao ----------
 
-      {error && (
-        <div className="p-4 rounded-xl bg-red-100 border border-red-200 flex items-center gap-2 text-red-800 text-sm">
-          <AlertCircle size={16} /> {error}
+  const handlePrint = (loan: Loan) => {
+    setPrintLoan(loan)
+    setTimeout(() => window.print(), 200)
+  }
+
+  // ---------- Badges ----------
+
+  const statusBadge = (status: Loan['status']) => {
+    const map: Record<string, { label: string; color: string }> = {
+      pending: { label: 'Pendente', color: '#f59e0b' },
+      closed: { label: 'Encerrado', color: '#10b981' },
+      cancelled: { label: 'Cancelado', color: '#ef4444' },
+    }
+    const s = map[status] ?? { label: status, color: txtMut }
+    return (
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: s.color,
+          background: s.color + '22',
+          borderRadius: 6,
+          padding: '2px 8px',
+          border: `1px solid ${s.color}44`,
+        }}
+      >
+        {s.label}
+      </span>
+    )
+  }
+
+  const catBadge = (cat: LoanCategory) => (
+    <span
+      style={{
+        fontSize: 11,
+        color: txtMut,
+        background:
+          mode === 'dark'
+            ? 'rgba(255,255,255,0.08)'
+            : 'rgba(0,0,0,0.06)',
+        borderRadius: 6,
+        padding: '2px 8px',
+      }}
+    >
+      {CATEGORY_LABEL[cat]}
+    </span>
+  )
+
+  // ---------- Render ----------
+
+  return (
+    <>
+      {/* Print styles */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          .print-only { display: block !important; }
+        }
+        .print-only { display: none; }
+      `}</style>
+
+      {/* Documento para impressao (visivel apenas ao imprimir) */}
+      {printLoan && (
+        <div className="print-only">
+          <PrintDocument loan={printLoan} />
         </div>
       )}
 
-      <div className="p-6" style={glass}>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: txtMut }} />
+      {/* Conteudo principal */}
+      <div className="max-w-5xl mx-auto space-y-6 no-print">
+        {/* Cabecalho */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                cursor: 'pointer',
+                background:
+                  mode === 'dark'
+                    ? 'rgba(255,255,255,0.1)'
+                    : 'rgba(0,0,0,0.06)',
+                border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+                color: txt,
+              }}
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1
+                className="text-2xl font-bold flex items-center gap-2"
+                style={{ color: txt }}
+              >
+                <Handshake size={22} /> Emprestimos / Doacoes
+              </h1>
+              <p className="text-sm" style={{ color: txtSec }}>
+                Controle de saidas por emprestimo, doacao, permuta e troca de
+                validade.
+              </p>
+            </div>
           </div>
-        ) : loans.length === 0 ? (
-          <p className="text-sm text-center py-8" style={{ color: txtMut }}>
-            Nenhum emprestimo em aberto.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {loans.map((loan) => (
-              <div key={loan.movement_id} className="rounded-lg p-4 space-y-3"
-                style={{
-                  background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-                  border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                }}>
-                <div className="flex justify-between items-start gap-4">
-                  <div className="flex-1">
-                    <p className="font-medium" style={{ color: txt }}>
-                      {loan.item_name || loan.item_id}
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: txtMut }}>
-                      {loan.item_code || 'sem codigo'} • {loan.quantity} {loan.item_unit || 'un'}
-                      {loan.unit_cost && ` • R$ ${Number(loan.unit_cost).toFixed(2)}/un`}
-                    </p>
-                    <p className="text-sm mt-2" style={{ color: txtSec }}>
-                      Emprestado para <strong>{loan.borrowed_to || '—'}</strong> em{' '}
-                      <strong>{new Date(loan.performed_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</strong>
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: txtMut }}>
-                      De: {loan.location_name}
-                    </p>
-                    {loan.notes && (
-                      <p className="text-xs mt-1 italic" style={{ color: txtMut }}>"{loan.notes}"</p>
-                    )}
-                  </div>
-                </div>
 
-                {/* Fechar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end pt-2 border-t"
-                  style={{ borderColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
-                  <div>
-                    <label className="text-xs" style={{ color: txtMut }}>Quantidade retornando</label>
-                    <input type="number" min={1} max={loan.quantity}
-                      value={closeQty[loan.movement_id] ?? loan.quantity}
-                      onChange={(e) => setCloseQty((m) => ({ ...m, [loan.movement_id]: parseInt(e.target.value) || 1 }))}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-lg"
-                      style={{
-                        background: mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)',
-                        border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
-                        color: txt,
-                      }} />
-                  </div>
-                  <div>
-                    <label className="text-xs" style={{ color: txtMut }}>Devolver para</label>
-                    <select value={closeTo[loan.movement_id] ?? loan.source_location_id}
-                      onChange={(e) => setCloseTo((m) => ({ ...m, [loan.movement_id]: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2 text-sm rounded-lg"
-                      style={{
-                        background: mode === 'dark' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)',
-                        border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
-                        color: txt,
-                      }}>
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    onClick={() => handleClose(loan)}
-                    disabled={closing === loan.movement_id}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    {closing === loan.movement_id
-                      ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      : <CornerDownLeft className="w-4 h-4 mr-2" />}
-                    Registrar retorno
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <Button
+            onClick={openModal}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
+          >
+            <Plus size={16} /> Novo Emprestimo
+          </Button>
+        </div>
+
+        {/* Erro global */}
+        {error && (
+          <div className="p-4 rounded-xl bg-red-100 border border-red-200 flex items-center gap-2 text-red-800 text-sm">
+            <AlertCircle size={16} /> {error}
           </div>
         )}
+
+        {/* Lista */}
+        <div className="p-6 space-y-3" style={glass}>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2
+                className="w-6 h-6 animate-spin"
+                style={{ color: txtMut }}
+              />
+            </div>
+          ) : loans.length === 0 ? (
+            <p className="text-sm text-center py-8" style={{ color: txtMut }}>
+              Nenhum emprestimo registrado.
+            </p>
+          ) : (
+            loans.map((loan) => (
+              <LoanCard
+                key={loan.id}
+                loan={loan}
+                mode={mode}
+                txt={txt}
+                txtSec={txtSec}
+                txtMut={txtMut}
+                statusBadge={statusBadge}
+                catBadge={catBadge}
+                onPrint={handlePrint}
+              />
+            ))
+          )}
+        </div>
       </div>
+
+      {/* Modal Novo Emprestimo */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 px-4 no-print"
+          style={{
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false)
+          }}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl p-6 space-y-5"
+            style={{
+              background:
+                mode === 'dark'
+                  ? 'rgba(10,18,26,0.97)'
+                  : 'rgba(255,255,255,0.98)',
+              border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            }}
+          >
+            {/* Header modal */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold" style={{ color: txt }}>
+                Novo Emprestimo / Doacao
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{ color: txtMut, cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-red-800 text-sm flex items-center gap-2">
+                <AlertCircle size={15} /> {formError}
+              </div>
+            )}
+
+            {/* Campos principais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label style={labelStyle}>Destino (instituicao) *</label>
+                <input
+                  style={inputStyle}
+                  placeholder="Ex: Hospital Municipal de Salvador"
+                  value={destino}
+                  onChange={(e) => setDestino(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Categoria *</label>
+                <select
+                  style={inputStyle}
+                  value={categoria}
+                  onChange={(e) =>
+                    setCategoria(e.target.value as LoanCategory)
+                  }
+                >
+                  {(Object.keys(CATEGORY_LABEL) as LoanCategory[]).map((k) => (
+                    <option key={k} value={k}>
+                      {CATEGORY_LABEL[k]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Observacao</label>
+                <input
+                  style={inputStyle}
+                  placeholder="Opcional"
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Itens */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  style={{
+                    color: txtSec,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  Itens *
+                </span>
+                <button
+                  onClick={() =>
+                    setFormItems((prev) => [...prev, emptyItem()])
+                  }
+                  className="text-emerald-600 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Plus size={14} /> Adicionar item
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {formItems.map((fi, idx) => (
+                  <FormItemRow
+                    key={idx}
+                    idx={idx}
+                    item={fi}
+                    categoria={categoria}
+                    mode={mode}
+                    txt={txt}
+                    txtSec={txtSec}
+                    txtMut={txtMut}
+                    inputStyle={inputStyle}
+                    labelStyle={labelStyle}
+                    searchValue={itemSearches[idx] ?? ''}
+                    showDropdown={showDropdowns[idx] ?? false}
+                    filteredItems={filteredItems}
+                    onSearchChange={(v) => {
+                      setItemSearches((m) => ({ ...m, [idx]: v }))
+                      setShowDropdowns((m) => ({ ...m, [idx]: true }))
+                      updateFormItem(idx, { item_id: null, item_nome: v })
+                    }}
+                    onSelectItem={(pi) => selectPharmacyItem(idx, pi)}
+                    onCloseDropdown={() =>
+                      setShowDropdowns((m) => ({ ...m, [idx]: false }))
+                    }
+                    onUpdate={(patch) => updateFormItem(idx, patch)}
+                    onRemove={
+                      formItems.length > 1
+                        ? () =>
+                            setFormItems((prev) =>
+                              prev.filter((_, i) => i !== idx)
+                            )
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Acoes */}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowModal(false)}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ---------- Card de emprestimo na lista ----------
+
+interface LoanCardProps {
+  loan: Loan
+  mode: string
+  txt: string
+  txtSec: string
+  txtMut: string
+  statusBadge: (s: Loan['status']) => React.ReactNode
+  catBadge: (c: LoanCategory) => React.ReactNode
+  onPrint: (loan: Loan) => void
+}
+
+function LoanCard({
+  loan,
+  mode,
+  txt,
+  txtSec,
+  txtMut,
+  statusBadge,
+  catBadge,
+  onPrint,
+}: LoanCardProps) {
+  const [expanded, setExpanded] = useState(false)
+
+  const totalValue = (loan.loan_items ?? []).reduce(
+    (acc, i) => acc + (i.valor_total ?? 0),
+    0
+  )
+
+  return (
+    <div
+      className="rounded-xl p-4 space-y-2"
+      style={{
+        background:
+          mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+        border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm" style={{ color: txt }}>
+              #{loan.loan_number} — {loan.destino}
+            </span>
+            {catBadge(loan.categoria)}
+            {statusBadge(loan.status)}
+          </div>
+          <p className="text-xs mt-1" style={{ color: txtMut }}>
+            {new Date(loan.created_at).toLocaleString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+            {totalValue > 0 && (
+              <>
+                {' '}
+                &bull; Total:{' '}
+                <span style={{ color: txtSec }}>
+                  {totalValue.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })}
+                </span>
+              </>
+            )}
+          </p>
+          {loan.observacao && (
+            <p
+              className="text-xs mt-0.5 italic"
+              style={{ color: txtMut }}
+            >
+              "{loan.observacao}"
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              fontSize: 12,
+              color: txtMut,
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: 6,
+              border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+            }}
+          >
+            {expanded ? 'Ocultar' : `${loan.loan_items?.length ?? 0} itens`}
+          </button>
+          <button
+            onClick={() => onPrint(loan)}
+            title="Gerar PDF"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 12,
+              color: '#3b82f6',
+              cursor: 'pointer',
+              padding: '4px 10px',
+              borderRadius: 6,
+              border: '1px solid #3b82f633',
+              background: '#3b82f611',
+            }}
+          >
+            <Printer size={13} /> PDF
+          </button>
+        </div>
+      </div>
+
+      {expanded && (loan.loan_items ?? []).length > 0 && (
+        <div
+          className="rounded-lg overflow-hidden mt-2"
+          style={{
+            border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+          }}
+        >
+          <table
+            style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background:
+                    mode === 'dark'
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(0,0,0,0.04)',
+                }}
+              >
+                {[
+                  'Produto',
+                  'Lote',
+                  'Validade',
+                  'Qtd',
+                  'Vlr Unit',
+                  'Vlr Total',
+                ].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: '6px 10px',
+                      textAlign: 'left',
+                      color: txtMut,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loan.loan_items.map((li, i) => (
+                <tr
+                  key={li.id ?? i}
+                  style={{
+                    borderTop: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}`,
+                  }}
+                >
+                  <td style={{ padding: '6px 10px', color: txt }}>
+                    {li.item_nome}
+                  </td>
+                  <td style={{ padding: '6px 10px', color: txtSec }}>
+                    {li.batch_number || '—'}
+                  </td>
+                  <td style={{ padding: '6px 10px', color: txtSec }}>
+                    {li.expiry_date ? fmtDate(li.expiry_date) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 10px', color: txt }}>
+                    {li.quantity}
+                  </td>
+                  <td style={{ padding: '6px 10px', color: txtSec }}>
+                    {fmtCurrency(li.valor_unit)}
+                  </td>
+                  <td style={{ padding: '6px 10px', color: txtSec }}>
+                    {fmtCurrency(li.valor_total)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------- Linha de item no formulario ----------
+
+interface FormItemRowProps {
+  idx: number
+  item: LoanItem
+  categoria: LoanCategory
+  mode: string
+  txt: string
+  txtSec: string
+  txtMut: string
+  inputStyle: React.CSSProperties
+  labelStyle: React.CSSProperties
+  searchValue: string
+  showDropdown: boolean
+  filteredItems: (s: string) => PharmacyItemRow[]
+  onSearchChange: (v: string) => void
+  onSelectItem: (pi: PharmacyItemRow) => void
+  onCloseDropdown: () => void
+  onUpdate: (patch: Partial<LoanItem>) => void
+  onRemove?: () => void
+}
+
+function FormItemRow({
+  idx: _idx,
+  item,
+  categoria,
+  mode,
+  txt,
+  txtSec: _txtSec,
+  txtMut,
+  inputStyle,
+  labelStyle,
+  searchValue,
+  showDropdown,
+  filteredItems,
+  onSearchChange,
+  onSelectItem,
+  onCloseDropdown,
+  onUpdate,
+  onRemove,
+}: FormItemRowProps) {
+  const showValues = categoria !== 'troca_validade'
+
+  return (
+    <div
+      className="rounded-xl p-3 space-y-3"
+      style={{
+        background:
+          mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+        border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+        position: 'relative',
+      }}
+    >
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            color: '#ef4444',
+            cursor: 'pointer',
+          }}
+          title="Remover item"
+        >
+          <Trash2 size={15} />
+        </button>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Busca de produto */}
+        <div style={{ position: 'relative' }}>
+          <label style={labelStyle}>
+            <Search
+              size={11}
+              style={{ display: 'inline', marginRight: 4 }}
+            />
+            Produto *
+          </label>
+          <input
+            style={inputStyle}
+            placeholder="Buscar pelo nome ou codigo..."
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => onSearchChange(searchValue)}
+            onBlur={() => setTimeout(onCloseDropdown, 200)}
+          />
+          {showDropdown && filteredItems(searchValue).length > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                zIndex: 100,
+                background: mode === 'dark' ? '#0f1a24' : '#fff',
+                border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'}`,
+                borderRadius: 10,
+                marginTop: 4,
+                maxHeight: 200,
+                overflowY: 'auto',
+              }}
+            >
+              {filteredItems(searchValue).map((pi) => (
+                <button
+                  key={pi.id}
+                  onMouseDown={() => onSelectItem(pi)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '8px 12px',
+                    fontSize: 13,
+                    color: txt,
+                    cursor: 'pointer',
+                    borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}`,
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{pi.name}</span>
+                  {pi.code && (
+                    <span
+                      style={{
+                        color: txtMut,
+                        marginLeft: 6,
+                        fontSize: 11,
+                      }}
+                    >
+                      {pi.code}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Quantidade */}
+        <div>
+          <label style={labelStyle}>Quantidade *</label>
+          <input
+            type="number"
+            min={1}
+            style={inputStyle}
+            value={item.quantity}
+            onChange={(e) =>
+              onUpdate({ quantity: parseInt(e.target.value) || 1 })
+            }
+            onWheel={(e) => e.currentTarget.blur()}
+          />
+        </div>
+
+        {/* Lote */}
+        <div>
+          <label style={labelStyle}>Lote</label>
+          <input
+            style={inputStyle}
+            placeholder="Ex: LOT2024001"
+            value={item.batch_number}
+            onChange={(e) => onUpdate({ batch_number: e.target.value })}
+          />
+        </div>
+
+        {/* Validade */}
+        <div>
+          <label style={labelStyle}>Validade</label>
+          <input
+            type="date"
+            style={inputStyle}
+            value={item.expiry_date}
+            onChange={(e) => onUpdate({ expiry_date: e.target.value })}
+          />
+        </div>
+
+        {showValues && (
+          <>
+            <div>
+              <label style={labelStyle}>Valor Unitario (R$)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                style={inputStyle}
+                placeholder="0,00"
+                value={item.valor_unit ?? ''}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value)
+                  onUpdate({ valor_unit: isNaN(v) ? null : v })
+                }}
+                onWheel={(e) => e.currentTarget.blur()}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Valor Total (R$)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                style={{ ...inputStyle, opacity: 0.8 }}
+                placeholder="Auto"
+                value={item.valor_total ?? ''}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value)
+                  onUpdate({ valor_total: isNaN(v) ? null : v })
+                }}
+                onWheel={(e) => e.currentTarget.blur()}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------- Documento para impressao ----------
+
+function PrintDocument({ loan }: { loan: Loan }) {
+  const totalValue = (loan.loan_items ?? []).reduce(
+    (acc, i) => acc + (i.valor_total ?? 0),
+    0
+  )
+
+  return (
+    <div
+      style={{
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 12,
+        color: '#000',
+        padding: '20mm',
+        maxWidth: '180mm',
+        margin: '0 auto',
+      }}
+    >
+      {/* Cabecalho */}
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <p
+          style={{
+            fontWeight: 700,
+            fontSize: 13,
+            margin: 0,
+            textTransform: 'uppercase',
+          }}
+        >
+          HOSPITAL ESTADUAL COSTA DOS COQUEIROS - HECC
+        </p>
+        <p
+          style={{
+            fontWeight: 600,
+            fontSize: 13,
+            margin: '6px 0 0',
+            textTransform: 'uppercase',
+          }}
+        >
+          EMPRESTIMO / DOACAO DE MEDICAMENTO
+        </p>
+        <p style={{ margin: '4px 0 0', fontSize: 11, color: '#555' }}>
+          N° {loan.loan_number} — {CATEGORY_LABEL[loan.categoria]}
+        </p>
+      </div>
+
+      {/* Dados gerais */}
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          marginBottom: 16,
+        }}
+      >
+        <tbody>
+          <tr>
+            <td
+              style={{ width: '50%', padding: '4px 0', verticalAlign: 'top' }}
+            >
+              <strong>Destino:</strong> {loan.destino}
+            </td>
+            <td
+              style={{ width: '50%', padding: '4px 0', verticalAlign: 'top' }}
+            >
+              <strong>Data:</strong>{' '}
+              {new Date(loan.created_at).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              })}
+            </td>
+          </tr>
+          {loan.observacao && (
+            <tr>
+              <td colSpan={2} style={{ padding: '4px 0' }}>
+                <strong>Observacao:</strong> {loan.observacao}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* Tabela de itens */}
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          border: '1px solid #999',
+          marginBottom: 20,
+        }}
+      >
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            {[
+              'Produto',
+              'Qtd',
+              'Apresentacao',
+              'Lote',
+              'Validade',
+              'Valor Unit',
+              'Valor Total',
+            ].map((h) => (
+              <th
+                key={h}
+                style={{
+                  border: '1px solid #999',
+                  padding: '5px 6px',
+                  textAlign: 'left',
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(loan.loan_items ?? []).map((li, i) => (
+            <tr key={li.id ?? i}>
+              <td style={{ border: '1px solid #ccc', padding: '5px 6px' }}>
+                {li.item_nome}
+              </td>
+              <td
+                style={{
+                  border: '1px solid #ccc',
+                  padding: '5px 6px',
+                  textAlign: 'center',
+                }}
+              >
+                {li.quantity}
+              </td>
+              <td style={{ border: '1px solid #ccc', padding: '5px 6px' }} />
+              <td style={{ border: '1px solid #ccc', padding: '5px 6px' }}>
+                {li.batch_number || '—'}
+              </td>
+              <td style={{ border: '1px solid #ccc', padding: '5px 6px' }}>
+                {li.expiry_date ? fmtDate(li.expiry_date) : '—'}
+              </td>
+              <td
+                style={{
+                  border: '1px solid #ccc',
+                  padding: '5px 6px',
+                  textAlign: 'right',
+                }}
+              >
+                {loan.categoria === 'troca_validade'
+                  ? '—'
+                  : fmtCurrency(li.valor_unit)}
+              </td>
+              <td
+                style={{
+                  border: '1px solid #ccc',
+                  padding: '5px 6px',
+                  textAlign: 'right',
+                }}
+              >
+                {loan.categoria === 'troca_validade'
+                  ? '—'
+                  : fmtCurrency(li.valor_total)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        {loan.categoria !== 'troca_validade' && totalValue > 0 && (
+          <tfoot>
+            <tr style={{ background: '#f8f8f8' }}>
+              <td
+                colSpan={6}
+                style={{
+                  border: '1px solid #ccc',
+                  padding: '5px 6px',
+                  textAlign: 'right',
+                  fontWeight: 700,
+                }}
+              >
+                TOTAL
+              </td>
+              <td
+                style={{
+                  border: '1px solid #ccc',
+                  padding: '5px 6px',
+                  textAlign: 'right',
+                  fontWeight: 700,
+                }}
+              >
+                {totalValue.toLocaleString('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                })}
+              </td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+
+      {/* Assinaturas */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 24,
+          marginTop: 40,
+          justifyContent: 'space-between',
+        }}
+      >
+        {['Solicitado por:', 'Atendido por:', 'Recebido por:'].map((label) => (
+          <div key={label} style={{ flex: 1, textAlign: 'center' }}>
+            <div
+              style={{
+                borderTop: '1px solid #000',
+                paddingTop: 6,
+                marginTop: 40,
+                fontSize: 11,
+              }}
+            >
+              {label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p
+        style={{
+          marginTop: 24,
+          fontSize: 10,
+          color: '#888',
+          textAlign: 'center',
+        }}
+      >
+        Documento gerado em{' '}
+        {new Date().toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </p>
     </div>
   )
 }
