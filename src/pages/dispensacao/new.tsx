@@ -756,9 +756,14 @@ export function NewDispensation() {
           )}
 
           <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(3)}>
-              <ArrowLeft size={14} className="mr-2" /> Voltar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setStep(3)}>
+                <ArrowLeft size={14} className="mr-2" /> Voltar
+              </Button>
+              <Button variant="outline" onClick={() => setStep(0)}>
+                Editar do início
+              </Button>
+            </div>
             <Button
               onClick={trySubmit}
               disabled={submitting}

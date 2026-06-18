@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Pill, FileSpreadsheet,
-  Eye, Plus, Edit, Trash2, PackagePlus
+  Eye, Plus, Edit, Trash2, PackagePlus, X, Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,6 +49,8 @@ export function PharmacyItems() {
   const [hideZeroStock, setHideZeroStock] = useState(true)
   const [hideNoLot, setHideNoLot] = useState(true)
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
+  // Modal de lotes do item
+  const [lotModalItem, setLotModalItem] = useState<Item | null>(null)
   // Saldos por local (CAF, SAT_1, SAT_2, SAT_T) carregados em uma chamada.
   // Map<itemId, Map<locationCode, quantity>>
   const [stocksByItem, setStocksByItem] = useState<Map<string, Record<string, number>>>(new Map())
@@ -453,7 +455,16 @@ export function PharmacyItems() {
                       {Math.round(avgConsumption)} {item.unit}/mês
                     </td>
                     <td className="px-2 py-2 text-sm text-right font-medium whitespace-nowrap">
-                      {item.current_stock} {item.unit}
+                      <button
+                        onClick={() => setLotModalItem(item)}
+                        className="inline-flex items-center gap-1 hover:text-blue-600 hover:underline cursor-pointer"
+                        title="Ver lotes disponíveis"
+                      >
+                        {item.current_stock} {item.unit}
+                        {(lotsByItem.get(item.id) ?? []).length > 0 && (
+                          <Layers className="w-3 h-3 text-blue-400" />
+                        )}
+                      </button>
                     </td>
                     <td className="px-2 py-2">
                       {(() => {
@@ -636,6 +647,85 @@ export function PharmacyItems() {
           }}
         />
       )}
+
+      {/* Lot detail modal */}
+      {lotModalItem && (() => {
+        const lots = lotsByItem.get(lotModalItem.id) ?? []
+        const today = Date.now()
+        function expiryBand(d: string | null): { bg: string; text: string; label: string } {
+          if (!d) return { bg: '#f9fafb', text: '#6b7280', label: '—' }
+          const days = Math.floor((new Date(d + 'T00:00:00').getTime() - today) / 86400000)
+          if (days < 0) return { bg: '#fef2f2', text: '#dc2626', label: 'Vencido' }
+          if (days <= 30) return { bg: '#fef2f2', text: '#dc2626', label: `${days}d` }
+          if (days <= 90) return { bg: '#fffbeb', text: '#d97706', label: `${days}d` }
+          return { bg: '#f0fdf4', text: '#16a34a', label: `${days}d` }
+        }
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.55)' }}
+            onClick={() => setLotModalItem(null)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-blue-500" />
+                    Lotes — {lotModalItem.name}
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Estoque total: <strong>{lotModalItem.current_stock} {lotModalItem.unit}</strong> · {lots.length} lote(s) rastreado(s)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setLotModalItem(null)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto max-h-80 px-5 py-3 space-y-2">
+                {lots.length === 0 ? (
+                  <p className="text-sm text-gray-500 py-4 text-center">Nenhum lote rastreado para este item.</p>
+                ) : (
+                  lots.map((lot, idx) => {
+                    const band = expiryBand(lot.expiry_date)
+                    return (
+                      <div
+                        key={`${lot.batch_number}-${idx}`}
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl border text-sm"
+                        style={{ background: band.bg, borderColor: band.bg === '#f9fafb' ? '#e5e7eb' : band.bg }}
+                      >
+                        <div className="flex items-center gap-2">
+                          {idx === 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold">FEFO</span>
+                          )}
+                          <span className="font-semibold text-gray-900">Lote {lot.batch_number}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="text-gray-600">
+                            Val.: {lot.expiry_date ? new Date(lot.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                          </span>
+                          <span className="font-medium px-2 py-0.5 rounded-full" style={{ color: band.text, background: band.bg === '#f9fafb' ? '#f3f4f6' : undefined }}>
+                            {band.label}
+                          </span>
+                          <span className="font-bold text-gray-800">{lot.current_quantity} {lotModalItem.unit}</span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setLotModalItem(null)}>Fechar</Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
