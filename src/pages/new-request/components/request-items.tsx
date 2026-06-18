@@ -29,6 +29,9 @@ const itemSchema = z.object({
   justificativa_motivo: z.string().optional(),
   justificativa_patient_name: z.string().optional(),
   justificativa_prontuario: z.string().optional(),
+  // lote selecionado
+  batch_number: z.string().optional(),
+  expiry_date: z.string().optional(),
 })
 
 export type RequestItem = z.infer<typeof itemSchema>

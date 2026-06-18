@@ -19,6 +19,7 @@ import { RequestInbox } from '@/pages/requests/inbox'
 import { RequestProcessing } from '@/pages/requests/processing'
 import { RequestHistory } from '@/pages/requests/history'
 import { RequestPending } from '@/pages/requests/pending'
+import { ReceiptConfirmation } from '@/pages/requests/receipt-confirmation'
 import { NewRequest } from '@/pages/new-request'
 import { Profile } from '@/pages/profile'
 import { ProfileAdvanced } from '@/pages/profile-advanced'
@@ -222,6 +223,13 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <RequestPending />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/requests/receipt-confirmation" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <ReceiptConfirmation />
                   </MainLayout>
                 </ProtectedRoute>
               } />
@@ -584,6 +592,7 @@ export default function App() {
                 <Route path="requests/processing" element={<RequestProcessing />} />
                 <Route path="requests/history" element={<RequestHistory />} />
                 <Route path="requests/pending" element={<RequestPending />} />
+                <Route path="requests/receipt-confirmation" element={<ReceiptConfirmation />} />
                 <Route path="requests/:id" element={<RequestDetails />} />
                 <Route path="estoque/saida-avulsa" element={<SaidaAvulsa />} />
                 <Route path="estoque/devolucao" element={<DevolucaoInterna />} />
@@ -616,6 +625,7 @@ export default function App() {
                 <Route path="requests/processing" element={<RequestProcessing />} />
                 <Route path="requests/history" element={<RequestHistory />} />
                 <Route path="requests/pending" element={<RequestPending />} />
+                <Route path="requests/receipt-confirmation" element={<ReceiptConfirmation />} />
                 <Route path="requests/:id" element={<RequestDetails />} />
                 <Route path="estoque/saida-avulsa" element={<SaidaAvulsa />} />
                 <Route path="estoque/devolucao" element={<DevolucaoInterna />} />
