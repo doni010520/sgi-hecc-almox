@@ -21,6 +21,8 @@ export function ConsentGate({ children }: ConsentGateProps) {
     if (authLoading) return
     // Unauthenticated (login/register pages) — pass through
     if (!user) { setStatus('accepted'); return }
+    // Authenticated: re-check from scratch (evita flash do app antes do modal)
+    setStatus('loading')
     checkConsent()
   }, [user?.id, authLoading])
 
