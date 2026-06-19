@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Building2, Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle, ShieldAlert } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 interface Department {
   id: string
@@ -70,11 +71,7 @@ export function Register() {
       })
     } catch (error) {
       console.error('Registration error:', error)
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError('Erro ao criar conta')
-      }
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

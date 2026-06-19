@@ -11,6 +11,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { itemsService } from '@/lib/services/items'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Item } from '@/lib/services/items'
 import { toast } from 'sonner'
 
@@ -53,7 +54,7 @@ export function DeleteItemDialog({
       onSuccess()
     } catch (err: any) {
       console.error('Error deleting item:', err)
-      setError(err?.message || 'Erro ao excluir item. Tente novamente.')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }

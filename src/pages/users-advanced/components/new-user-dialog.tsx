@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { usersService } from '@/lib/services/users'
 import { departmentsService } from '@/lib/services/departments'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { UserRole } from '@/lib/types'
 import type { Department } from '@/lib/types/departments'
 
@@ -97,11 +98,7 @@ export function NewUserDialog({ open, onOpenChange, onSuccess }: NewUserDialogPr
       onOpenChange(false)
     } catch (error) {
       console.error('Error creating user:', error)
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError('Erro ao criar usuário. Por favor, tente novamente.')
-      }
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

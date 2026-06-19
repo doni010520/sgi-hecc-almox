@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { format, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -114,7 +115,7 @@ export function MovementsReport() {
       setRows((data as MovementRow[]) || [])
     } catch (e: any) {
       console.error('Error loading movements:', e)
-      setError(e?.message || 'Erro ao carregar movimentações')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }

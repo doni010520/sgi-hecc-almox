@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
@@ -160,11 +161,12 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
       onOpenChange(false)
     } catch (error: any) {
       console.error('Error creating item:', error)
-      let errorMessage = error?.message || 'Erro ao criar item. Por favor, tente novamente.'
-      if (errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint') || errorMessage.includes('code_unique')) {
-        errorMessage = 'Já existe um item ativo com esse código. Verifique a lista de itens ou use um código diferente.'
+      const raw = (error?.message || '').toString()
+      if (raw.includes('duplicate key') || raw.includes('unique constraint') || raw.includes('code_unique')) {
+        setError('Já existe um item ativo com esse código. Verifique a lista de itens ou use um código diferente.')
+      } else {
+        setError(getErrorMessage(error))
       }
-      setError(errorMessage)
     } finally {
       setLoading(false)
     }

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Item } from '@/lib/services/items'
 
 const entrySchema = z.object({
@@ -110,7 +111,7 @@ export function RegisterEntryDialog({ item, type, open, onOpenChange, onSuccess 
       onOpenChange(false)
     } catch (error: any) {
       console.error('Error registering entry:', error)
-      setError(error?.message || 'Erro ao registrar entrada. Por favor, tente novamente.')
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

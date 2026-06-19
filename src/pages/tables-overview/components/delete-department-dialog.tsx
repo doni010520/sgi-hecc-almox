@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { departmentsService } from '@/lib/services/departments'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Department } from '@/lib/types/departments'
 
 interface DeleteDepartmentDialogProps {
@@ -41,7 +42,7 @@ export function DeleteDepartmentDialog({
       if (msg.toLowerCase().includes('foreign key') || msg.toLowerCase().includes('violates') || msg.toLowerCase().includes('referenced')) {
         setError('Este setor não pode ser excluído porque está vinculado a usuários ou solicitações. Remova essas vinculações primeiro.')
       } else {
-        setError(msg || 'Erro ao excluir setor')
+        setError(getErrorMessage(err))
       }
     } finally {
       setLoading(false)

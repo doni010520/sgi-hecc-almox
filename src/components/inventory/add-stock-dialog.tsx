@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Item } from '@/lib/services/items'
 
 const stockEntrySchema = z.object({
@@ -151,7 +152,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
       onOpenChange(false)
     } catch (error: any) {
       console.error('Error adding stock:', error)
-      setError(error?.message || 'Erro ao adicionar estoque. Por favor, tente novamente.')
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { usersService } from '@/lib/services/users'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { User } from '@/lib/types'
 
 const passwordSchema = z.object({
@@ -55,11 +56,7 @@ export function ChangePasswordDialog({ user, open, onOpenChange, onSuccess }: Ch
       onOpenChange(false)
     } catch (error) {
       console.error('Error changing password:', error)
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError('Erro ao alterar senha')
-      }
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

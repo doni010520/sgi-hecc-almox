@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { tvRequestService } from '@/lib/services/tv-requests'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { TVRequest } from '@/lib/services/tv-requests'
 
 const THEME_A = {
@@ -173,11 +174,7 @@ export default function PharmacyTVDashboard() {
       setRequests(activeRequests)
       setLastUpdated(new Date())
     } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message.includes('Failed to fetch') ? 'Erro de conexão com o servidor.' : `Erro: ${error.message}`)
-      } else {
-        setError('Erro ao carregar solicitações.')
-      }
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

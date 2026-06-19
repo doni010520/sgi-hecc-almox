@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ---------- Tipos ----------
 
@@ -171,7 +172,7 @@ export function EmprestimosAbertos() {
       if (err) throw err
       setLoans((data || []) as Loan[])
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar emprestimos')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -300,7 +301,7 @@ export function EmprestimosAbertos() {
       setShowModal(false)
       await loadLoans()
     } catch (e: any) {
-      setFormError(e?.message || 'Erro ao salvar emprestimo')
+      setFormError(getErrorMessage(e))
     } finally {
       setSaving(false)
     }

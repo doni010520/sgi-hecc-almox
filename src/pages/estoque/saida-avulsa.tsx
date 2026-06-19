@@ -21,6 +21,7 @@ import { useTheme } from '@/contexts/theme'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type {
   StockLocation,
   SaidaAvulsaReason,
@@ -116,7 +117,7 @@ export function SaidaAvulsa() {
         const caf = locs.find((l) => l.code === 'CAF')
         if (caf) setLocationId(caf.id)
       } catch (e: any) {
-        setError(e?.message || 'Erro ao carregar locais')
+        setError(getErrorMessage(e))
       }
 
       const { data, error } = await supabase
@@ -223,7 +224,7 @@ export function SaidaAvulsa() {
       setNotes('')
       setItemSearch('')
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar saida')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

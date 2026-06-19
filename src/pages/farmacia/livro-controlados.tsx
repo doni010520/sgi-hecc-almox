@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/theme'
 import { useAuth } from '@/contexts/auth'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,7 +149,7 @@ export function LivroControlados() {
       .from('livros_controlados')
       .select('*')
       .order('termo_abertura_data', { ascending: false })
-    if (err) { setError(err.message); return }
+    if (err) { setError(getErrorMessage(err)); return }
     setLivros((data || []) as LivroRow[])
   }
 
@@ -210,7 +211,7 @@ export function LivroControlados() {
 
       setMovs(filtered)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar movimentações')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -241,7 +242,7 @@ export function LivroControlados() {
       setShowAbrirModal(false)
       await loadLivros()
     } catch (e: any) {
-      setLivroError(e?.message || 'Erro ao abrir livro')
+      setLivroError(getErrorMessage(e))
     } finally {
       setSavingLivro(false)
     }
@@ -264,7 +265,7 @@ export function LivroControlados() {
       setShowEncerrarModal(false)
       await loadLivros()
     } catch (e: any) {
-      setLivroError(e?.message || 'Erro ao encerrar livro')
+      setLivroError(getErrorMessage(e))
     } finally {
       setSavingLivro(false)
     }

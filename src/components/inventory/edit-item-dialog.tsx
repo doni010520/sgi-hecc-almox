@@ -16,6 +16,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Item, ItemCategory, UnitType } from '@/lib/services/items'
 
 // Transforma NaN/vazio em undefined para campos numéricos opcionais
@@ -212,7 +213,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
       onOpenChange(false)
     } catch (e: any) {
       console.error('Error editing item:', e)
-      setError(e?.message || 'Erro ao salvar')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }

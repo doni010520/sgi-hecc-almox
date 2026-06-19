@@ -11,6 +11,7 @@ import { useTheme } from '@/contexts/theme'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { StockLocation, ItemStock } from '@/lib/types/stock'
 
 interface ItemRow {
@@ -78,7 +79,7 @@ export function Transferencia() {
         if (s1) setSourceId(s1.id)
         if (caf) setTargetId(caf.id)
       } catch (e: any) {
-        setError(e?.message || 'Erro ao carregar locais')
+        setError(getErrorMessage(e))
       }
       const { data } = await supabase
         .from('pharmacy_items')
@@ -155,7 +156,7 @@ export function Transferencia() {
       })
       navigate('/inventory/pharmacy')
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar transferencia')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

@@ -18,6 +18,7 @@ import {
   DISPATCH_TYPE_LABELS,
   type WarehouseDispatchSummary,
 } from '@/lib/services/warehouse-dispatch'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 export function WarehouseDispatchList() {
   const navigate = useNavigate()
@@ -70,7 +71,7 @@ export function WarehouseDispatchList() {
       setCancelTarget(null)
       await load()
     } catch (e: any) {
-      setCancelError(e?.message || 'Erro ao estornar a saída')
+      setCancelError(getErrorMessage(e))
     } finally {
       setCancelling(false)
     }

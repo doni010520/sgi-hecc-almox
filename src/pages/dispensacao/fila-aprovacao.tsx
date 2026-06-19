@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, CheckCircle2, Loader2, AlertCircle, Pill } from 'luci
 import { Button } from '@/components/ui/button'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import type { PharmacyDispensation } from '@/lib/types/dispensation'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const APPROVAL_ROLES = new Set(['pharmacist', 'gestor', 'administrador'])
 
@@ -56,7 +57,7 @@ export function FilaAprovacaoFarmaceutica() {
     try {
       setList(await pharmacyDispensationService.getPendingApprovals())
     } catch (e: unknown) {
-      setError((e as Error)?.message || 'Erro ao carregar fila')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -71,7 +72,7 @@ export function FilaAprovacaoFarmaceutica() {
       setConfirmId(null)
       await load()
     } catch (e: unknown) {
-      setError((e as Error)?.message || 'Erro ao aprovar dispensação')
+      setError(getErrorMessage(e))
     } finally {
       setApproving(null)
     }

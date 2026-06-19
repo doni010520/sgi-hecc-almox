@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { warehouseDispatchService, DISPATCH_TYPE_LABELS, type DispatchType } from '@/lib/services/warehouse-dispatch'
 import { itemsService } from '@/lib/services/items'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
@@ -228,7 +229,7 @@ export function NewWarehouseDispatch() {
       })
       navigate('/saida-direta')
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar saída')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { itemsService } from '@/lib/services/items'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { Item } from '@/lib/services/items'
 
 const CONFIRM_WORD = 'EDITAR'
@@ -87,7 +88,7 @@ export function EditStockDialog({
       resetDialog()
     } catch (error: any) {
       console.error('Error updating stock:', error)
-      setError(error?.message || 'Erro ao atualizar estoque. Por favor, tente novamente.')
+      setError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

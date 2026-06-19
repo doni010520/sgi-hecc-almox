@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/theme'
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, Heart, Skull } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { format } from 'date-fns'
 
 type DischargeReason = 'alta' | 'obito'
@@ -60,7 +61,7 @@ export function PatientDischarge() {
       setSuccess(true)
       setTimeout(() => navigate('/dispensacao'), 1500)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar saída do paciente.')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

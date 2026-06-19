@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/theme'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,7 +116,7 @@ export function Talidomida() {
       if (err) throw err
       setRows((data || []) as TalidomidaNotification[])
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar notificações')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -172,7 +173,7 @@ export function Talidomida() {
       setShowModal(false)
       await load()
     } catch (e: any) {
-      setFormError(e?.message || 'Erro ao salvar notificação')
+      setFormError(getErrorMessage(e))
     } finally {
       setSaving(false)
     }

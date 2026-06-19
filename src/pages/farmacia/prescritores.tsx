@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
 import { prescribersService } from '@/lib/services/farmacia-cadastros'
 import type { Prescriber } from '@/lib/types/farmacia'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const ALLOWED_ROLES = new Set([
   'admin', 'manager', 'administrador', 'gestor', 'pharmacist',
@@ -59,7 +60,7 @@ export function Prescritores() {
   async function load() {
     setLoading(true); setError('')
     try { setRows(await prescribersService.list()) }
-    catch (e: any) { setError(e?.message || 'Erro') }
+    catch (e: any) { setError(getErrorMessage(e)) }
     finally { setLoading(false) }
   }
 
@@ -84,14 +85,14 @@ export function Prescritores() {
       if (editing) await prescribersService.update(editing.id, { name: fName, crm: fCrm, crm_uf: fUf })
       else await prescribersService.create({ name: fName, crm: fCrm, crm_uf: fUf })
       setShowForm(false); await load()
-    } catch (e: any) { setFormError(e?.message || 'Erro ao salvar') }
+    } catch (e: any) { setFormError(getErrorMessage(e)) }
     finally { setSaving(false) }
   }
 
   async function remove(p: Prescriber) {
     if (!confirm(`Desativar prescritor "${p.name}"?`)) return
     try { await prescribersService.deactivate(p.id); await load() }
-    catch (e: any) { setError(e?.message || 'Erro') }
+    catch (e: any) { setError(getErrorMessage(e)) }
   }
 
   if (!canManage) {

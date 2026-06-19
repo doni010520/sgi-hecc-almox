@@ -14,6 +14,7 @@ import { Loader2, BarChart3, FileText, Pill, Download, AlertCircle } from 'lucid
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
@@ -106,7 +107,7 @@ export function FarmaciaMultiEstoqueReport() {
         setItemNames(new Map())
       }
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar relatorio')
+      setError(getErrorMessage(e))
       setRows([])
     } finally {
       setLoading(false)

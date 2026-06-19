@@ -20,6 +20,7 @@ import {
   type Via,
 } from '@/lib/services/antimicrobial-controls'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -149,7 +150,7 @@ export function Antimicrobianos() {
   async function load() {
     setLoading(true); setError('')
     try { setRows(await antimicrobialControlsService.getAll()) }
-    catch (e: any) { setError(e?.message || 'Erro ao carregar') }
+    catch (e: any) { setError(getErrorMessage(e)) }
     finally { setLoading(false) }
   }
 
@@ -226,7 +227,7 @@ export function Antimicrobianos() {
         await antimicrobialControlsService.create(form)
       }
       setShowModal(false); await load()
-    } catch (e: any) { setFormError(e?.message || 'Erro ao salvar') }
+    } catch (e: any) { setFormError(getErrorMessage(e)) }
     finally { setSaving(false) }
   }
 

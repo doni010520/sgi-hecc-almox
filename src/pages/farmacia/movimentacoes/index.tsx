@@ -20,6 +20,7 @@ import {
   type LoanSummary,
   type LoanScope,
 } from '@/lib/services/pharmacy-loan'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 export function PharmacyLoansList({ scope }: { scope: LoanScope }) {
   const navigate = useNavigate()
@@ -75,7 +76,7 @@ export function PharmacyLoansList({ scope }: { scope: LoanScope }) {
       setCancelTarget(null)
       await load()
     } catch (e: any) {
-      setCancelError(e?.message || 'Erro ao estornar')
+      setCancelError(getErrorMessage(e))
     } finally {
       setCancelling(false)
     }

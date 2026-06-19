@@ -11,6 +11,7 @@ import {
   type LoanDetail,
   type LoanType,
 } from '@/lib/services/pharmacy-loan'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const TYPES: LoanType[] = [
   'emprestimo',
@@ -62,7 +63,7 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
       const data = await pharmacyLoanService.getById(loanId)
       setLoan(data)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }

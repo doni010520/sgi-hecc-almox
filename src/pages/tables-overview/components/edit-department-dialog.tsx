@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { departmentsService } from '@/lib/services/departments'
 import type { Department } from '@/lib/types/departments'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const departmentSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
@@ -56,7 +57,7 @@ export function EditDepartmentDialog({
       onOpenChange(false)
     } catch (error: any) {
       console.error('Error updating department:', error)
-      setSubmitError(error?.message || 'Erro ao atualizar setor')
+      setSubmitError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }

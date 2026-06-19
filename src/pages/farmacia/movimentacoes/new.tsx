@@ -15,6 +15,7 @@ import {
   type LoanItemInput,
   type LoanScope,
 } from '@/lib/services/pharmacy-loan'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const HECC_NAME = 'HOSPITAL ESTADUAL COSTA DOS COQUEIROS'
 
@@ -211,7 +212,7 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
       })
       navigate(`${baseRoute}/${result.id}`)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao salvar')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

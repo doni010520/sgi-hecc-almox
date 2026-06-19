@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/theme'
 import { ArrowLeft, Search, Plus, User, Calendar, FileText, Loader2, AlertCircle, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -113,7 +114,7 @@ export function PatientSelect() {
       if (error) throw error
       navigate('/dispensacao/new', { state: { patient: data } })
     } catch (e: any) {
-      setError(e?.message || 'Erro ao cadastrar paciente.')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

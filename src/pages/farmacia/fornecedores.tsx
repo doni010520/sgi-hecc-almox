@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
 import { suppliersService, formatCNPJ } from '@/lib/services/farmacia-cadastros'
 import type { Supplier } from '@/lib/types/farmacia'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const ALLOWED_ROLES = new Set([
   'admin', 'manager', 'administrador', 'gestor', 'pharmacist',
@@ -56,7 +57,7 @@ export function Fornecedores() {
     setLoading(true); setError('')
     try {
       setRows(await suppliersService.list())
-    } catch (e: any) { setError(e?.message || 'Erro') }
+    } catch (e: any) { setError(getErrorMessage(e)) }
     finally { setLoading(false) }
   }
 
@@ -81,14 +82,14 @@ export function Fornecedores() {
       if (editing) await suppliersService.update(editing.id, { name: formName, cnpj: formCnpj })
       else await suppliersService.create({ name: formName, cnpj: formCnpj })
       setShowForm(false); await load()
-    } catch (e: any) { setFormError(e?.message || 'Erro ao salvar') }
+    } catch (e: any) { setFormError(getErrorMessage(e)) }
     finally { setSaving(false) }
   }
 
   async function remove(s: Supplier) {
     if (!confirm(`Desativar fornecedor "${s.name}"?`)) return
     try { await suppliersService.deactivate(s.id); await load() }
-    catch (e: any) { setError(e?.message || 'Erro') }
+    catch (e: any) { setError(getErrorMessage(e)) }
   }
 
   // CNPJ mask

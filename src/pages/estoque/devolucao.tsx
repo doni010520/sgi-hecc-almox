@@ -12,6 +12,7 @@ import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, Cl
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 const MOTIVO_OPTIONS = [
   { value: 'melhora_clinica', label: 'Melhora clínica' },
@@ -126,7 +127,7 @@ export function DevolucaoInterna() {
         const caf = locs.find((l) => l.code === 'CAF')
         if (caf) setCafLocationId(caf.id)
       } catch (e: any) {
-        setError(e?.message || 'Erro ao carregar locais')
+        setError(getErrorMessage(e))
       }
       const { data } = await supabase
         .from('pharmacy_items')
@@ -175,7 +176,7 @@ export function DevolucaoInterna() {
 
       setPendentes(rows)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar pendentes')
+      setError(getErrorMessage(e))
     } finally {
       setLoadingPendentes(false)
     }
@@ -279,7 +280,7 @@ export function DevolucaoInterna() {
       setObservacao('')
       setLines([])
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar devolucao')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }
@@ -320,7 +321,7 @@ export function DevolucaoInterna() {
       setConfirmingId(null)
       await loadPendentes()
     } catch (e: any) {
-      setError(e?.message || 'Erro ao confirmar devolucao')
+      setError(getErrorMessage(e))
     } finally {
       setConfirmingSubmit(null)
     }

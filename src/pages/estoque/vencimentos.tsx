@@ -12,6 +12,7 @@ import { ArrowLeft, AlertCircle, Loader2, CalendarX, Check, AlertTriangle, Check
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { ExpiryColorBand, ExpiringAlertRow, ExpiringToWriteoffRow } from '@/lib/types/stock'
 
 const RESOLVE_ROLES = new Set(['pharmacist', 'gestor', 'administrador'])
@@ -78,7 +79,7 @@ export function VencimentosABaixar() {
       })
       setResolutions(resolvedSet)
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar dados')
+      setError(getErrorMessage(e))
     } finally {
       setLoadingAlerts(false)
       setLoadingWriteoff(false)
@@ -104,7 +105,7 @@ export function VencimentosABaixar() {
       if (e) throw e
       setResolutions((prev) => new Set([...prev, `${row.expiry_tracking_id}__${row.color_band}`]))
     } catch (e: any) {
-      setError(e?.message || 'Erro ao marcar como resolvido')
+      setError(getErrorMessage(e))
     } finally {
       setResolvingId(null)
     }
@@ -170,7 +171,7 @@ export function VencimentosABaixar() {
       setSelected(new Set())
       await loadAll()
     } catch (e: any) {
-      setError(e?.message || 'Erro ao registrar baixa')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
     }

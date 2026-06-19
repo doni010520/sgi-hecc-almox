@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import { patientsService, prescribersService } from '@/lib/services/farmacia-cadastros'
 import type { Patient, Prescriber, PatientAdmission } from '@/lib/types/farmacia'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 type NotificacaoReceitaTipo = 'amarela_A' | 'azul_B' | 'branca'
 
@@ -287,7 +288,7 @@ export function NewDispensation() {
         : 'Dispensação registrada com sucesso'
       navigate('/dispensacao', { state: { successMsg: msg } })
     } catch (e: unknown) {
-      setError((e as Error)?.message || 'Erro ao registrar dispensação')
+      setError(getErrorMessage(e))
     } finally {
       setSubmitting(false); setShowMavConfirm(false)
     }

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
 import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ─── Tipos ───────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ export function IntervencaoFarmaceutica() {
       if (err) throw err
       setRows((data ?? []) as Intervencao[])
     } catch (e: any) {
-      setError(e?.message || 'Erro ao carregar intervenções')
+      setError(getErrorMessage(e))
     } finally {
       setLoading(false)
     }
@@ -287,7 +288,7 @@ export function IntervencaoFarmaceutica() {
       setShowForm(false)
       await load()
     } catch (e: any) {
-      setFormError(e?.message || 'Erro ao salvar')
+      setFormError(getErrorMessage(e))
     } finally {
       setSaving(false)
     }
@@ -303,7 +304,7 @@ export function IntervencaoFarmaceutica() {
       if (err) throw err
       await load()
     } catch (e: any) {
-      setError(e?.message || 'Erro ao excluir')
+      setError(getErrorMessage(e))
     }
   }
 
