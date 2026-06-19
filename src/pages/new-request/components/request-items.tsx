@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import type { Item } from '@/lib/services/items'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/auth'
 import { z } from 'zod'
 
 // Item that requires special patient info
@@ -49,6 +50,9 @@ interface RequestItemsProps {
 const JUSTIFICATIVA_MOTIVOS = ['Quebra', 'Não encontrado', 'Avariado'] as const
 
 export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItemsProps) {
+  const { user } = useAuth()
+  // Solicitantes não veem nem estoque nem o bloqueio "sem estoque" — só gestores/admins/atendentes
+  const canSeeStock = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
   const [items, setItems] = useState<Item[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedItems, setSelectedItems] = useState<RequestItem[]>(
@@ -340,15 +344,19 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
           {filteredItems.map(item => {
             const stock = (item as any).current_stock || 0
             const isOutOfStock = stock <= 0
+            // Para solicitantes, esconde estoque e libera o botão (eles podem pedir mesmo se zerado)
+            const dimRow = canSeeStock && isOutOfStock
             return (
-              <div key={item.id} className={`p-4 flex items-center justify-between ${isOutOfStock ? 'bg-red-50/50 opacity-60' : 'hover:bg-gray-50'}`}>
+              <div key={item.id} className={`p-4 flex items-center justify-between ${dimRow ? 'bg-red-50/50 opacity-60' : 'hover:bg-gray-50'}`}>
                 <div>
-                  <p className={`font-medium ${isOutOfStock ? 'text-gray-400' : ''}`}>{item.name}</p>
+                  <p className={`font-medium ${dimRow ? 'text-gray-400' : ''}`}>{item.name}</p>
                   <p className="text-sm text-gray-500">
                     {item.code} • {item.category} • {item.unit}
-                    <span className={`ml-2 font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
-                      (Estoque: {stock})
-                    </span>
+                    {canSeeStock && (
+                      <span className={`ml-2 font-medium ${isOutOfStock ? 'text-red-500' : 'text-green-600'}`}>
+                        (Estoque: {stock})
+                      </span>
+                    )}
                   </p>
                 </div>
                 <Button
@@ -356,10 +364,10 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
                   variant="outline"
                   size="sm"
                   onClick={() => handleAddItem(item)}
-                  disabled={isOutOfStock || (item.code !== COLCHAO_CASCA_OVO_CODE && selectedItems.some(i => i.id === item.id))}
+                  disabled={(canSeeStock && isOutOfStock) || (item.code !== COLCHAO_CASCA_OVO_CODE && selectedItems.some(i => i.id === item.id))}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  {isOutOfStock ? 'Sem estoque' : 'Adicionar'}
+                  {canSeeStock && isOutOfStock ? 'Sem estoque' : 'Adicionar'}
                 </Button>
               </div>
             )
