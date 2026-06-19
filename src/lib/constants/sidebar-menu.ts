@@ -102,6 +102,9 @@ export function buildSidebarSections(): SidebarSection[] {
       module: 'farmacia',
       items: [
         { name: 'Livro de Controlados', icon: BookOpen, href: '/farmacia/livro-controlados', show: (f) => f.canManageRequests },
+        { name: 'Notificação de Receita', icon: FileText, href: '/farmacia/notificacao-receita', show: (f) => f.canManageRequests },
+        { name: 'BMPO — Balanço', icon: BarChart3, href: '/farmacia/bmpo', show: (f) => f.canManageRequests },
+        { name: 'Perdas / Inutilização', icon: PackageMinus, href: '/farmacia/perdas', show: (f) => f.canManageRequests },
         { name: 'Talidomida', icon: AlertOctagon, href: '/farmacia/talidomida', show: (f) => f.canManageRequests },
       ],
     },

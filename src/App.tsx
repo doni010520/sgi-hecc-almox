@@ -67,6 +67,9 @@ import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
 import { ChangePassword } from '@/pages/change-password'
 import { LivroControlados } from '@/pages/farmacia/livro-controlados'
 import { Talidomida } from '@/pages/farmacia/talidomida'
+import { Perdas } from '@/pages/farmacia/perdas'
+import { NotificacaoReceita } from '@/pages/farmacia/notificacao-receita'
+import { BMPO } from '@/pages/farmacia/bmpo'
 import { ConsentGate } from '@/components/lgpd/consent-gate'
 import { useModule } from '@/contexts/module'
 import { ModuleLayout } from '@/components/module-layout-wrapper'
@@ -452,6 +455,27 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <Talidomida />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/perdas" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <Perdas />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/notificacao-receita" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NotificacaoReceita />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/bmpo" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <BMPO />
                   </MainLayout>
                 </ProtectedRoute>
               } />
