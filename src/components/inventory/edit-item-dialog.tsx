@@ -49,7 +49,7 @@ const schema = z.object({
   entry_quantity: optionalNumber,
   acquisition_type: z.preprocess(
     (v) => (v === '' ? undefined : v),
-    z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Devolução']).optional(),
+    z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Devolução', 'Inventário']).optional(),
   ),
   invoice_number: z.string().optional(),
   invoice_date: z.string().optional(),
@@ -411,6 +411,7 @@ export function EditItemDialog({ item, type, open, onOpenChange, onSuccess }: Ed
                   <option value="Empréstimo">Empréstimo</option>
                   <option value="Permuta">Permuta</option>
                   <option value="Devolução">Devolução</option>
+                  <option value="Inventário">Inventário</option>
                 </select>
               </div>
 

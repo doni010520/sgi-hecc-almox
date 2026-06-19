@@ -114,7 +114,7 @@ interface CreateItemData {
   afm_number?: string
   invoice_total_value?: number
   unit_price?: number
-  acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta'
+  acquisition_type?: 'Compra' | 'Empréstimo' | 'Doação' | 'Permuta' | 'Inventário'
   barcode?: string | null
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null

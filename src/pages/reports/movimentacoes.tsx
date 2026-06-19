@@ -41,7 +41,7 @@ interface MovementRow {
   is_active: boolean
 }
 
-const ENTRY_SUBTYPES = ['Compra', 'Empréstimo', 'Doação', 'Permuta']
+const ENTRY_SUBTYPES = ['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário']
 const EXIT_SUBTYPES = [
   'Consumo interno',
   'Empréstimo',

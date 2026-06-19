@@ -39,7 +39,7 @@ const itemSchema = z.object({
   reference_price: z.number().min(0).optional(),
   // Estoque inicial + NF (opcionais — só preenche se já tem estoque)
   initial_stock: z.number().min(0).optional(),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']).optional(),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário']).optional(),
   invoice_number: z.string().optional(),
   invoice_date: z.string().optional(),
   invoice_total_value: z.number().min(0).optional(),
@@ -504,6 +504,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                   <option value="Doação">Doação</option>
                   <option value="Empréstimo">Empréstimo</option>
                   <option value="Permuta">Permuta</option>
+                  <option value="Inventário">Inventário</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Define a origem do estoque inicial (aparece nos relatórios).

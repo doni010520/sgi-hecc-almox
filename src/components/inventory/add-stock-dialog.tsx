@@ -20,7 +20,7 @@ import type { Item } from '@/lib/services/items'
 
 const stockEntrySchema = z.object({
   quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta'], {
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário'], {
     errorMap: () => ({ message: 'Selecione o tipo de aquisição' })
   }),
   invoice_number: z.string().min(1, 'Numero da nota fiscal e obrigatorio'),
@@ -212,6 +212,7 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
                 <option value="Empréstimo">Empréstimo</option>
                 <option value="Doação">Doação</option>
                 <option value="Permuta">Permuta</option>
+                <option value="Inventário">Inventário</option>
               </select>
               {errors.acquisition_type && (
                 <p className="text-sm text-red-500 mt-1">{errors.acquisition_type.message}</p>

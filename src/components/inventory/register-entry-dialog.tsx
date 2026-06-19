@@ -19,7 +19,7 @@ import type { Item } from '@/lib/services/items'
 
 const entrySchema = z.object({
   quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta']),
+  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário']),
   invoice_number: z.string().min(1, 'Código da NF é obrigatório'),
   afm_number: z.string().min(1, 'Código da AFM é obrigatório'),
   supplier_name: z.string().optional(),
@@ -165,6 +165,7 @@ export function RegisterEntryDialog({ item, type, open, onOpenChange, onSuccess 
                 <option value="Empréstimo">Empréstimo</option>
                 <option value="Doação">Doação</option>
                 <option value="Permuta">Permuta</option>
+                <option value="Inventário">Inventário</option>
               </select>
               {errors.acquisition_type && (
                 <p className="text-sm text-red-500 mt-1">{errors.acquisition_type.message}</p>
