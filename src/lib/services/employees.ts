@@ -10,50 +10,19 @@ class EmployeesService {
 
       const mat = matricula.trim()
 
-      // First try employees table
-      const { data, error } = await supabase
-        .from('employees')
-        .select(`
-          *,
-          department:departments(name)
-        `)
-        .eq('matricula', mat)
-        .eq('is_active', true)
-        .single()
+      // Lookup via RPC security-definer (users/employees não são legíveis por anon;
+      // a RPC entrega só o mínimo e funciona tanto no painel de TV público quanto logado)
+      const { data, error } = await supabase.rpc('lookup_employee_by_matricula', { mat })
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
+        const e = data[0]
         return {
-          ...data,
-          department_name: data.department?.name || undefined
-        } as Employee
-      }
-
-      // Fallback: try users table (matricula field)
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, matricula, role, department_id')
-        .eq('matricula', mat)
-        .maybeSingle()
-
-      if (!userError && userData) {
-        // Get department name if exists
-        let deptName = ''
-        if (userData.department_id) {
-          const { data: dept } = await supabase
-            .from('departments')
-            .select('name')
-            .eq('id', userData.department_id)
-            .single()
-          deptName = dept?.name || ''
-        }
-
-        return {
-          id: userData.id,
-          matricula: userData.matricula || mat,
-          full_name: userData.full_name,
-          cargo: userData.role,
+          id: e.id,
+          matricula: e.matricula || mat,
+          full_name: e.full_name,
+          cargo: e.cargo,
           is_active: true,
-          department_name: deptName,
+          department_name: e.department_name || '',
           created_at: '',
           updated_at: '',
         } as Employee

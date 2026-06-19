@@ -55,7 +55,6 @@ class TVRequestService {
         .from('requests')
         .select(`
           *,
-          requester:users!requests_requester_id_fkey(full_name),
           dept:departments!requests_department_id_fkey(id, name),
           dest_dept:departments!requests_destination_department_id_fkey(id, name),
           request_items(
@@ -77,6 +76,14 @@ class TVRequestService {
       if (error) {
         console.error('TVRequestService: Error fetching requests:', error)
         return []
+      }
+
+      // Nomes dos solicitantes via RPC (users não é mais legível por anon)
+      const requesterIds = [...new Set((requests || []).map((r: any) => r.requester_id).filter(Boolean))]
+      let nameMap: Record<string, string> = {}
+      if (requesterIds.length > 0) {
+        const { data: names } = await supabase.rpc('get_requester_names', { ids: requesterIds })
+        if (names) nameMap = Object.fromEntries((names as any[]).map(n => [n.id, n.full_name]))
       }
 
       return (requests || []).map(req => {
@@ -110,7 +117,7 @@ class TVRequestService {
           destination_department: req.dest_dept?.name || '',
           destination_department_id: req.dest_dept?.id || req.destination_department_id,
           requester_id: req.requester_id,
-          requester_name: req.requester?.full_name || 'Usuário Desconhecido',
+          requester_name: nameMap[req.requester_id] || 'Usuário Desconhecido',
           request_number: req.request_number,
           justification: req.justification,
           notes: req.notes,
@@ -137,7 +144,6 @@ class TVRequestService {
         .from('requests')
         .select(`
           *,
-          requester:users!requests_requester_id_fkey(full_name),
           dept:departments!requests_department_id_fkey(id, name),
           dest_dept:departments!requests_destination_department_id_fkey(id, name),
           request_items(
@@ -158,6 +164,13 @@ class TVRequestService {
       if (error) {
         console.error('TVRequestService: Error fetching request:', error)
         return null
+      }
+
+      // Nome do solicitante via RPC (users não é mais legível por anon)
+      let nameMap: Record<string, string> = {}
+      if (req.requester_id) {
+        const { data: names } = await supabase.rpc('get_requester_names', { ids: [req.requester_id] })
+        if (names) nameMap = Object.fromEntries((names as any[]).map(n => [n.id, n.full_name]))
       }
 
       const items: TVRequestItem[] = (req.request_items || [])
@@ -190,7 +203,7 @@ class TVRequestService {
         destination_department: req.dest_dept?.name || '',
         destination_department_id: req.dest_dept?.id || req.destination_department_id,
         requester_id: req.requester_id,
-        requester_name: req.requester?.full_name || 'Usuário Desconhecido',
+        requester_name: nameMap[req.requester_id] || 'Usuário Desconhecido',
         request_number: req.request_number,
         justification: req.justification,
         notes: req.notes,
