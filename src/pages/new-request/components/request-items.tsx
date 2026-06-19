@@ -86,9 +86,25 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
   // Cache de medication_class por item_id
   const [medicationClassCache, setMedicationClassCache] = useState<Record<string, string | null>>({})
 
+  // Cache de lotes por item_id (FEFO: ordenado por expiry_date ASC)
+  const [lotsCache, setLotsCache] = useState<Record<string, Array<{ batch_number: string; expiry_date: string; current_quantity: number }>>>({})
+
   useEffect(() => {
     loadItems()
   }, [])
+
+  // Auto-seleciona lote FEFO quando lotes são carregados
+  useEffect(() => {
+    if (type !== 'pharmacy') return
+    setSelectedItems(prev => prev.map(item => {
+      if (item.batch_number) return item
+      const lots = lotsCache[item.id]
+      if (lots && lots.length > 0) {
+        return { ...item, batch_number: lots[0].batch_number, expiry_date: lots[0].expiry_date }
+      }
+      return item
+    }))
+  }, [lotsCache])
 
   async function loadItems() {
     try {
@@ -106,6 +122,17 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     } finally {
       setLoading(false)
     }
+  }
+
+  async function fetchLotsForItem(itemId: string) {
+    if (itemId in lotsCache) return
+    const { data } = await supabase
+      .from('expiry_tracking')
+      .select('batch_number, expiry_date, current_quantity')
+      .eq('item_id', itemId)
+      .gt('current_quantity', 0)
+      .order('expiry_date', { ascending: true })
+    setLotsCache(prev => ({ ...prev, [itemId]: data || [] }))
   }
 
   async function getMedicationClass(itemId: string): Promise<string | null> {
@@ -156,6 +183,8 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     // Itens de farmacia (exceto colchao): abrir modal de justificativa
     if (type === 'pharmacy') {
       const cls = await getMedicationClass(item.id)
+      // Inicia carregamento de lotes em paralelo enquanto usuário preenche o modal
+      fetchLotsForItem(item.id)
       const isCurativo = cls?.toLowerCase() === 'curativo'
       setJustPendingItem(item)
       const uid = makeUid()
@@ -246,6 +275,10 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     setSelectedItems(selectedItems.map(item =>
       item._uid === uid ? { ...item, quantity } : item
     ))
+  }
+
+  const handleLotChange = (uid: string, batch_number: string, expiry_date: string) => {
+    setSelectedItems(prev => prev.map(i => i._uid === uid ? { ...i, batch_number, expiry_date } : i))
   }
 
   const handleSubmit = async () => {
@@ -378,6 +411,34 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
                       )}
                     </div>
                   )}
+                  {/* Seleção de lote FEFO (apenas farmácia) */}
+                  {type === 'pharmacy' && !isColchao && (() => {
+                    const lots = lotsCache[item.id]
+                    if (lots === undefined) return (
+                      <p className="mt-1 text-xs text-gray-400">Carregando lotes...</p>
+                    )
+                    if (lots.length === 0) return (
+                      <p className="mt-1 text-xs text-red-500">Sem lotes disponíveis</p>
+                    )
+                    return (
+                      <div className="mt-1">
+                        <select
+                          value={selectedItem.batch_number || lots[0].batch_number}
+                          onChange={(e) => {
+                            const lot = lots.find(l => l.batch_number === e.target.value)
+                            if (lot) handleLotChange(selectedItem._uid!, lot.batch_number, lot.expiry_date)
+                          }}
+                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white"
+                        >
+                          {lots.map(l => (
+                            <option key={l.batch_number} value={l.batch_number}>
+                              Lote: {l.batch_number} | Val: {new Date(l.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR')} | Qtd: {l.current_quantity}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="flex items-center gap-4">
                   {isColchao ? (

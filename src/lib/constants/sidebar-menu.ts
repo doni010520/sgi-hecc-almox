@@ -159,10 +159,13 @@ export function buildSidebarSections(): SidebarSection[] {
       ],
     },
     {
-      title: 'Estoque',
+      title: 'Estoques',
       module: 'farmacia',
       items: [
-        { name: 'Farmácia', icon: Pill, href: '/inventory/pharmacy', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'CAF', icon: Building2, href: '/inventory/stock/42c3b239-c354-4b5b-a2eb-d42b7a9edc10', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Satélite 1', icon: Pill, href: '/inventory/stock/fa96acab-9065-44ee-aeae-b87c5af8110a', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Satélite 2', icon: Pill, href: '/inventory/stock/cf2d0681-0cdd-48b4-9431-73c09e853048', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Satélite T', icon: Pill, href: '/inventory/stock/6f3fdf99-829a-46bb-b354-19a44fa36324', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     {

@@ -27,7 +27,12 @@ import type { Item, FilterOptions } from '@/lib/services/items'
 import { ImportDialog } from '@/components/inventory/import-dialog'
 import { AddItemDialog } from '@/components/inventory/add-item-dialog'
 
-export function PharmacyItems() {
+interface PharmacyItemsProps {
+  locationId?: string
+  locationName?: string
+}
+
+export function PharmacyItems({ locationId: _locationId, locationName }: PharmacyItemsProps = {}) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
@@ -255,7 +260,7 @@ export function PharmacyItems() {
               <Pill className="w-6 h-6 text-blue-600" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Itens da Farmácia</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{locationName ? `Estoque — ${locationName}` : 'Itens da Farmácia'}</h1>
               <p className="text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque farmacêutico
               </p>

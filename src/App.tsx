@@ -12,6 +12,7 @@ import { Register } from '@/pages/register'
 import { MainLayout } from '@/pages/main-layout'
 import { MyRequests } from '@/pages/my-requests'
 import { PharmacyItems } from '@/pages/inventory/pharmacy-items'
+import { StockLocationItems } from '@/pages/inventory/stock-location-items'
 import { WarehouseItems } from '@/pages/inventory/warehouse-items'
 import { ItemDetails } from '@/pages/inventory/item-details'
 import { RequestDetails } from '@/pages/requests/request-details'
@@ -124,6 +125,13 @@ export default function App() {
                     </MainLayout>
                   </ProtectedRoute>
                 } />
+              <Route path="/inventory/stock/:locationId" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <StockLocationItems />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
               <Route path="/inventory/warehouse" element={
                 <ProtectedRoute>
                   <MainLayout>
