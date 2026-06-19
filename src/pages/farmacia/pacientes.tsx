@@ -4,6 +4,7 @@
 // =====================================================================
 
 import { useEffect, useState, useMemo } from 'react'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import {
   Users, Plus, Edit2, Trash2, Search, Loader2, AlertCircle, X,
   ArrowDownToLine, ArrowUpFromLine, History as HistoryIcon,
@@ -74,7 +75,7 @@ export function Pacientes() {
   async function load() {
     setLoading(true); setError('')
     try { setRows(await patientsService.list() as PatientRow[]) }
-    catch (e: any) { setError(e?.message || 'Erro') }
+    catch (e) { setError(getErrorMessage(e)) }
     finally { setLoading(false) }
   }
 
@@ -119,19 +120,19 @@ export function Pacientes() {
         })
       }
       setShowForm(false); await load()
-    } catch (e: any) { setFormError(e?.message || 'Erro ao salvar') }
+    } catch (e) { setFormError(getErrorMessage(e)) }
     finally { setSaving(false) }
   }
 
   async function remove(p: Patient) {
     if (!confirm(`Desativar paciente "${p.full_name}"?`)) return
     try { await patientsService.deactivate(p.id); await load() }
-    catch (e: any) { setError(e?.message || 'Erro') }
+    catch (e) { setError(getErrorMessage(e)) }
   }
 
   async function admit(p: PatientRow) {
     try { await patientsService.openAdmission(p.id); await load() }
-    catch (e: any) { alert(e?.message || 'Erro') }
+    catch (e) { alert(getErrorMessage(e)) }
   }
 
   function openDischarge(p: PatientRow) {
@@ -147,7 +148,7 @@ export function Pacientes() {
         discharge_date: dDate, discharge_reason: dReason, discharge_notes: dNotes,
       })
       setDischargingPatient(null); await load()
-    } catch (e: any) { alert(e?.message || 'Erro') }
+    } catch (e) { alert(getErrorMessage(e)) }
   }
 
   async function openHistory(p: Patient) {

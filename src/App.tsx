@@ -67,6 +67,7 @@ import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
 import { ChangePassword } from '@/pages/change-password'
 import { LivroControlados } from '@/pages/farmacia/livro-controlados'
 import { Talidomida } from '@/pages/farmacia/talidomida'
+import { ConsentGate } from '@/components/lgpd/consent-gate'
 import { useModule } from '@/contexts/module'
 import { ModuleLayout } from '@/components/module-layout-wrapper'
 
@@ -99,6 +100,7 @@ export default function App() {
             <ThemeProvider>
             <AuthProvider>
             <ModuleProvider>
+            <ConsentGate>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -648,6 +650,7 @@ export default function App() {
               </Route>
 
               </Routes>
+            </ConsentGate>
             </ModuleProvider>
             </AuthProvider>
             </ThemeProvider>

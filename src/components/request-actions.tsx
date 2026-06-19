@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getErrorMessage } from '@/lib/utils/error-messages'
 import { useAuth } from '@/contexts/auth'
 import {
   CheckCircle2, XCircle, PlayCircle,
@@ -185,10 +186,8 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
       setSearchResults([])
       setShowResults(false)
       setEmployee(null)
-    } catch (error: any) {
-      console.error('Error performing action:', JSON.stringify(error))
-      const msg = error?.message || error?.error_description || error?.msg || JSON.stringify(error) || 'Erro desconhecido'
-      setEmployeeError(`Erro: ${msg}`)
+    } catch (error) {
+      setEmployeeError(getErrorMessage(error))
     } finally {
       setLoading(false)
       if (action !== 'deliver') setAction(null)
