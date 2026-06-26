@@ -49,6 +49,10 @@ interface RequestItemsProps {
 
 const JUSTIFICATIVA_MOTIVOS = ['Quebra', 'Não encontrado', 'Avariado'] as const
 
+// Só estas classes de medicação exigem justificativa ao adicionar na solicitação.
+// Demais itens de farmácia entram direto (apenas com seleção de lote FEFO).
+const REQUIRES_JUSTIFICATION_CLASSES = new Set(['controlados', 'antimicrobianos'])
+
 export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItemsProps) {
   const { user } = useAuth()
   // Solicitantes não veem nem estoque nem o bloqueio "sem estoque" — só gestores/admins/atendentes
@@ -184,21 +188,27 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     // Demais itens: não permite duplicar no mesmo pedido
     if (selectedItems.some(i => i.id === item.id)) return
 
-    // Itens de farmacia (exceto colchao): abrir modal de justificativa
+    // Itens de farmacia: só controlados e antimicrobianos exigem justificativa
     if (type === 'pharmacy') {
       const cls = await getMedicationClass(item.id)
-      // Inicia carregamento de lotes em paralelo enquanto usuário preenche o modal
+      // Inicia carregamento de lotes em paralelo (FEFO) para qualquer item de farmácia
       fetchLotsForItem(item.id)
-      const isCurativo = cls?.toLowerCase() === 'curativo'
-      setJustPendingItem(item)
-      const uid = makeUid()
-      setJustPendingUid(uid)
-      setJustMotivo('')
-      setJustPatientName('')
-      setJustProntuario('')
-      setJustIsCurativo(isCurativo)
-      setJustError(null)
-      setShowJustModal(true)
+      const clsNorm = (cls || '').toLowerCase()
+      if (REQUIRES_JUSTIFICATION_CLASSES.has(clsNorm)) {
+        const isCurativo = clsNorm === 'curativo'
+        setJustPendingItem(item)
+        const uid = makeUid()
+        setJustPendingUid(uid)
+        setJustMotivo('')
+        setJustPatientName('')
+        setJustProntuario('')
+        setJustIsCurativo(isCurativo)
+        setJustError(null)
+        setShowJustModal(true)
+        return
+      }
+      // Demais itens de farmácia: adiciona direto (com seleção de lote FEFO)
+      setSelectedItems([...selectedItems, { id: item.id, quantity: 1, _uid: makeUid() }])
       return
     }
 
