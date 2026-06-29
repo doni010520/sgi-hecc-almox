@@ -151,7 +151,7 @@ export function DispensationDetails() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {infoItem('Medico Prescritor', d.prescribing_doctor)}
-          {infoItem('N. da Prescricao', d.prescription_number)}
+          {infoItem('N. da Prescricao', d.prescription_number || undefined)}
           {d.notes && infoItem('Observacoes', d.notes)}
         </div>
       </div>

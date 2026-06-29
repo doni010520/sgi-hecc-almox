@@ -7,7 +7,7 @@ export interface PharmacyDispensation {
   patient_bed_room?: string
   medical_record_number: string
   prescribing_doctor: string
-  prescription_number: string
+  prescription_number?: string | null
   prescription_date?: string | null
   sector?: string
   notes?: string
@@ -45,7 +45,7 @@ export interface CreateDispensationData {
   patient_bed_room?: string
   medical_record_number: string
   prescribing_doctor: string
-  prescription_number: string
+  prescription_number?: string | null
   prescription_date?: string | null
   sector?: string
   notes?: string

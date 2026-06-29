@@ -99,7 +99,7 @@ class PharmacyDispensationService {
             d.patient_name.toLowerCase().includes(q) ||
             d.medical_record_number.toLowerCase().includes(q) ||
             d.prescribing_doctor.toLowerCase().includes(q) ||
-            d.prescription_number.toLowerCase().includes(q) ||
+            (d.prescription_number || '').toLowerCase().includes(q) ||
             String(d.dispensation_number).includes(q)
         )
       }
@@ -187,7 +187,7 @@ class PharmacyDispensationService {
         p_patient_name: data.patient_name,
         p_medical_record_number: data.medical_record_number,
         p_prescribing_doctor: data.prescribing_doctor,
-        p_prescription_number: data.prescription_number,
+        p_prescription_number: data.prescription_number ?? null,
         p_prescription_date: data.prescription_date ?? null,
         p_items: data.items.map((i) => ({
           item_id: i.item_id,

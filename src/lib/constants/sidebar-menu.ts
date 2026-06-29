@@ -61,6 +61,8 @@ export interface VisibilityFlags {
 export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | null }): SidebarSection[] {
   // Estoque de farmácia é escolhido no topo; a sidebar mostra só o estoque atual.
   const stock = ctx?.pharmacyStock ?? null
+  // Dispensação só ocorre nas farmácias satélites — não no CAF.
+  const isSat = !!stock && stock.code !== 'CAF'
   const estoqueAtualItems: SidebarItem[] = stock
     ? [{ name: stock.label, icon: Building2, href: `/inventory/stock/${stock.id}`, show: (f) => f.isManager || f.isAdmin || f.isAtendente }]
     : []
@@ -127,10 +129,10 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       title: 'Dispensação',
       module: 'farmacia',
       items: [
-        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: (f) => f.canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => f.canManageRequests },
-        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => f.canManageRequests },
-        { name: 'Histórico de Prescrições', icon: History, href: '/dispensacao/historico', show: (f) => f.canManageRequests },
+        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: (f) => isSat && f.canManageRequests },
+        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => isSat && f.canManageRequests },
+        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => isSat && f.canManageRequests },
+        { name: 'Histórico de Prescrições', icon: History, href: '/dispensacao/historico', show: (f) => isSat && f.canManageRequests },
       ],
     },
     {

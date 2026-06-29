@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
 import {
   ArrowLeft, ArrowRight, Search, Trash2, Loader2, AlertCircle, AlertTriangle,
-  UserCheck, Stethoscope, Pill, CheckCircle2, ClipboardList,
+  UserCheck, Stethoscope, Pill, CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
@@ -47,12 +47,11 @@ interface LotRow {
 
 const STEPS = [
   { label: 'Paciente', icon: UserCheck },
-  { label: 'Prescrição', icon: ClipboardList },
   { label: 'Prescritor', icon: Stethoscope },
   { label: 'Medicamentos', icon: Pill },
   { label: 'Resumo', icon: CheckCircle2 },
 ]
-const STEP_RESUMO = 4
+const STEP_RESUMO = 3
 
 export function NewDispensation() {
   const navigate = useNavigate()
@@ -96,8 +95,7 @@ export function NewDispensation() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(prefilledPatient)
   const [openAdmission, setOpenAdmission] = useState<PatientAdmission | null>(null)
 
-  // Etapa 2 — Prescrição
-  const [prescriptionNumber, setPrescriptionNumber] = useState('')
+  // Prescrição (data) + prescritor
   const [prescriptionDate, setPrescriptionDate] = useState('')
 
   // Etapa 3 — Prescritor
@@ -266,7 +264,6 @@ export function NewDispensation() {
         patient_name: selectedPatient!.full_name,
         medical_record_number: selectedPatient!.medical_record_number,
         prescribing_doctor: `${selectedPresc!.name} (CRM ${selectedPresc!.crm}/${selectedPresc!.crm_uf})`,
-        prescription_number: prescriptionNumber.trim(),
         prescription_date: prescriptionDate,
         patient_id: selectedPatient!.id,
         admission_id: openAdmission?.id ?? null,
@@ -291,8 +288,7 @@ export function NewDispensation() {
 
   const canAdvance: boolean[] = [
     !!selectedPatient,
-    !!prescriptionDate && !!prescriptionNumber.trim(),
-    !!selectedPresc,
+    !!prescriptionDate && !!selectedPresc,
     selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
     true,
   ]
@@ -432,51 +428,20 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 2 — Prescrição */}
+      {/* Etapa 2 — Prescritor + Data */}
       {step === 1 && (
         <div className="p-6 space-y-4" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 2 — Dados da Prescrição</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 2 — Prescritor e Data</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label style={lbl}>Número da Prescrição *</label>
-              <input
-                value={prescriptionNumber}
-                onChange={(e) => setPrescriptionNumber(e.target.value)}
-                placeholder="Ex: 2026-000123"
-                style={inputStyle}
-                autoFocus
-              />
-            </div>
-            <div>
-              <label style={lbl}>Data da Prescrição *</label>
-              <input
-                type="date"
-                value={prescriptionDate}
-                onChange={(e) => setPrescriptionDate(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
+          <div>
+            <label style={lbl}>Data da Prescrição *</label>
+            <input
+              type="date"
+              value={prescriptionDate}
+              onChange={(e) => setPrescriptionDate(e.target.value)}
+              style={inputStyle}
+            />
           </div>
-
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(0)}>
-              <ArrowLeft size={14} className="mr-2" /> Voltar
-            </Button>
-            <Button
-              onClick={() => setStep(2)}
-              disabled={!canAdvance[1]}
-              className="bg-blue-600 hover:bg-blue-700 text-white">
-              Continuar <ArrowRight size={14} className="ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Etapa 3 — Prescritor */}
-      {step === 2 && (
-        <div className="p-6 space-y-4" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 3 — Prescritor</h2>
 
           {selectedPresc ? (
             <div className="p-4 rounded-xl flex items-center justify-between"
@@ -523,23 +488,23 @@ export function NewDispensation() {
           )}
 
           <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(1)}>
+            <Button variant="outline" onClick={() => setStep(0)}>
               <ArrowLeft size={14} className="mr-2" /> Voltar
             </Button>
             <Button
-              onClick={() => setStep(3)}
-              disabled={!canAdvance[2]}
+              onClick={() => setStep(2)}
+              disabled={!canAdvance[1]}
               className="bg-blue-600 hover:bg-blue-700 text-white">
-              Confirmar Prescritor <ArrowRight size={14} className="ml-2" />
+              Continuar <ArrowRight size={14} className="ml-2" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Etapa 4 — Medicamentos */}
-      {step === 3 && (
+      {/* Etapa 3 — Medicamentos */}
+      {step === 2 && (
         <div className="p-6 space-y-4" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 4 — Medicamentos</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 3 — Medicamentos</h2>
           <p className="text-xs" style={{ color: txtMut }}>
             Busque e clique para adicionar. O lote que vence primeiro (FEFO) é escolhido automaticamente — você pode trocar abaixo.
           </p>
@@ -673,12 +638,12 @@ export function NewDispensation() {
           )}
 
           <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(2)}>
+            <Button variant="outline" onClick={() => setStep(1)}>
               <ArrowLeft size={14} className="mr-2" /> Voltar
             </Button>
             <Button
               onClick={() => setStep(STEP_RESUMO)}
-              disabled={!canAdvance[3]}
+              disabled={!canAdvance[2]}
               className="bg-blue-600 hover:bg-blue-700 text-white">
               Revisar Resumo <ArrowRight size={14} className="ml-2" />
             </Button>
@@ -686,10 +651,10 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 5 — Resumo */}
+      {/* Etapa 4 — Resumo */}
       {step === STEP_RESUMO && (
         <div className="p-6 space-y-5" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 5 — Resumo</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 4 — Resumo</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl space-y-1"
@@ -710,16 +675,10 @@ export function NewDispensation() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-2"
+          <div className="p-4 rounded-xl"
             style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Nº da Prescrição</p>
-              <p className="font-semibold" style={{ color: txt }}>{prescriptionNumber || '—'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
-              <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
+            <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
           </div>
 
           <div className="space-y-2">
@@ -764,7 +723,7 @@ export function NewDispensation() {
 
           <div className="flex justify-between pt-2">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(3)}>
+              <Button variant="outline" onClick={() => setStep(2)}>
                 <ArrowLeft size={14} className="mr-2" /> Voltar
               </Button>
               <Button variant="outline" onClick={() => setStep(0)}>
@@ -808,7 +767,7 @@ export function NewDispensation() {
             <div className="text-xs space-y-0.5" style={{ color: txtSec }}>
               <p>✓ Paciente: {selectedPatient?.full_name} ({selectedPatient?.medical_record_number})</p>
               <p>✓ Prescritor: {selectedPresc?.name} (CRM {selectedPresc?.crm})</p>
-              <p>✓ Prescrição: {prescriptionNumber} · {fmt(prescriptionDate)}</p>
+              <p>✓ Data da prescrição: {fmt(prescriptionDate)}</p>
             </div>
             <div>
               <label style={lbl}>Para confirmar, digite "CONFIRMO" *</label>
