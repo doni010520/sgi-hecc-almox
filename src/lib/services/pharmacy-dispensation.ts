@@ -1,5 +1,4 @@
 import { supabase } from '../supabase'
-import { stockService } from './stock'
 import type {
   PharmacyDispensation,
   CreateDispensationData,
@@ -180,143 +179,34 @@ class PharmacyDispensationService {
 
   async create(data: CreateDispensationData): Promise<{ id: string; needsApproval?: boolean } | null> {
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      if (!authData?.user) throw new Error('User not authenticated')
+      // Criação atômica no banco: a RPC criar_dispensacao insere cabeçalho +
+      // itens e, se não precisar de aprovação, já baixa o estoque pelo ledger
+      // (PRESCRICAO out@CAF + lote) numa única transação. needsApproval é
+      // decidido no servidor (MAV / controlado / antimicrobiano).
+      const { data: result, error } = await supabase.rpc('criar_dispensacao', {
+        p_patient_name: data.patient_name,
+        p_medical_record_number: data.medical_record_number,
+        p_prescribing_doctor: data.prescribing_doctor,
+        p_prescription_number: data.prescription_number,
+        p_prescription_date: data.prescription_date ?? null,
+        p_items: data.items.map((i) => ({
+          item_id: i.item_id,
+          quantity: i.quantity,
+          expiry_tracking_id: i.expiry_tracking_id ?? null,
+          batch_number: i.batch_number ?? null,
+          expiry_date: i.expiry_date ?? null,
+        })),
+        p_patient_id: data.patient_id ?? null,
+        p_admission_id: data.admission_id ?? null,
+        p_prescriber_id: data.prescriber_id ?? null,
+        p_patient_bed_room: data.patient_bed_room ?? null,
+        p_sector: data.sector ?? null,
+        p_notes: data.notes ?? null,
+        p_mav_confirmado: data.mav_confirmado ?? false,
+      })
 
-      // Resolve o estoque-fonte (CAF por padrao). Modelo multi-estoque exige
-      // que toda prescricao tenha origem. CAF tem cache no stockService.
-      const cafLocation = await stockService.getLocationByCode('CAF')
-      if (!cafLocation) {
-        throw new Error('Local CAF nao encontrado em stock_locations.')
-      }
-
-      // Buscar medication_class e is_mav de todos os itens para determinar
-      // se a dispensacao precisa de aprovacao farmaceutica.
-      const itemIds = data.items.map((i) => i.item_id)
-      const { data: itemDetails } = await supabase
-        .from('pharmacy_items')
-        .select('id, medication_class, is_mav')
-        .in('id', itemIds)
-
-      const REQUIRES_APPROVAL_CLASSES = new Set(['controlados', 'antimicrobianos'])
-      const needsApproval = (itemDetails || []).some((item: any) =>
-        item.is_mav || REQUIRES_APPROVAL_CLASSES.has(item.medication_class)
-      )
-
-      // Insert dispensation header (ja com source_location_id no novo modelo)
-      const { data: dispensation, error: dispError } = await supabase
-        .from('pharmacy_dispensations')
-        .insert({
-          patient_name: data.patient_name.trim(),
-          patient_bed_room: data.patient_bed_room?.trim() || null,
-          medical_record_number: data.medical_record_number.trim(),
-          prescribing_doctor: data.prescribing_doctor.trim(),
-          prescription_number: data.prescription_number.trim(),
-          prescription_date: data.prescription_date ?? null,
-          sector: data.sector?.trim() || null,
-          notes: data.notes?.trim() || null,
-          created_by: authData.user.id,
-          source_location_id: cafLocation.id,
-          status: needsApproval ? 'pending_approval' : 'completed',
-          // Novos vinculos
-          patient_id: data.patient_id ?? null,
-          admission_id: data.admission_id ?? null,
-          prescriber_id: data.prescriber_id ?? null,
-        })
-        .select('id')
-        .single()
-
-      if (dispError) throw dispError
-      if (!dispensation) throw new Error('Failed to create dispensation')
-
-      // Snapshot de precos unitarios para registrar custo em stock_movements
-      const { data: priceRows } = await supabase
-        .from('pharmacy_items')
-        .select('id, price')
-        .in('id', itemIds)
-      const priceMap = new Map<string, number | null>(
-        (priceRows || []).map((p: any) => [p.id, p.price ?? null])
-      )
-
-      // Insert dispensation items.
-      // OBS: a trigger legada `deduct_pharmacy_stock` ja decrementa
-      // pharmacy_items.current_stock. Em seguida, registramos no
-      // livro-razao (stock_movements) — o trigger fn_apply_stock_movement
-      // decrementa item_stocks(CAF). Sao tabelas diferentes; o trigger
-      // de compat fn_sync_legacy_stock_columns mantem ambos coerentes.
-      const itemsToInsert = data.items.map((item) => ({
-        dispensation_id: dispensation.id,
-        item_id: item.item_id,
-        quantity: item.quantity,
-        expiry_tracking_id: item.expiry_tracking_id ?? null,
-        batch_number: item.batch_number ?? null,
-        expiry_date: item.expiry_date ?? null,
-      }))
-
-      const { error: itemsError } = await supabase
-        .from('pharmacy_dispensation_items')
-        .insert(itemsToInsert)
-
-      if (itemsError) {
-        // Rollback: delete the dispensation header
-        await supabase
-          .from('pharmacy_dispensations')
-          .delete()
-          .eq('id', dispensation.id)
-        throw itemsError
-      }
-
-      // Se precisa de aprovacao, nao debitar estoque agora.
-      // O debito ocorre quando o farmaceutico aprovar via approveDispensation().
-      if (needsApproval) {
-        return { id: dispensation.id, needsApproval: true }
-      }
-
-      // Registra cada saida no livro-razao do novo modelo.
-      // Se algum falhar (ex: saldo insuficiente em item_stocks), faz rollback
-      // total (dispensacao + items + movimentacoes ja criadas).
-      const today = new Date().toISOString().slice(0, 10)
-      try {
-        for (const item of data.items) {
-          await stockService.dispenseFromPrescription({
-            item_id: item.item_id,
-            quantity: item.quantity,
-            unit_cost: priceMap.get(item.item_id) ?? null,
-            source_location_id: cafLocation.id,
-            medical_record_number: data.medical_record_number.trim(),
-            prescription_date: today,
-            dispensation_id: dispensation.id,
-          })
-
-          // Se um lote foi escolhido, decrementa o expiry_tracking via RPC atomico
-          if (item.expiry_tracking_id) {
-            const { error: trackErr } = await supabase.rpc('decrement_expiry_tracking', {
-              p_tracking_id: item.expiry_tracking_id,
-              p_qty: item.quantity,
-            })
-            if (trackErr) {
-              throw new Error(`Falha ao baixar lote: ${trackErr.message}`)
-            }
-          }
-        }
-      } catch (movementError) {
-        // Rollback completo. As movimentacoes ja criadas sao imutaveis (trigger
-        // bloqueia DELETE em stock_movements), mas como nao deveriam existir
-        // se a dispensacao falha como um todo, apenas deletamos a dispensacao
-        // (items caem por CASCADE) e o usuario refaz. Sera necessario um
-        // AJUSTE manual se houver inconsistencia. Logamos para investigar.
-        console.error(
-          'Falha ao registrar stock_movement; revertendo dispensacao.',
-          movementError
-        )
-        await supabase
-          .from('pharmacy_dispensations')
-          .delete()
-          .eq('id', dispensation.id)
-        throw movementError
-      }
-
-      return { id: dispensation.id }
+      if (error) throw error
+      return { id: (result as any).id, needsApproval: (result as any).needs_approval }
     } catch (error) {
       console.error('Error creating dispensation:', error)
       throw error
@@ -325,76 +215,10 @@ class PharmacyDispensationService {
 
   async approveDispensation(dispensationId: string): Promise<void> {
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      if (!authData?.user) throw new Error('User not authenticated')
-
-      // Buscar nome do aprovador
-      let approverName = 'Desconhecido'
-      const { data: approverData } = await supabase
-        .from('users')
-        .select('full_name')
-        .eq('id', authData.user.id)
-        .single()
-      if (approverData) approverName = approverData.full_name
-
-      // Buscar a dispensacao com seus items
-      const dispensation = await this.getById(dispensationId)
-      if (!dispensation) throw new Error('Dispensacao nao encontrada')
-      if (dispensation.status !== 'pending_approval') {
-        throw new Error('Dispensacao nao esta pendente de aprovacao')
-      }
-
-      const cafLocation = await stockService.getLocationByCode('CAF')
-      if (!cafLocation) {
-        throw new Error('Local CAF nao encontrado em stock_locations.')
-      }
-
-      // Snapshot de precos
-      const itemIds = dispensation.items.map((i) => i.item_id)
-      const { data: priceRows } = await supabase
-        .from('pharmacy_items')
-        .select('id, price')
-        .in('id', itemIds)
-      const priceMap = new Map<string, number | null>(
-        (priceRows || []).map((p: any) => [p.id, p.price ?? null])
-      )
-
-      const today = new Date().toISOString().slice(0, 10)
-
-      // Debitar estoque para cada item
-      for (const item of dispensation.items) {
-        await stockService.dispenseFromPrescription({
-          item_id: item.item_id,
-          quantity: item.quantity,
-          unit_cost: priceMap.get(item.item_id) ?? null,
-          source_location_id: cafLocation.id,
-          medical_record_number: dispensation.medical_record_number,
-          prescription_date: today,
-          dispensation_id: dispensationId,
-        })
-
-        if (item.expiry_tracking_id) {
-          const { error: trackErr } = await supabase.rpc('decrement_expiry_tracking', {
-            p_tracking_id: item.expiry_tracking_id,
-            p_qty: item.quantity,
-          })
-          if (trackErr) {
-            throw new Error(`Falha ao baixar lote: ${trackErr.message}`)
-          }
-        }
-      }
-
-      // Marcar dispensacao como aprovada/concluida
-      const { error } = await supabase
-        .from('pharmacy_dispensations')
-        .update({
-          status: 'completed',
-          approved_by: authData.user.id,
-          approved_at: new Date().toISOString(),
-          approved_by_name: approverName,
-        })
-        .eq('id', dispensationId)
-
+      // Aprovação atômica: a RPC baixa o estoque (PRESCRICAO out@CAF + lote) e
+      // conclui, com FOR UPDATE + checagem de status — impede baixa dupla por
+      // aprovação concorrente.
+      const { error } = await supabase.rpc('aprovar_dispensacao', { p_id: dispensationId })
       if (error) throw error
     } catch (error) {
       console.error('Error approving dispensation:', error)
@@ -489,19 +313,12 @@ class PharmacyDispensationService {
 
   async cancel(id: string, reason: string): Promise<void> {
     try {
-      const { data: authData } = await supabase.auth.getUser()
-      if (!authData?.user) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('pharmacy_dispensations')
-        .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          cancelled_by: authData.user.id,
-          cancellation_reason: reason.trim(),
-        })
-        .eq('id', id)
-
+      // Cancelamento atômico: se a dispensação estava concluída, a RPC estorna
+      // o estoque (AJUSTE in@CAF + devolve o lote); se pendente, apenas cancela.
+      const { error } = await supabase.rpc('cancelar_dispensacao', {
+        p_id: id,
+        p_reason: reason,
+      })
       if (error) throw error
     } catch (error) {
       console.error('Error cancelling dispensation:', error)

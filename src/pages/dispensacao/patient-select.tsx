@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/theme'
 import { ArrowLeft, Search, Plus, User, Calendar, FileText, Loader2, AlertCircle, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { patientsService } from '@/lib/services/farmacia-cadastros'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -107,11 +108,17 @@ export function PatientSelect() {
           medical_record_number: medicalRecord.trim(),
           mother_name: motherName.trim() || null,
           birth_date: birthDate || null,
-          admission_date: admissionDate || null,
         })
         .select()
         .single()
       if (error) throw error
+      // Registra a internação no modelo único (patient_admissions), para a
+      // dispensação reconhecer a internação aberta.
+      try {
+        await patientsService.openAdmission(data.id, admissionDate || undefined)
+      } catch (admErr) {
+        console.error('Falha ao abrir internação do paciente:', admErr)
+      }
       navigate('/dispensacao/new', { state: { patient: data } })
     } catch (e: any) {
       setError(getErrorMessage(e))

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
 import {
-  ArrowLeft, ArrowRight, Search, Plus, Trash2, Loader2, AlertCircle, AlertTriangle,
-  UserCheck, Stethoscope, Pill, CheckCircle2, ClipboardList, FileText,
+  ArrowLeft, ArrowRight, Search, Trash2, Loader2, AlertCircle, AlertTriangle,
+  UserCheck, Stethoscope, Pill, CheckCircle2, ClipboardList,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
@@ -12,8 +12,6 @@ import { patientsService, prescribersService } from '@/lib/services/farmacia-cad
 import type { Patient, Prescriber, PatientAdmission } from '@/lib/types/farmacia'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-type NotificacaoReceitaTipo = 'amarela_A' | 'azul_B' | 'branca'
-
 interface SelectedItem {
   item_id: string
   name: string
@@ -21,13 +19,13 @@ interface SelectedItem {
   unit: string
   is_mav: boolean
   medication_class: string | null
+  // lote escolhido (FEFO por padrão; pode trocar no seletor)
   expiry_tracking_id: string | null
   batch_number: string | null
   expiry_date: string | null
   available_in_batch: number
+  item_stock: number // estoque agregado (para opção "sem lote")
   quantity: number
-  notificacao_receita_tipo?: NotificacaoReceitaTipo
-  notificacao_receita_numero?: string
 }
 
 interface PharmacyItemRow {
@@ -52,18 +50,13 @@ const STEPS = [
   { label: 'Prescrição', icon: ClipboardList },
   { label: 'Prescritor', icon: Stethoscope },
   { label: 'Medicamentos', icon: Pill },
-  { label: 'Receita', icon: FileText },
   { label: 'Resumo', icon: CheckCircle2 },
 ]
-
-// Step indexes
-const STEP_RESUMO = 5
-const STEP_RECEITA = 4
-
-const APPROVAL_CLASSES = new Set(['mav', 'controlados', 'antimicrobianos', 'anticoagulante'])
+const STEP_RESUMO = 4
 
 export function NewDispensation() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { mode } = useTheme()
 
   const txt = mode === 'dark' ? '#fff' : '#0d2e1c'
@@ -91,46 +84,36 @@ export function NewDispensation() {
     background: mode === 'dark' ? 'rgba(15,20,28,0.98)' : 'rgba(255,255,255,0.98)',
     backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
     border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
-    borderRadius: 10, maxHeight: 220, overflowY: 'auto',
+    borderRadius: 10, maxHeight: 260, overflowY: 'auto',
   }
 
   const [step, setStep] = useState(0)
 
-  // Etapa 1
+  // Etapa 1 — Paciente (pode vir pré-selecionado da tela /dispensacao/paciente)
+  const prefilledPatient = (location.state as { patient?: Patient } | null)?.patient ?? null
   const [patientSearch, setPatientSearch] = useState('')
   const [patientResults, setPatientResults] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(prefilledPatient)
   const [openAdmission, setOpenAdmission] = useState<PatientAdmission | null>(null)
 
-  // Etapa 2
+  // Etapa 2 — Prescrição
+  const [prescriptionNumber, setPrescriptionNumber] = useState('')
   const [prescriptionDate, setPrescriptionDate] = useState('')
 
-  // Etapa 3
+  // Etapa 3 — Prescritor
   const [prescSearch, setPrescSearch] = useState('')
   const [prescResults, setPrescResults] = useState<Prescriber[]>([])
   const [selectedPresc, setSelectedPresc] = useState<Prescriber | null>(null)
 
-  // Etapa 4
+  // Etapa 4 — Medicamentos
   const [itemSearch, setItemSearch] = useState('')
   const [itemResults, setItemResults] = useState<PharmacyItemRow[]>([])
-  const [loadingLots, setLoadingLots] = useState<string | null>(null)
+  const [searchingItems, setSearchingItems] = useState(false)
+  const [addingItem, setAddingItem] = useState<string | null>(null)
   const [lotsByItem, setLotsByItem] = useState<Record<string, LotRow[]>>({})
-  const [expandedItem, setExpandedItem] = useState<PharmacyItemRow | null>(null)
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
 
-  // Etapa 5 — Notificação de Receita (apenas para controlados)
-  const hasControlados = useMemo(
-    () => selectedItems.some((i) => i.medication_class === 'controlados'),
-    [selectedItems]
-  )
-
-  function setItemReceita(idx: number, tipo: NotificacaoReceitaTipo | undefined, numero: string | undefined) {
-    setSelectedItems(prev => prev.map((it, i) =>
-      i === idx ? { ...it, notificacao_receita_tipo: tipo, notificacao_receita_numero: numero } : it
-    ))
-  }
-
-  // Etapa 6
+  // Etapa 5 — Resumo / submit
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showMavConfirm, setShowMavConfirm] = useState(false)
@@ -138,7 +121,7 @@ export function NewDispensation() {
 
   const hasMav = useMemo(() => selectedItems.some((i) => i.is_mav), [selectedItems])
   const needsApproval = useMemo(
-    () => selectedItems.some((i) => i.is_mav || APPROVAL_CLASSES.has(i.medication_class ?? '')),
+    () => selectedItems.some((i) => i.is_mav || i.medication_class === 'controlados' || i.medication_class === 'antimicrobianos'),
     [selectedItems]
   )
 
@@ -170,7 +153,8 @@ export function NewDispensation() {
   useEffect(() => {
     const t = setTimeout(async () => {
       const q = itemSearch.trim()
-      if (!q) return setItemResults([])
+      if (!q) { setItemResults([]); return }
+      setSearchingItems(true)
       const { data, error: err } = await supabase
         .from('pharmacy_items')
         .select('id, code, name, unit, current_stock, is_mav, medication_class')
@@ -180,58 +164,69 @@ export function NewDispensation() {
         .limit(20)
       if (err) console.error(err)
       setItemResults((data || []) as PharmacyItemRow[])
+      setSearchingItems(false)
     }, 200)
     return () => clearTimeout(t)
   }, [itemSearch])
 
   async function loadLots(itemId: string): Promise<LotRow[]> {
     if (lotsByItem[itemId]) return lotsByItem[itemId]
-    setLoadingLots(itemId)
+    const { data, error: err } = await supabase
+      .from('expiry_tracking')
+      .select('id, batch_number, expiry_date, current_quantity')
+      .eq('item_id', itemId)
+      .gt('current_quantity', 0)
+      .order('expiry_date', { ascending: true, nullsFirst: false })
+    if (err) console.error(err)
+    const lots = (data || []) as LotRow[]
+    setLotsByItem((p) => ({ ...p, [itemId]: lots }))
+    return lots
+  }
+
+  // Adiciona o item já com o lote FEFO (primeiro por validade) selecionado.
+  async function addItem(item: PharmacyItemRow) {
+    if (selectedItems.some((s) => s.item_id === item.id)) {
+      setItemSearch(''); setItemResults([])
+      return
+    }
+    setAddingItem(item.id)
     try {
-      const { data, error: err } = await supabase
-        .from('expiry_tracking')
-        .select('id, batch_number, expiry_date, current_quantity')
-        .eq('item_id', itemId)
-        .gt('current_quantity', 0)
-        .order('expiry_date', { ascending: true, nullsFirst: false })
-      if (err) throw err
-      const lots = (data || []) as LotRow[]
-      setLotsByItem((p) => ({ ...p, [itemId]: lots }))
-      return lots
+      const lots = await loadLots(item.id)
+      const fefo = lots[0]
+      setSelectedItems((prev) => [
+        ...prev,
+        {
+          item_id: item.id, name: item.name, code: item.code || '', unit: item.unit || 'UN',
+          is_mav: item.is_mav, medication_class: item.medication_class,
+          expiry_tracking_id: fefo?.id ?? null,
+          batch_number: fefo?.batch_number ?? null,
+          expiry_date: fefo?.expiry_date ?? null,
+          available_in_batch: fefo ? fefo.current_quantity : item.current_stock,
+          item_stock: item.current_stock,
+          quantity: 1,
+        },
+      ])
+      setItemSearch(''); setItemResults([])
     } finally {
-      setLoadingLots(null)
+      setAddingItem(null)
     }
   }
 
-  function clickItem(item: PharmacyItemRow) {
-    setExpandedItem(item)
-    void loadLots(item.id)
-  }
-
-  function selectWithLot(item: PharmacyItemRow, lot: LotRow) {
-    setSelectedItems((prev) => [
-      ...prev,
-      {
-        item_id: item.id, name: item.name, code: item.code || '', unit: item.unit || 'UN',
-        is_mav: item.is_mav, medication_class: item.medication_class,
-        expiry_tracking_id: lot.id, batch_number: lot.batch_number,
-        expiry_date: lot.expiry_date, available_in_batch: lot.current_quantity, quantity: 1,
-      },
-    ])
-    setExpandedItem(null); setItemSearch('')
-  }
-
-  function selectWithoutLot(item: PharmacyItemRow) {
-    setSelectedItems((prev) => [
-      ...prev,
-      {
-        item_id: item.id, name: item.name, code: item.code || '', unit: item.unit || 'UN',
-        is_mav: item.is_mav, medication_class: item.medication_class,
-        expiry_tracking_id: null, batch_number: null, expiry_date: null,
-        available_in_batch: item.current_stock, quantity: 1,
-      },
-    ])
-    setExpandedItem(null); setItemSearch('')
+  function changeLot(idx: number, lotId: string) {
+    setSelectedItems((prev) => prev.map((it, i) => {
+      if (i !== idx) return it
+      if (!lotId) {
+        const avail = it.item_stock
+        return { ...it, expiry_tracking_id: null, batch_number: null, expiry_date: null, available_in_batch: avail, quantity: Math.min(it.quantity, Math.max(1, avail)) }
+      }
+      const lot = (lotsByItem[it.item_id] || []).find((l) => l.id === lotId)
+      if (!lot) return it
+      return {
+        ...it, expiry_tracking_id: lot.id, batch_number: lot.batch_number,
+        expiry_date: lot.expiry_date, available_in_batch: lot.current_quantity,
+        quantity: Math.min(it.quantity, Math.max(1, lot.current_quantity)),
+      }
+    }))
   }
 
   function removeItem(idx: number) {
@@ -250,7 +245,7 @@ export function NewDispensation() {
   }
 
   function expiryColor(d: string | null | undefined): string {
-    if (!d) return 'rgba(0,0,0,0.05)'
+    if (!d) return mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'
     const days = Math.floor((new Date(d + 'T00:00:00').getTime() - Date.now()) / 86400000)
     if (days < 0) return 'rgba(239,68,68,0.15)'
     if (days <= 30) return 'rgba(239,68,68,0.10)'
@@ -271,16 +266,16 @@ export function NewDispensation() {
         patient_name: selectedPatient!.full_name,
         medical_record_number: selectedPatient!.medical_record_number,
         prescribing_doctor: `${selectedPresc!.name} (CRM ${selectedPresc!.crm}/${selectedPresc!.crm_uf})`,
-        prescription_number: prescriptionDate,
+        prescription_number: prescriptionNumber.trim(),
         prescription_date: prescriptionDate,
         patient_id: selectedPatient!.id,
         admission_id: openAdmission?.id ?? null,
         prescriber_id: selectedPresc!.id,
+        mav_confirmado: hasMav ? true : false,
         items: selectedItems.map((i) => ({
           item_id: i.item_id, quantity: i.quantity,
           expiry_tracking_id: i.expiry_tracking_id,
           batch_number: i.batch_number, expiry_date: i.expiry_date,
-          medication_class: i.medication_class, is_mav: i.is_mav,
         })),
       })
       const msg = result?.needsApproval
@@ -294,19 +289,11 @@ export function NewDispensation() {
     }
   }
 
-  // canAdvance[4] = receita: if any controlados item, all must have tipo+numero filled
-  const receitaValid = useMemo(() => {
-    const controladosItems = selectedItems.filter(i => i.medication_class === 'controlados')
-    if (controladosItems.length === 0) return true
-    return controladosItems.every(i => i.notificacao_receita_tipo && i.notificacao_receita_numero?.trim())
-  }, [selectedItems])
-
   const canAdvance: boolean[] = [
     !!selectedPatient,
-    !!prescriptionDate,
+    !!prescriptionDate && !!prescriptionNumber.trim(),
     !!selectedPresc,
     selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
-    receitaValid,
     true,
   ]
 
@@ -355,9 +342,6 @@ export function NewDispensation() {
                 <span className="text-xs font-medium hidden sm:block" style={{ color: active ? txt : txtMut }}>
                   {s.label}
                 </span>
-                {i < STEPS.length - 1 && (
-                  <div className="absolute" style={{ display: 'none' }} />
-                )}
               </div>
             )
           })}
@@ -453,14 +437,26 @@ export function NewDispensation() {
         <div className="p-6 space-y-4" style={card}>
           <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 2 — Dados da Prescrição</h2>
 
-          <div>
-            <label style={lbl}>Data da Prescrição *</label>
-            <input
-              type="date"
-              value={prescriptionDate}
-              onChange={(e) => setPrescriptionDate(e.target.value)}
-              style={inputStyle}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label style={lbl}>Número da Prescrição *</label>
+              <input
+                value={prescriptionNumber}
+                onChange={(e) => setPrescriptionNumber(e.target.value)}
+                placeholder="Ex: 2026-000123"
+                style={inputStyle}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label style={lbl}>Data da Prescrição *</label>
+              <input
+                type="date"
+                value={prescriptionDate}
+                onChange={(e) => setPrescriptionDate(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
           </div>
 
           <div className="flex justify-between pt-2">
@@ -544,6 +540,9 @@ export function NewDispensation() {
       {step === 3 && (
         <div className="p-6 space-y-4" style={card}>
           <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 4 — Medicamentos</h2>
+          <p className="text-xs" style={{ color: txtMut }}>
+            Busque e clique para adicionar. O lote que vence primeiro (FEFO) é escolhido automaticamente — você pode trocar abaixo.
+          </p>
 
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: txtMut }} />
@@ -553,142 +552,114 @@ export function NewDispensation() {
               placeholder="Buscar medicamento por nome ou código..."
               style={{ ...inputStyle, paddingLeft: 36 }}
             />
-            {itemSearch && itemResults.length > 0 && (
-              <div style={{ ...dropdownStyle, position: 'absolute' }}>
-                {itemResults.map((i) => (
-                  <button
-                    key={i.id}
-                    onClick={() => clickItem(i)}
-                    className="w-full text-left px-4 py-3 block"
-                    style={{ borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium flex items-center gap-1" style={{ color: txt }}>
-                        <Pill size={13} />
-                        {i.name}
-                        {i.is_mav && (
-                          <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
-                            ⚠️ MAV
-                          </span>
-                        )}
-                      </p>
-                      <span className="text-xs ml-2" style={{ color: txtMut }}>
-                        {i.current_stock} {i.unit || 'UN'}
-                      </span>
-                    </div>
-                    <p className="text-xs" style={{ color: txtMut }}>{i.code || 'sem código'}</p>
-                  </button>
-                ))}
+            {itemSearch.trim() && (
+              <div style={dropdownStyle}>
+                {searchingItems ? (
+                  <div className="flex items-center gap-2 text-sm px-4 py-3" style={{ color: txtMut }}>
+                    <Loader2 size={14} className="animate-spin" /> Buscando...
+                  </div>
+                ) : itemResults.length === 0 ? (
+                  <div className="px-4 py-3 text-sm" style={{ color: txtMut }}>Nenhum medicamento encontrado.</div>
+                ) : itemResults.map((i) => {
+                  const already = selectedItems.some((s) => s.item_id === i.id)
+                  const out = i.current_stock <= 0
+                  return (
+                    <button
+                      key={i.id}
+                      onClick={() => addItem(i)}
+                      disabled={already || addingItem === i.id}
+                      className="w-full text-left px-4 py-3 block disabled:opacity-50"
+                      style={{ borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}` }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium flex items-center gap-1" style={{ color: txt }}>
+                          <Pill size={13} /> {i.name}
+                          {i.is_mav && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">⚠️ MAV</span>
+                          )}
+                          {already && <span className="ml-1 text-xs" style={{ color: txtMut }}>(já adicionado)</span>}
+                        </p>
+                        <span className="text-xs ml-2 flex items-center gap-1" style={{ color: out ? '#dc2626' : txtMut }}>
+                          {addingItem === i.id && <Loader2 size={12} className="animate-spin" />}
+                          {i.current_stock} {i.unit || 'UN'}
+                        </span>
+                      </div>
+                      <p className="text-xs" style={{ color: txtMut }}>{i.code || 'sem código'}</p>
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
 
-          {expandedItem && (
-            <div className="p-4 rounded-xl space-y-3"
-              style={{
-                background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-                border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-              }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: txt }}>
-                    Lotes disponíveis — {expandedItem.name}
-                  </p>
-                  <p className="text-xs" style={{ color: txtMut }}>Ordenados por FEFO (vence primeiro)</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setExpandedItem(null)}>Fechar</Button>
-              </div>
-
-              {loadingLots === expandedItem.id ? (
-                <div className="flex items-center gap-2 text-sm" style={{ color: txtMut }}>
-                  <Loader2 size={14} className="animate-spin" /> Carregando lotes...
-                </div>
-              ) : (lotsByItem[expandedItem.id] || []).length === 0 ? (
-                <div className="space-y-2">
-                  <p className="text-sm" style={{ color: txtMut }}>
-                    Sem lotes rastreados via NF. Dispensar do estoque agregado:
-                  </p>
-                  <Button size="sm" onClick={() => selectWithoutLot(expandedItem)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                    <Plus size={14} className="mr-1" />
-                    Dispensar sem lote ({expandedItem.current_stock} {expandedItem.unit})
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {(lotsByItem[expandedItem.id] || []).map((lot, idx) => (
-                    <div
-                      key={lot.id}
-                      className="flex items-center justify-between gap-2 p-2 rounded-lg"
-                      style={{ background: expiryColor(lot.expiry_date) }}>
-                      <div className="text-sm flex items-center gap-3 flex-wrap">
-                        {idx === 0 && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-300">
-                            FEFO
-                          </span>
-                        )}
-                        <span style={{ color: txt }}>Lote <strong>{lot.batch_number}</strong></span>
-                        <span style={{ color: txtSec }}>Validade {fmt(lot.expiry_date)}</span>
-                        <span style={{ color: txtMut }}>{lot.current_quantity} un</span>
-                      </div>
-                      <Button size="sm" onClick={() => selectWithLot(expandedItem, lot)}>
-                        <Plus size={14} className="mr-1" /> Usar
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {selectedItems.length === 0 ? (
-            <p className="text-sm text-center py-4" style={{ color: txtMut }}>
+            <p className="text-sm text-center py-6" style={{ color: txtMut }}>
               Nenhum medicamento adicionado. Use a busca acima.
             </p>
           ) : (
             <div className="space-y-2">
-              {selectedItems.map((it, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-xl flex items-center gap-3 flex-wrap"
-                  style={{
-                    background: it.is_mav
-                      ? 'rgba(245,158,11,0.08)'
-                      : mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-                    border: `1px solid ${it.is_mav ? 'rgba(245,158,11,0.3)' : mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                  }}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium flex items-center gap-1 flex-wrap" style={{ color: txt }}>
-                      <Pill size={13} /> {it.name}
-                      {it.is_mav && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 border border-amber-300">
-                          ⚠️ MAV
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs" style={{ color: txtMut }}>
-                      {it.batch_number ? `Lote ${it.batch_number} · Val ${fmt(it.expiry_date)}` : 'Sem lote específico'}
-                      {' · '}Saldo: {it.available_in_batch}
-                    </p>
+              {selectedItems.map((it, idx) => {
+                const lots = lotsByItem[it.item_id] || []
+                const over = it.quantity > it.available_in_batch
+                return (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl space-y-2"
+                    style={{
+                      background: it.is_mav ? 'rgba(245,158,11,0.08)' : mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
+                      border: `1px solid ${it.is_mav ? 'rgba(245,158,11,0.3)' : mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                    }}>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium flex items-center gap-1 flex-wrap" style={{ color: txt }}>
+                          <Pill size={13} /> {it.name}
+                          {it.is_mav && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 border border-amber-300">⚠️ MAV</span>
+                          )}
+                        </p>
+                        <p className="text-xs" style={{ color: txtMut }}>{it.code || 'sem código'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={it.available_in_batch}
+                          value={it.quantity}
+                          onChange={(e) => setQty(idx, parseInt(e.target.value) || 1)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                          style={{ ...inputStyle, width: 80, borderColor: over ? '#dc2626' : (inputStyle.border as string) }}
+                        />
+                        <span className="text-xs" style={{ color: txtMut }}>{it.unit}</span>
+                        <Button
+                          variant="outline" size="sm"
+                          onClick={() => removeItem(idx)}
+                          className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Seletor de lote (FEFO por padrão) */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Lote</span>
+                      <select
+                        value={it.expiry_tracking_id ?? ''}
+                        onChange={(e) => changeLot(idx, e.target.value)}
+                        style={{ ...inputStyle, width: 'auto', minWidth: 260, padding: '6px 10px', background: expiryColor(it.expiry_date) }}>
+                        {lots.length === 0 && <option value="">Sem lote — estoque agregado ({it.item_stock} {it.unit})</option>}
+                        {lots.map((l, li) => (
+                          <option key={l.id} value={l.id}>
+                            {li === 0 ? '★ FEFO · ' : ''}Lote {l.batch_number} · Val {fmt(l.expiry_date)} · {l.current_quantity} un
+                          </option>
+                        ))}
+                        {lots.length > 0 && <option value="">Sem lote — estoque agregado ({it.item_stock} {it.unit})</option>}
+                      </select>
+                      <span className="text-xs" style={{ color: over ? '#dc2626' : txtMut }}>
+                        Disponível: {it.available_in_batch}
+                      </span>
+                    </div>
                   </div>
-                  <input
-                    type="number"
-                    min={1}
-                    max={it.available_in_batch}
-                    value={it.quantity}
-                    onChange={(e) => setQty(idx, parseInt(e.target.value) || 1)}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    style={{ ...inputStyle, width: 80 }}
-                  />
-                  <span className="text-xs" style={{ color: txtMut }}>{it.unit}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(idx)}
-                    className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -706,92 +677,8 @@ export function NewDispensation() {
               <ArrowLeft size={14} className="mr-2" /> Voltar
             </Button>
             <Button
-              onClick={() => setStep(STEP_RECEITA)}
-              disabled={!canAdvance[3]}
-              className="bg-blue-600 hover:bg-blue-700 text-white">
-              {hasControlados ? 'Notificação de Receita' : 'Revisar Resumo'} <ArrowRight size={14} className="ml-2" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Etapa 5 — Notificação de Receita (controlados) */}
-      {step === STEP_RECEITA && (
-        <div className="p-6 space-y-4" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 5 — Notificação de Receita</h2>
-
-          {!hasControlados ? (
-            <div className="p-4 rounded-xl"
-              style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <p className="text-sm" style={{ color: txt }}>
-                Nenhum item controlado nesta dispensação. Esta etapa não é obrigatória.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="p-3 rounded-xl flex items-start gap-2"
-                style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                <FileText className="text-indigo-500 flex-shrink-0 mt-0.5" size={16} />
-                <p className="text-sm" style={{ color: txt }}>
-                  Um ou mais medicamentos desta dispensação são <strong>Controlados (Portaria 344/98)</strong>.
-                  Informe o tipo e número da notificação de receita para cada item controlado.
-                </p>
-              </div>
-
-              {selectedItems
-                .map((it, idx) => ({ it, idx }))
-                .filter(({ it }) => it.medication_class === 'controlados')
-                .map(({ it, idx }) => (
-                  <div key={idx} className="p-4 rounded-xl space-y-3"
-                    style={{
-                      background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-                      border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                    }}>
-                    <p className="text-sm font-semibold flex items-center gap-2" style={{ color: txt }}>
-                      <Pill size={14} /> {it.name}
-                      <span className="text-xs font-normal px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                        Controlado
-                      </span>
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label style={lbl}>Tipo de Notificação *</label>
-                        <select
-                          value={it.notificacao_receita_tipo ?? ''}
-                          onChange={e => setItemReceita(
-                            idx,
-                            e.target.value as NotificacaoReceitaTipo || undefined,
-                            it.notificacao_receita_numero
-                          )}
-                          style={inputStyle as React.CSSProperties}>
-                          <option value="">— selecionar —</option>
-                          <option value="amarela_A">Notificação Amarela — Lista A</option>
-                          <option value="azul_B">Notificação Azul — Lista B</option>
-                          <option value="branca">Receita de Controle Especial (Branca)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={lbl}>Número da Notificação *</label>
-                        <input
-                          value={it.notificacao_receita_numero ?? ''}
-                          onChange={e => setItemReceita(idx, it.notificacao_receita_tipo, e.target.value)}
-                          style={inputStyle}
-                          placeholder="Ex: AA123456"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
-
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(3)}>
-              <ArrowLeft size={14} className="mr-2" /> Voltar
-            </Button>
-            <Button
               onClick={() => setStep(STEP_RESUMO)}
-              disabled={!canAdvance[4]}
+              disabled={!canAdvance[3]}
               className="bg-blue-600 hover:bg-blue-700 text-white">
               Revisar Resumo <ArrowRight size={14} className="ml-2" />
             </Button>
@@ -799,10 +686,10 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 6 — Resumo */}
+      {/* Etapa 5 — Resumo */}
       {step === STEP_RESUMO && (
         <div className="p-6 space-y-5" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 6 — Resumo</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 5 — Resumo</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl space-y-1"
@@ -823,10 +710,16 @@ export function NewDispensation() {
             </div>
           </div>
 
-          <div className="p-4 rounded-xl space-y-1"
+          <div className="p-4 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-2"
             style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
-            <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Nº da Prescrição</p>
+              <p className="font-semibold" style={{ color: txt }}>{prescriptionNumber || '—'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
+              <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -849,7 +742,7 @@ export function NewDispensation() {
                     )}
                   </p>
                   <p className="text-xs" style={{ color: txtMut }}>
-                    {it.batch_number ? `Lote ${it.batch_number} · Val ${fmt(it.expiry_date)}` : 'Sem lote'}
+                    {it.batch_number ? `Lote ${it.batch_number} · Val ${fmt(it.expiry_date)}` : 'Sem lote específico'}
                   </p>
                 </div>
                 <span className="text-sm font-bold" style={{ color: txt }}>
@@ -871,7 +764,7 @@ export function NewDispensation() {
 
           <div className="flex justify-between pt-2">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(STEP_RECEITA)}>
+              <Button variant="outline" onClick={() => setStep(3)}>
                 <ArrowLeft size={14} className="mr-2" /> Voltar
               </Button>
               <Button variant="outline" onClick={() => setStep(0)}>
@@ -915,7 +808,7 @@ export function NewDispensation() {
             <div className="text-xs space-y-0.5" style={{ color: txtSec }}>
               <p>✓ Paciente: {selectedPatient?.full_name} ({selectedPatient?.medical_record_number})</p>
               <p>✓ Prescritor: {selectedPresc?.name} (CRM {selectedPresc?.crm})</p>
-              <p>✓ Data: {fmt(prescriptionDate)}</p>
+              <p>✓ Prescrição: {prescriptionNumber} · {fmt(prescriptionDate)}</p>
             </div>
             <div>
               <label style={lbl}>Para confirmar, digite "CONFIRMO" *</label>

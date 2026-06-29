@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
-import { Plus, Search, Calendar, RefreshCw, XCircle, CheckCircle2 } from 'lucide-react'
+import { Plus, Search, Calendar, RefreshCw, XCircle, CheckCircle2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -150,6 +150,10 @@ export function DispensationList() {
                     {d.status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle2 size={12} /> Concluida
+                      </span>
+                    ) : d.status === 'pending_approval' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <Clock size={12} /> Aguard. aprovacao
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">

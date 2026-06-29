@@ -117,6 +117,10 @@ export function DispensationDetails() {
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
               <CheckCircle2 size={16} /> Concluida
             </span>
+          ) : d.status === 'pending_approval' ? (
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+              <Clock size={16} /> Aguardando aprovacao
+            </span>
           ) : (
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
               <XCircle size={16} /> Cancelada
@@ -203,7 +207,7 @@ export function DispensationDetails() {
       </div>
 
       {/* Cancel Action */}
-      {d.status === 'completed' && (
+      {(d.status === 'completed' || d.status === 'pending_approval') && (
         <div className="flex justify-end">
           {showCancel ? (
             <div className="p-4 rounded-xl w-full max-w-md" style={{

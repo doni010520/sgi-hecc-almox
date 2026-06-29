@@ -53,6 +53,7 @@ export interface CreateDispensationData {
   admission_id?: string | null
   prescriber_id?: string | null
   needs_approval?: boolean
+  mav_confirmado?: boolean
   items: Array<{
     item_id: string
     quantity: number
