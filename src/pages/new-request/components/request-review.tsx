@@ -185,12 +185,14 @@ export function RequestReview({ type, details, items, onSubmit, onEdit, loading 
               {details.priority === 'high' ? 'Alta' : details.priority === 'medium' ? 'Média' : 'Baixa'}
             </span>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Justificativa</p>
-            <p className="mt-1 font-medium">
-              {justificationOptions[details.justification_option as keyof typeof justificationOptions] || details.justification_option}
-            </p>
-          </div>
+          {details.justification_option && (
+            <div>
+              <p className="text-sm text-gray-500">Justificativa</p>
+              <p className="mt-1 font-medium">
+                {justificationOptions[details.justification_option as keyof typeof justificationOptions] || details.justification_option}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

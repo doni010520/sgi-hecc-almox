@@ -6,18 +6,17 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
-import { CheckSquare } from 'lucide-react'
 import { departmentsService } from '@/lib/services/departments'
 import { useAuth } from '@/contexts/auth'
 import type { Department } from '@/lib/types/departments'
 
-// Updated schema to use justification_option instead of justification text
 const detailsSchema = z.object({
   department: z.string().min(1, 'Setor do usuário é obrigatório'),
   requesting_department: z.string().min(1, 'Setor solicitante é obrigatório'),
   destination_department: z.string().min(1, 'Setor solicitado é obrigatório'),
   priority: z.enum(['low', 'medium', 'high']),
-  justification_option: z.string().min(1, 'Selecione uma justificativa'),
+  // Justificativa não é mais obrigatória — qualquer item entra na solicitação sem ela.
+  justification_option: z.string().optional(),
   requestDate: z.string(),
 })
 
@@ -28,17 +27,6 @@ interface RequestDetailsProps {
   defaultValues?: Partial<RequestDetails>
   requestType?: 'warehouse' | 'pharmacy' | null
 }
-
-// Predefined justification options
-const justificationOptions = [
-  { id: 'routine', label: 'Reposição de Rotina', description: 'Reposição regular para manter os níveis de estoque' },
-  { id: 'increased_demand', label: 'Aumento de Demanda', description: 'Aumento inesperado no consumo do item' },
-  { id: 'new_procedure', label: 'Novo Procedimento', description: 'Item necessário para novo procedimento ou serviço' },
-  { id: 'critical_level', label: 'Nível Crítico', description: 'Estoque em nível crítico, necessita reposição urgente' },
-  { id: 'replacement', label: 'Substituição', description: 'Substituição de item danificado ou vencido' },
-  { id: 'special_event', label: 'Evento Especial', description: 'Necessário para evento ou campanha específica' },
-  { id: 'emergency', label: 'Emergência', description: 'Situação de emergência ou contingência' },
-]
 
 export function RequestDetails({ onSubmit, defaultValues, requestType }: RequestDetailsProps) {
   const { user } = useAuth()
@@ -381,42 +369,6 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
           </div>
           {errors.priority && (
             <p className="text-sm text-red-500">{errors.priority.message}</p>
-          )}
-        </div>
-
-        {/* Justification Options */}
-        <div className="space-y-2">
-          <Label htmlFor="justification_option">Justificativa</Label>
-          <div className="grid grid-cols-1 gap-3">
-            {justificationOptions.map((option) => {
-              const isSelected = watch('justification_option') === option.id
-              return (
-                <div key={option.id} className="relative">
-                  <input
-                    type="radio"
-                    id={`justification-${option.id}`}
-                    value={option.id}
-                    {...register('justification_option')}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor={`justification-${option.id}`}
-                    className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${isSelected ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
-                  >
-                    <div className={`flex-shrink-0 h-5 w-5 mt-0.5 border rounded-md flex items-center justify-center ${isSelected ? 'bg-primary-500 border-primary-500' : 'border-gray-300'}`}>
-                      {isSelected && <CheckSquare className="h-4 w-4 text-white" />}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{option.label}</p>
-                      <p className="text-sm text-gray-500">{option.description}</p>
-                    </div>
-                  </label>
-                </div>
-              )
-            })}
-          </div>
-          {errors.justification_option && (
-            <p className="text-sm text-red-500 mt-1">{errors.justification_option.message}</p>
           )}
         </div>
       </form>

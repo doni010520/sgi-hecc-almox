@@ -84,67 +84,92 @@ export function AddStockDialog({ item, type, open, onOpenChange, onSuccess }: Ad
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuario nao autenticado')
 
-      const tableName = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
-
-      const { error: entryError } = await supabase
-        .from('stock_entries')
-        .insert({
-          item_id: item.id,
-          item_type: type,
-          quantity: data.quantity,
-          acquisition_type: data.acquisition_type,
-          invoice_number: data.invoice_number,
-          invoice_date: data.invoice_date,
-          invoice_total_value: data.invoice_total_value,
-          expiry_date: data.expiry_date || null,
-          afm_number: data.afm_number,
-          supplier_cnpj: data.supplier_cnpj,
-          supplier_name: data.supplier_name,
-          unit_price: data.unit_price,
-          batch_number: data.batch_number || null,
-          delivery_date: data.delivery_date || null,
-          notes: data.notes || null,
-          created_by: user.id,
+      if (type === 'pharmacy') {
+        // Farmácia roda no modelo multi-estoque: a entrada precisa passar pelo
+        // ledger. A RPC grava stock_entries (NF/auditoria), insere stock_movements
+        // (ENTRADA_NF -> credita item_stocks via trigger e espelha current_stock)
+        // e cria/incrementa o lote em expiry_tracking, tudo numa transação.
+        // NUNCA escrever em current_stock direto — quebra o saldo multi-estoque.
+        const { error: rpcError } = await supabase.rpc('registrar_entrada_estoque', {
+          p_item_id: item.id,
+          p_item_type: type,
+          p_quantity: data.quantity,
+          p_invoice_number: data.invoice_number,
+          p_invoice_date: data.invoice_date,
+          p_afm_number: data.afm_number,
+          p_supplier_cnpj: data.supplier_cnpj,
+          p_supplier_name: data.supplier_name,
+          p_unit_price: data.unit_price,
+          p_invoice_total_value: data.invoice_total_value,
+          p_acquisition_type: data.acquisition_type,
+          p_batch_number: data.batch_number || null,
+          p_expiry_date: data.expiry_date || null,
+          p_delivery_date: data.delivery_date || null,
+          p_notes: data.notes || null,
         })
-
-      if (entryError) {
-        console.error('Error creating stock entry:', entryError)
-        throw entryError
-      }
-
-      const newStock = item.current_stock + data.quantity
-
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({
-          current_stock: newStock,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', item.id)
-
-      if (updateError) {
-        console.error('Error updating item stock:', updateError)
-        throw updateError
-      }
-
-      if (data.expiry_date && data.batch_number) {
-        await supabase
-          .from('expiry_tracking')
+        if (rpcError) {
+          console.error('Error registering stock entry:', rpcError)
+          throw rpcError
+        }
+      } else {
+        // Almoxarifado roda no modelo legado (current_stock direto, consistente com
+        // as saídas via deduct_warehouse_stock). item_stocks(ALMOX) não é usado aqui.
+        const { error: entryError } = await supabase
+          .from('stock_entries')
           .insert({
             item_id: item.id,
-            batch_number: data.batch_number,
-            expiry_date: data.expiry_date,
-            initial_quantity: data.quantity,
-            current_quantity: data.quantity,
-            created_by: user.id,
+            item_type: type,
+            quantity: data.quantity,
+            acquisition_type: data.acquisition_type,
             invoice_number: data.invoice_number,
             invoice_date: data.invoice_date,
-            delivery_date: data.delivery_date,
+            invoice_total_value: data.invoice_total_value,
+            expiry_date: data.expiry_date || null,
             afm_number: data.afm_number,
             supplier_cnpj: data.supplier_cnpj,
             supplier_name: data.supplier_name,
-            invoice_total_value: data.invoice_total_value,
+            unit_price: data.unit_price,
+            batch_number: data.batch_number || null,
+            delivery_date: data.delivery_date || null,
+            notes: data.notes || null,
+            created_by: user.id,
           })
+        if (entryError) {
+          console.error('Error creating stock entry:', entryError)
+          throw entryError
+        }
+
+        const { error: updateError } = await supabase
+          .from('warehouse_items')
+          .update({
+            current_stock: item.current_stock + data.quantity,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.id)
+        if (updateError) {
+          console.error('Error updating item stock:', updateError)
+          throw updateError
+        }
+
+        if (data.expiry_date && data.batch_number) {
+          await supabase
+            .from('expiry_tracking')
+            .insert({
+              item_id: item.id,
+              batch_number: data.batch_number,
+              expiry_date: data.expiry_date,
+              initial_quantity: data.quantity,
+              current_quantity: data.quantity,
+              created_by: user.id,
+              invoice_number: data.invoice_number,
+              invoice_date: data.invoice_date,
+              delivery_date: data.delivery_date,
+              afm_number: data.afm_number,
+              supplier_cnpj: data.supplier_cnpj,
+              supplier_name: data.supplier_name,
+              invoice_total_value: data.invoice_total_value,
+            })
+        }
       }
 
       reset()

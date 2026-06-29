@@ -68,42 +68,59 @@ export function RegisterEntryDialog({ item, type, open, onOpenChange, onSuccess 
       }
 
       const today = new Date().toISOString().split('T')[0]
-      const tableName = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
 
-      // 1. Register entry in stock_entries (audit log)
-      const { error: entryError } = await supabase.from('stock_entries').insert({
-        item_id: item.id,
-        item_type: type,
-        quantity: data.quantity,
-        acquisition_type: data.acquisition_type,
-        invoice_number: data.invoice_number,
-        invoice_date: today,
-        invoice_total_value: 0,
-        afm_number: data.afm_number,
-        supplier_cnpj: '00.000.000/0000-00',
-        supplier_name: data.supplier_name || 'Não informado',
-        unit_price: 0,
-        notes: data.notes || null,
-        created_by: user.id,
-      })
-
-      if (entryError) {
-        console.error('Error registering entry:', entryError)
-        throw new Error('Erro ao registrar entrada: ' + entryError.message)
-      }
-
-      // 2. Update item current_stock
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({
-          current_stock: newStock,
-          updated_at: new Date().toISOString()
+      if (type === 'pharmacy') {
+        // Farmácia (multi-estoque): entrada via RPC atômica — grava stock_entries
+        // (auditoria) e insere stock_movements (ENTRADA_NF), que credita item_stocks
+        // e espelha current_stock pelos triggers. Não escrever current_stock direto.
+        const { error: rpcError } = await supabase.rpc('registrar_entrada_estoque', {
+          p_item_id: item.id,
+          p_item_type: type,
+          p_quantity: data.quantity,
+          p_invoice_number: data.invoice_number,
+          p_invoice_date: today,
+          p_afm_number: data.afm_number,
+          p_supplier_cnpj: '00.000.000/0000-00',
+          p_supplier_name: data.supplier_name || 'Não informado',
+          p_unit_price: 0,
+          p_invoice_total_value: 0,
+          p_acquisition_type: data.acquisition_type,
+          p_notes: data.notes || null,
         })
-        .eq('id', item.id)
+        if (rpcError) {
+          console.error('Error registering entry:', rpcError)
+          throw new Error('Erro ao registrar entrada: ' + rpcError.message)
+        }
+      } else {
+        // Almoxarifado (modelo legado): current_stock direto.
+        const { error: entryError } = await supabase.from('stock_entries').insert({
+          item_id: item.id,
+          item_type: type,
+          quantity: data.quantity,
+          acquisition_type: data.acquisition_type,
+          invoice_number: data.invoice_number,
+          invoice_date: today,
+          invoice_total_value: 0,
+          afm_number: data.afm_number,
+          supplier_cnpj: '00.000.000/0000-00',
+          supplier_name: data.supplier_name || 'Não informado',
+          unit_price: 0,
+          notes: data.notes || null,
+          created_by: user.id,
+        })
+        if (entryError) {
+          console.error('Error registering entry:', entryError)
+          throw new Error('Erro ao registrar entrada: ' + entryError.message)
+        }
 
-      if (updateError) {
-        console.error('Error updating stock:', updateError)
-        throw new Error('Erro ao atualizar estoque: ' + updateError.message)
+        const { error: updateError } = await supabase
+          .from('warehouse_items')
+          .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+          .eq('id', item.id)
+        if (updateError) {
+          console.error('Error updating stock:', updateError)
+          throw new Error('Erro ao atualizar estoque: ' + updateError.message)
+        }
       }
 
       reset()
