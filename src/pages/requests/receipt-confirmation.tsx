@@ -5,37 +5,31 @@ import {
   CheckCircle2,
   Calendar,
   Building2,
-  Package,
+  User,
   AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { supabase } from '@/lib/supabase'
-import { stockService } from '@/lib/services/stock'
+import { requestService } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
-
-const SAT_LOCATION_IDS = [
-  'fa96acab-9065-44ee-aeae-b87c5af8110a', // SAT_1
-  'cf2d0681-0cdd-48b4-9431-73c09e853048', // SAT_2
-]
 
 interface RequestItem {
   id: string
   quantity: number
-  item_id: string
-  item_type: 'pharmacy' | 'warehouse'
   item_name: string
   item_code: string
   item_unit?: string
 }
 
-interface PendingRequest {
+interface DeliveredRequest {
   id: string
   request_number: string | null
-  target_location_id: string
-  target_location_name: string
-  dispatched_at: string | null
+  requester_name: string
+  department_name: string
+  delivered_at: string | null
+  delivered_by_name: string
   created_at: string
   items: RequestItem[]
 }
@@ -57,7 +51,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 }
 
 export function ReceiptConfirmation() {
-  const [requests, setRequests] = useState<PendingRequest[]>([])
+  const [requests, setRequests] = useState<DeliveredRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -66,18 +60,23 @@ export function ReceiptConfirmation() {
     setToast({ message, type })
   }, [])
 
-  const loadPendingRequests = useCallback(async () => {
+  const loadDeliveredRequests = useCallback(async () => {
     try {
       setLoading(true)
 
+      // Pedidos entregues aguardando confirmação de recebimento. Qualquer usuário
+      // logado pode confirmar — quem marca a entrega e quem confere os itens
+      // costumam ser pessoas diferentes (a RLS permite delivered -> completed).
       const { data, error } = await supabase
         .from('requests')
         .select(`
           id,
           request_number,
-          target_location_id,
-          dispatched_at,
           created_at,
+          delivered_at,
+          requester:users!requests_requester_id_fkey(full_name),
+          department:departments!requests_department_id_fkey(name),
+          delivered_by_user:users!requests_delivered_by_fkey(full_name),
           request_items(
             id,
             quantity,
@@ -85,32 +84,24 @@ export function ReceiptConfirmation() {
             warehouse_item:warehouse_items(id, name, code, unit)
           )
         `)
-        .eq('status', 'dispatched')
-        .eq('needs_receipt_confirmation', true)
-        .in('target_location_id', SAT_LOCATION_IDS)
-        .order('dispatched_at', { ascending: true })
+        .eq('status', 'delivered')
+        .order('delivered_at', { ascending: true, nullsFirst: false })
 
       if (error) throw error
 
-      // Load location names
-      const locations = await stockService.getLocations()
-      const locationMap = new Map(locations.map((l) => [l.id, l.name]))
-
-      const mapped: PendingRequest[] = (data || []).map((req: any) => ({
+      const mapped: DeliveredRequest[] = (data || []).map((req: any) => ({
         id: req.id,
         request_number: req.request_number,
-        target_location_id: req.target_location_id,
-        target_location_name: locationMap.get(req.target_location_id) ?? req.target_location_id,
-        dispatched_at: req.dispatched_at,
+        requester_name: req.requester?.full_name ?? '—',
+        department_name: req.department?.name ?? '—',
+        delivered_at: req.delivered_at,
+        delivered_by_name: req.delivered_by_user?.full_name ?? '—',
         created_at: req.created_at,
         items: (req.request_items || []).map((ri: any) => {
-          const isPharmacy = !!ri.pharmacy_item
-          const item = isPharmacy ? ri.pharmacy_item : ri.warehouse_item
+          const item = ri.pharmacy_item ?? ri.warehouse_item
           return {
             id: ri.id,
             quantity: ri.quantity,
-            item_id: item?.id ?? '',
-            item_type: isPharmacy ? 'pharmacy' : 'warehouse',
             item_name: item?.name ?? '—',
             item_code: item?.code ?? '—',
             item_unit: item?.unit,
@@ -120,54 +111,21 @@ export function ReceiptConfirmation() {
 
       setRequests(mapped)
     } catch (err) {
-      console.error('ReceiptConfirmation.loadPendingRequests:', err)
-      showToast('Erro ao carregar pedidos pendentes.', 'error')
+      console.error('ReceiptConfirmation.loadDeliveredRequests:', err)
+      showToast('Erro ao carregar pedidos entregues.', 'error')
     } finally {
       setLoading(false)
     }
   }, [showToast])
 
   useEffect(() => {
-    loadPendingRequests()
-  }, [loadPendingRequests])
+    loadDeliveredRequests()
+  }, [loadDeliveredRequests])
 
-  async function handleConfirm(req: PendingRequest) {
+  async function handleConfirm(req: DeliveredRequest) {
     try {
       setConfirming(req.id)
-
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id ?? null
-
-      // 1. Create stock_movement entries (direction=in) for each item
-      for (const item of req.items) {
-        if (!item.item_id) continue
-        await stockService.createMovement({
-          item_id: item.item_id,
-          item_type: item.item_type,
-          movement_type: 'SOLICITACAO',
-          direction: 'in',
-          quantity: item.quantity,
-          target_location_id: req.target_location_id,
-          source_location_id: '42c3b239-c354-4b5b-a2eb-d42b7a9edc10', // CAF
-          request_id: req.id,
-          performed_by: userId,
-          notes: `Confirmação de recebimento — pedido ${req.request_number ?? formatRequestNumber(req.id)}`,
-        })
-      }
-
-      // 2. Update request status to 'received' (or 'completed')
-      const { error: updateError } = await supabase
-        .from('requests')
-        .update({
-          status: 'completed',
-          received_at: new Date().toISOString(),
-          received_by: userId,
-          needs_receipt_confirmation: false,
-        })
-        .eq('id', req.id)
-
-      if (updateError) throw updateError
-
+      await requestService.confirmReceipt(req.id)
       showToast('Recebimento confirmado com sucesso!', 'success')
       setRequests((prev) => prev.filter((r) => r.id !== req.id))
     } catch (err: any) {
@@ -198,9 +156,9 @@ export function ReceiptConfirmation() {
             <PackageCheck className="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Confirmação de Recebimento</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Confirmar Recebimento</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Pedidos despachados pelo CAF aguardando confirmação de recebimento na unidade satélite
+              Pedidos entregues aguardando confirmação. Confira os itens e confirme o recebimento.
             </p>
           </div>
         </div>
@@ -225,7 +183,7 @@ export function ReceiptConfirmation() {
             <div>
               <h2 className="text-lg font-semibold text-gray-700">Nenhum pedido aguardando confirmação</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Quando o CAF despachar um pedido para esta unidade, ele aparecerá aqui.
+                Quando um pedido for marcado como entregue, ele aparecerá aqui para confirmação.
               </p>
             </div>
           </div>
@@ -254,27 +212,27 @@ export function ReceiptConfirmation() {
                       </span>
                     </div>
 
-                    {/* Origin */}
+                    {/* Requester */}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200">
-                      <Building2 className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs text-gray-400">Origem:</span>
-                      <span className="text-sm font-medium text-gray-700">CAF</span>
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span className="text-xs text-gray-400">Solicitante:</span>
+                      <span className="text-sm font-medium text-gray-700">{req.requester_name}</span>
                     </div>
 
-                    {/* Destination */}
+                    {/* Department */}
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200">
-                      <Package className="w-4 h-4 text-green-500" />
-                      <span className="text-xs text-green-400">Destino:</span>
-                      <span className="text-sm font-medium text-green-700">{req.target_location_name}</span>
+                      <Building2 className="w-4 h-4 text-green-500" />
+                      <span className="text-xs text-green-400">Setor:</span>
+                      <span className="text-sm font-medium text-green-700">{req.department_name}</span>
                     </div>
 
-                    {/* Dispatched at */}
-                    {req.dispatched_at && (
+                    {/* Delivered at */}
+                    {req.delivered_at && (
                       <div className="flex items-center gap-2 text-gray-500">
                         <Calendar className="w-4 h-4" />
                         <span className="text-sm">
-                          Despachado em{' '}
-                          {format(new Date(req.dispatched_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          Entregue em{' '}
+                          {format(new Date(req.delivered_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </span>
                       </div>
                     )}

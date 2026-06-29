@@ -86,6 +86,7 @@ export function buildSidebarSections(): SidebarSection[] {
       items: [
         { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: () => true },
         { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: () => true },
+        { name: 'Confirmar Recebimento', icon: PackageCheck, href: '/requests/receipt-confirmation', show: () => true },
       ],
     },
     {
@@ -158,7 +159,6 @@ export function buildSidebarSections(): SidebarSection[] {
         { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
         { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
         { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
-        { name: 'Confirmação de Recebimento', icon: PackageCheck, href: '/requests/receipt-confirmation', show: (f) => f.canManageRequests },
       ],
     },
     {
