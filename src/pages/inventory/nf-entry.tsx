@@ -1,0 +1,350 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft, FileText, Building2, Search, Plus, Trash2, Loader2, Package, CheckCircle2, AlertCircle,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { supabase } from '@/lib/supabase'
+import { getErrorMessage } from '@/lib/utils/error-messages'
+
+interface NfEntryProps {
+  type: 'pharmacy' | 'warehouse'
+}
+
+interface ItemRow {
+  id: string
+  code: string | null
+  name: string
+  unit: string
+}
+
+interface LineItem {
+  item_id: string
+  name: string
+  code: string
+  unit: string
+  quantity: number
+  batch_number: string
+  expiry_date: string
+  unit_price: number
+}
+
+const ACQUISITION_TYPES = ['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário'] as const
+
+function formatCNPJ(value: string) {
+  const n = value.replace(/\D/g, '').slice(0, 14)
+  return n
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}
+
+export function NfEntry({ type }: NfEntryProps) {
+  const navigate = useNavigate()
+  const table = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
+  const backTo = type === 'pharmacy' ? '/inventory/pharmacy' : '/inventory/warehouse'
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Cabeçalho da NF
+  const [acquisitionType, setAcquisitionType] = useState<typeof ACQUISITION_TYPES[number]>('Compra')
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [invoiceDate, setInvoiceDate] = useState(today)
+  const [afmNumber, setAfmNumber] = useState('')
+  const [supplierCnpj, setSupplierCnpj] = useState('')
+  const [supplierName, setSupplierName] = useState('')
+
+  // Linhas
+  const [lines, setLines] = useState<LineItem[]>([])
+
+  // Busca de item
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<ItemRow[]>([])
+  const [searching, setSearching] = useState(false)
+
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      const q = search.trim()
+      if (!q) { setResults([]); return }
+      setSearching(true)
+      const { data, error: err } = await supabase
+        .from(table)
+        .select('id, code, name, unit')
+        .eq('is_active', true)
+        .or(`name.ilike.%${q}%,code.ilike.%${q}%`)
+        .order('name')
+        .limit(20)
+      if (err) console.error(err)
+      setResults((data || []) as ItemRow[])
+      setSearching(false)
+    }, 200)
+    return () => clearTimeout(t)
+  }, [search, table])
+
+  function addLine(item: ItemRow) {
+    if (lines.some((l) => l.item_id === item.id)) { setSearch(''); setResults([]); return }
+    setLines((prev) => [...prev, {
+      item_id: item.id, name: item.name, code: item.code || '', unit: item.unit || 'UN',
+      quantity: 1, batch_number: '', expiry_date: '', unit_price: 0,
+    }])
+    setSearch(''); setResults([])
+  }
+
+  function updateLine(idx: number, patch: Partial<LineItem>) {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
+  }
+
+  function removeLine(idx: number) {
+    setLines((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const totalQty = lines.reduce((s, l) => s + (l.quantity || 0), 0)
+  const totalValue = lines.reduce((s, l) => s + (l.quantity || 0) * (l.unit_price || 0), 0)
+
+  const canSubmit =
+    invoiceNumber.trim() && invoiceDate && afmNumber.trim() && supplierName.trim() &&
+    lines.length > 0 && lines.every((l) => l.quantity > 0)
+
+  async function handleSubmit() {
+    setError(null)
+    if (!canSubmit) {
+      setError('Preencha o cabeçalho (NF, data, AFM, fornecedor) e ao menos uma linha com quantidade válida.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const { data, error: rpcError } = await supabase.rpc('registrar_entrada_nf', {
+        p_item_type: type,
+        p_invoice_number: invoiceNumber.trim(),
+        p_invoice_date: invoiceDate,
+        p_afm_number: afmNumber.trim(),
+        p_supplier_cnpj: supplierCnpj.trim() || '00.000.000/0000-00',
+        p_supplier_name: supplierName.trim(),
+        p_acquisition_type: acquisitionType,
+        p_items: lines.map((l) => ({
+          item_id: l.item_id,
+          quantity: l.quantity,
+          unit_price: l.unit_price,
+          batch_number: l.batch_number.trim() || null,
+          expiry_date: l.expiry_date || null,
+        })),
+      })
+      if (rpcError) throw rpcError
+      const n = (data as any)?.itens ?? lines.length
+      setToast(`Nota fiscal registrada: ${n} ${n === 1 ? 'item' : 'itens'} lançado(s).`)
+      setTimeout(() => navigate(backTo), 1200)
+    } catch (e: any) {
+      console.error('NF entry error:', e)
+      setError(getErrorMessage(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate(backTo)}
+          className="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-emerald-600" />
+            Entrada por Nota Fiscal — {type === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}
+          </h1>
+          <p className="text-sm text-gray-500">Digite os dados da NF e lance todos os itens de uma vez.</p>
+        </div>
+      </div>
+
+      {/* Dados da NF */}
+      <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 border-b pb-2">
+          <FileText className="w-4 h-4" /> Dados da Nota Fiscal
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="acq">Tipo de Aquisição *</Label>
+            <select
+              id="acq"
+              value={acquisitionType}
+              onChange={(e) => setAcquisitionType(e.target.value as typeof ACQUISITION_TYPES[number])}
+              className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm"
+            >
+              {ACQUISITION_TYPES.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="nf">Número da NF *</Label>
+            <Input id="nf" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="Ex: NF-123456" className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="data">Data de Emissão *</Label>
+            <Input id="data" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="afm">Número da AFM *</Label>
+            <Input id="afm" value={afmNumber} onChange={(e) => setAfmNumber(e.target.value)} placeholder="Ex: AFM-2026-001" className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="cnpj">CNPJ do Fornecedor</Label>
+            <Input id="cnpj" value={supplierCnpj} onChange={(e) => setSupplierCnpj(formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" maxLength={18} className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="forn">Nome do Fornecedor *</Label>
+            <Input id="forn" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Empresa fornecedora" className="mt-1" />
+          </div>
+        </div>
+      </div>
+
+      {/* Itens da nota */}
+      <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 border-b pb-2">
+          <Package className="w-4 h-4" /> Itens da Nota
+        </div>
+
+        {/* Busca */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar item por nome ou código para adicionar..."
+            className="pl-9"
+          />
+          {search.trim() && (
+            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              {searching ? (
+                <div className="px-4 py-3 text-sm text-gray-400 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Buscando...
+                </div>
+              ) : results.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-400">Nenhum item encontrado.</div>
+              ) : results.map((i) => {
+                const already = lines.some((l) => l.item_id === i.id)
+                return (
+                  <button
+                    key={i.id}
+                    onClick={() => addLine(i)}
+                    disabled={already}
+                    className="w-full text-left px-4 py-2.5 border-b last:border-0 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-between"
+                  >
+                    <span className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5" /> {i.name}
+                      {already && <span className="text-xs text-gray-400 ml-1">(já na nota)</span>}
+                    </span>
+                    <span className="text-xs text-gray-400">{i.code || 'sem código'} · {i.unit}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Linhas */}
+        {lines.length === 0 ? (
+          <p className="text-sm text-center py-6 text-gray-400">Nenhum item adicionado. Use a busca acima.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400 uppercase border-b">
+                  <th className="text-left py-2 pr-2">Item</th>
+                  <th className="text-right py-2 px-2 w-24">Qtd</th>
+                  <th className="text-left py-2 px-2 w-32">Lote</th>
+                  <th className="text-left py-2 px-2 w-36">Validade</th>
+                  <th className="text-right py-2 px-2 w-32">Vlr. Unit.</th>
+                  <th className="text-right py-2 px-2 w-28">Total</th>
+                  <th className="w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((l, idx) => (
+                  <tr key={l.item_id} className="border-b last:border-0">
+                    <td className="py-2 pr-2">
+                      <p className="font-medium text-gray-900">{l.name}</p>
+                      <p className="text-xs text-gray-400">{l.code || 'sem código'} · {l.unit}</p>
+                    </td>
+                    <td className="py-2 px-2">
+                      <Input
+                        type="number" min={1} value={l.quantity}
+                        onChange={(e) => updateLine(idx, { quantity: parseInt(e.target.value) || 0 })}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        className="w-20 text-right"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <Input value={l.batch_number} onChange={(e) => updateLine(idx, { batch_number: e.target.value })} placeholder="Lote" className="w-28" />
+                    </td>
+                    <td className="py-2 px-2">
+                      <Input type="date" value={l.expiry_date} onChange={(e) => updateLine(idx, { expiry_date: e.target.value })} className="w-36" />
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="w-28 ml-auto">
+                        <CurrencyInput value={l.unit_price} onChange={(v) => updateLine(idx, { unit_price: v as number })} />
+                      </div>
+                    </td>
+                    <td className="py-2 px-2 text-right font-medium text-gray-700">
+                      R$ {((l.quantity || 0) * (l.unit_price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button onClick={() => removeLine(idx)} className="text-red-500 hover:text-red-600 p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 font-semibold text-gray-800">
+                  <td className="py-2 pr-2 text-right">Totais</td>
+                  <td className="py-2 px-2 text-right">{totalQty}</td>
+                  <td colSpan={3}></td>
+                  <td className="py-2 px-2 text-right">
+                    R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-500 flex items-center gap-1">
+          <Building2 className="w-4 h-4" /> Destino: {type === 'pharmacy' ? 'CAF' : 'Almoxarifado'}
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate(backTo)}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit || submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+            Registrar Nota Fiscal
+          </Button>
+        </div>
+      </div>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg bg-green-600 text-white text-sm font-medium">
+          <CheckCircle2 className="w-5 h-5" /> {toast}
+        </div>
+      )}
+    </div>
+  )
+}

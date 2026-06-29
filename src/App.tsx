@@ -14,6 +14,7 @@ import { MyRequests } from '@/pages/my-requests'
 import { PharmacyItems } from '@/pages/inventory/pharmacy-items'
 import { StockLocationItems } from '@/pages/inventory/stock-location-items'
 import { WarehouseItems } from '@/pages/inventory/warehouse-items'
+import { NfEntry } from '@/pages/inventory/nf-entry'
 import { ItemDetails } from '@/pages/inventory/item-details'
 import { RequestDetails } from '@/pages/requests/request-details'
 import { RequestInbox } from '@/pages/requests/inbox'
@@ -141,6 +142,20 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <WarehouseItems />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/inventory/pharmacy/nf-entry" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NfEntry type="pharmacy" />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/inventory/warehouse/nf-entry" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <NfEntry type="warehouse" />
                   </MainLayout>
                 </ProtectedRoute>
               } />
@@ -602,6 +617,7 @@ export default function App() {
               <Route path="/farmacia" element={<ModuleLayout module="farmacia" />}>
                 <Route path="dashboard" element={<Dashboard module="farmacia" />} />
                 <Route path="inventory" element={<PharmacyItems />} />
+                <Route path="inventory/nf-entry" element={<NfEntry type="pharmacy" />} />
                 <Route path="inventory/:id" element={<ItemDetails />} />
                 <Route path="inventory/:id/edit" element={<ItemDetails />} />
                 <Route path="inventory/:id/delete" element={<ItemDetails />} />
@@ -645,6 +661,7 @@ export default function App() {
               <Route path="/almox" element={<ModuleLayout module="almoxarifado" />}>
                 <Route path="dashboard" element={<Dashboard module="almoxarifado" />} />
                 <Route path="inventory" element={<WarehouseItems />} />
+                <Route path="inventory/nf-entry" element={<NfEntry type="warehouse" />} />
                 <Route path="inventory/:id" element={<ItemDetails />} />
                 <Route path="inventory/:id/edit" element={<ItemDetails />} />
                 <Route path="inventory/:id/delete" element={<ItemDetails />} />
