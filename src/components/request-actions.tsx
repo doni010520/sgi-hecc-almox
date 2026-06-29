@@ -91,11 +91,13 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   }, [request])
 
   const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
-  const isRequester = user?.id === request?.requester_id
   const canManage = isManager && request?.status === 'pending'
   const canProcess = isManager && request?.status === 'approved'
   const canDeliver = isManager && request?.status === 'processing'
-  const canConfirmReceipt = isRequester && request?.status === 'delivered'
+  // Recebimento pode ser confirmado por QUALQUER usuário logado — quem marca a
+  // saída para entrega e quem confere os itens costumam ser pessoas diferentes.
+  // Quem confirma fica registrado em received_by. Atender (acima) segue restrito.
+  const canConfirmReceipt = !!user && request?.status === 'delivered'
   const canComplete = isManager && request?.status === 'processing'
   const canCancel = (user?.id === request?.requester_id || isManager) &&
     ['pending', 'approved'].includes(request.status)
