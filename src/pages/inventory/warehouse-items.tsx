@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
-  Loader2, ArrowUpDown, Package2, FileSpreadsheet,
+  Loader2, ArrowUpDown, Package2, FileSpreadsheet, FileText,
   Eye, Plus, Edit, Trash2, PackagePlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -186,6 +186,13 @@ export function WarehouseItems() {
             >
               <Download className="w-4 h-4 mr-2" />
               Exportar
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => navigate('/inventory/warehouse/nf-entry')}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Entrada por NF
             </Button>
             <Button
               className="bg-primary-500 hover:bg-primary-600 text-white"

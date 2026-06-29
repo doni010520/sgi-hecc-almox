@@ -15,7 +15,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, signOut } = useAuth()
   const { colors } = useTheme()
-  const { activeModule, setActiveModule, isModuleUser } = useModule()
+  const { activeModule, setActiveModule, isModuleUser, activeStock } = useModule()
   const navigate = useNavigate()
 
   const isAdmin = user?.role === 'administrador'
@@ -43,7 +43,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const flags: VisibilityFlags = { isAdmin, isManager, isAtendente, isEnfermagem, canManageRequests }
 
-  const allSections = buildSidebarSections()
+  const allSections = buildSidebarSections({ pharmacyStock: activeModule === 'farmacia' ? activeStock : null })
 
   const filteredSections = filterSectionsByModule(allSections, activeModule)
 

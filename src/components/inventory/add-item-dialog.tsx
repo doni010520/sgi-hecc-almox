@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, FileText, Pill, AlertTriangle, Barcode } from 'lucide-react'
+import { Loader2, Pill, AlertTriangle, Barcode } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,7 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
 import type { ItemCategory, UnitType } from '@/lib/services/items'
-import { suppliersService } from '@/lib/services/farmacia-cadastros'
-import type { Supplier, MedicationClass, Presentation } from '@/lib/types/farmacia'
+import type { MedicationClass, Presentation } from '@/lib/types/farmacia'
 import {
   MEDICATION_CLASS_LABEL,
   CONTROLLED_SUBCLASSES,
@@ -33,22 +32,9 @@ const itemSchema = z.object({
   category: z.string(),
   unit: z.string(),
   min_stock: z.number().min(0, 'Estoque minimo deve ser maior ou igual a 0'),
-  batch_number: z.string().optional(),
-  expiry_date: z.string().optional(),
   last_purchase_price: z.number().min(0).optional(),
   reference_price: z.number().min(0).optional(),
-  // Estoque inicial + NF (opcionais — só preenche se já tem estoque)
-  initial_stock: z.number().min(0).optional(),
-  acquisition_type: z.enum(['Compra', 'Empréstimo', 'Doação', 'Permuta', 'Inventário']).optional(),
-  invoice_number: z.string().optional(),
-  invoice_date: z.string().optional(),
-  invoice_total_value: z.number().min(0).optional(),
-  unit_price: z.number().min(0).optional(),
-  afm_number: z.string().optional(),
-  supplier_cnpj: z.string().optional(),
-  supplier_name: z.string().optional(),
   // Farmacia (so usados quando type='pharmacy')
-  supplier_id: z.string().optional(),
   medication_class: z.enum(['uso_geral', 'antimicrobianos', 'controlados', 'mav', 'sgv', 'curativo', 'anticoagulante']).optional(),
   controlled_subclass: z.enum(['A1', 'A2', 'A3', 'B1', 'B2', 'C1', 'C2', 'C3', 'C4']).optional(),
   presentation: z.enum([
@@ -91,7 +77,6 @@ const unitOptions = [
 export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [scanningBarcode, setScanningBarcode] = useState(false)
   const barcodeInputRef = useRef<HTMLInputElement>(null)
 
@@ -109,21 +94,13 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
   const medClass = watch('medication_class')
   const isMav = watch('is_mav')
 
-  // Carrega fornecedores quando o dialog abre (so para pharmacy)
-  useEffect(() => {
-    if (open && type === 'pharmacy') {
-      suppliersService.list().then(setSuppliers).catch((e) => {
-        console.error('Erro ao carregar fornecedores:', e)
-      })
-    }
-  }, [open, type])
-
   const onSubmit = async (data: ItemFormData) => {
     try {
       setLoading(true)
       setError(null)
 
-      const hasInitial = (data.initial_stock ?? 0) > 0
+      // Cadastro puro do item — SEM estoque. A entrada de estoque é uma ação
+      // separada (botão "Entrada por NF" na tela do estoque).
       await itemsService.create({
         code: data.code,
         barcode: data.barcode || undefined,
@@ -132,23 +109,11 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         category: data.category as ItemCategory,
         unit: data.unit as UnitType,
         min_stock: data.min_stock,
-        current_stock: hasInitial ? data.initial_stock : 0,
+        current_stock: 0,
         price: 0,
-        batch_number: data.batch_number,
-        expiry_date: data.expiry_date,
         last_purchase_price: data.last_purchase_price,
         reference_price: data.reference_price,
-        // Dados de origem (NF) — preenchidos só se houver estoque inicial
-        acquisition_type: hasInitial ? data.acquisition_type : undefined,
-        invoice_number: hasInitial ? data.invoice_number : undefined,
-        invoice_date: hasInitial ? data.invoice_date : undefined,
-        unit_price: hasInitial ? data.unit_price : undefined,
-        afm_number: hasInitial ? data.afm_number : undefined,
-        supplier_cnpj: hasInitial ? data.supplier_cnpj : undefined,
-        supplier_name: hasInitial ? data.supplier_name : undefined,
-        invoice_total_value: hasInitial ? data.invoice_total_value : undefined,
         // Farmacia
-        supplier_id: type === 'pharmacy' ? (data.supplier_id || undefined) : undefined,
         medication_class: type === 'pharmacy' ? data.medication_class : undefined,
         controlled_subclass: type === 'pharmacy' && data.medication_class === 'controlados'
           ? data.controlled_subclass : null,
@@ -197,7 +162,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         <DialogHeader>
           <DialogTitle>Novo Item</DialogTitle>
           <p className="text-sm text-gray-500 mt-1">
-            Cadastre as informações do item. Se já houver estoque inicial, preencha os dados da NF abaixo.
+            Cadastro do item (identificação e classificação). A entrada de estoque é uma ação separada.
           </p>
         </DialogHeader>
 
@@ -339,28 +304,6 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="batch_number">Numero do Lote</Label>
-              <Input
-                id="batch_number"
-                {...register('batch_number')}
-                className="mt-1"
-                placeholder="Ex: LOTE-2024-001"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="expiry_date">Data de Validade</Label>
-              <Input
-                id="expiry_date"
-                type="date"
-                {...register('expiry_date')}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
               <Label htmlFor="last_purchase_price">Valor da Última Compra</Label>
               <div className="mt-1">
                 <CurrencyInput
@@ -476,168 +419,9 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
           )}
 
-          {/* Seção: Estoque Inicial + Origem (NF/fornecedor) — sempre visível */}
-          <div className="border border-emerald-200 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border-b border-emerald-200">
-              <FileText className="w-4 h-4 text-emerald-700" />
-              <span className="text-sm font-medium text-emerald-900">
-                Origem do material (Nota Fiscal e Fornecedor)
-              </span>
-            </div>
-
-            <div className="p-4 space-y-4 bg-white">
-              <p className="text-xs text-gray-500">
-                Preencha se o item está sendo cadastrado <strong>com estoque inicial</strong>. Deixe em branco se for só cadastro do item (sem estoque).
-              </p>
-
-              {/* Tipo de aquisição — sempre visível */}
-              <div>
-                <Label htmlFor="acquisition_type">Como o material chegou? *</Label>
-                <select
-                  id="acquisition_type"
-                  {...register('acquisition_type')}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
-                  defaultValue=""
-                >
-                  <option value="">— Selecione o tipo —</option>
-                  <option value="Compra">Compra</option>
-                  <option value="Doação">Doação</option>
-                  <option value="Empréstimo">Empréstimo</option>
-                  <option value="Permuta">Permuta</option>
-                  <option value="Inventário">Inventário</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Define a origem do estoque inicial (aparece nos relatórios).
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="initial_stock">Quantidade Inicial</Label>
-                  <Input
-                    id="initial_stock"
-                    type="number"
-                    min="0"
-                    {...register('initial_stock', { valueAsNumber: true })}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    className="mt-1"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="unit_price">Valor Unitário</Label>
-                  <div className="mt-1">
-                    <CurrencyInput
-                      id="unit_price"
-                      value={watch('unit_price')}
-                      onChange={(v) => setValue('unit_price', v)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="invoice_total_value">Valor Total da NF</Label>
-                  <div className="mt-1">
-                    <CurrencyInput
-                      id="invoice_total_value"
-                      value={watch('invoice_total_value')}
-                      onChange={(v) => setValue('invoice_total_value', v)}
-                    />
-                  </div>
-                </div>
-                <div></div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="invoice_number">Número da NF</Label>
-                  <Input
-                    id="invoice_number"
-                    {...register('invoice_number')}
-                    className="mt-1"
-                    placeholder="Ex: NF-123456"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="afm_number">Número da AFM</Label>
-                  <Input
-                    id="afm_number"
-                    {...register('afm_number')}
-                    className="mt-1"
-                    placeholder="Ex: AFM-2026-001"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="invoice_date">Data da NF</Label>
-                <Input
-                  id="invoice_date"
-                  type="date"
-                  {...register('invoice_date')}
-                  className="mt-1"
-                />
-              </div>
-
-              {type === 'pharmacy' ? (
-                <div>
-                  <Label htmlFor="supplier_id">Fornecedor</Label>
-                  <select
-                    id="supplier_id"
-                    {...register('supplier_id')}
-                    onChange={(e) => {
-                      setValue('supplier_id', e.target.value, { shouldDirty: true })
-                      // Auto-preenche name/cnpj a partir do supplier selecionado
-                      const sup = suppliers.find((s) => s.id === e.target.value)
-                      if (sup) {
-                        setValue('supplier_name', sup.name)
-                        setValue('supplier_cnpj', sup.cnpj)
-                      }
-                    }}
-                    className="w-full mt-1 h-9 rounded-md border border-input px-3 py-1 bg-white"
-                  >
-                    <option value="">Selecione um fornecedor...</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Não está na lista? Cadastre em <strong>/farmacia/fornecedores</strong>.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="supplier_cnpj">CNPJ do Fornecedor</Label>
-                    <Input
-                      id="supplier_cnpj"
-                      {...register('supplier_cnpj')}
-                      className="mt-1"
-                      placeholder="00.000.000/0000-00"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="supplier_name">Nome do Fornecedor</Label>
-                    <Input
-                      id="supplier_name"
-                      {...register('supplier_name')}
-                      className="mt-1"
-                      placeholder="Nome da empresa"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-700">
-            Dica: depois de cadastrado, você pode registrar mais entradas pelo botão <strong>"Registrar Entrada"</strong> na lista do item.
+            Este é o <strong>cadastro do item</strong> (sem estoque). Para dar entrada de
+            quantidade, use o botão <strong>"Entrada por NF"</strong> na tela do estoque.
           </div>
 
           {error && (

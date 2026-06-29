@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth'
 import { useTheme } from '@/contexts/theme'
+import { useModule } from '@/contexts/module'
+import { PHARMACY_STOCKS } from '@/lib/constants/stock-locations'
 import {
   User,
   LogOut,
@@ -10,7 +12,12 @@ import {
   Menu,
   X,
   Sun,
-  Moon
+  Moon,
+  Pill,
+  Package2,
+  Building2,
+  ChevronDown,
+  Check,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -30,7 +37,18 @@ export function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const { mode, toggle, colors } = useTheme()
+  const { activeModule, activeStock, setActiveStock } = useModule()
   const [searchQuery, setSearchQuery] = useState('')
+
+  const isFarmacia = activeModule === 'farmacia'
+  const indicatorColor = isFarmacia ? '#2da362' : '#00CCBB'
+  const indicatorBg = mode === 'dark' ? `${indicatorColor}26` : `${indicatorColor}1a`
+  const pillStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '7px 12px', borderRadius: 10, cursor: isFarmacia ? 'pointer' : 'default',
+    background: indicatorBg, border: `1px solid ${indicatorColor}55`,
+    color: indicatorColor, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +88,38 @@ export function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
         >
           {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
+
+        {/* Indicador do estoque/módulo atual (claro no topo) */}
+        {isFarmacia ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button style={pillStyle} title="Trocar estoque de farmácia">
+                <Pill size={15} />
+                <span>Farmácia · {activeStock?.label ?? 'Selecione o estoque'}</span>
+                <ChevronDown size={14} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Estoque de farmácia</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {PHARMACY_STOCKS.map((s) => (
+                <DropdownMenuItem
+                  key={s.id}
+                  onClick={() => { setActiveStock(s); navigate(`/inventory/stock/${s.id}`) }}
+                >
+                  <Building2 className="mr-2 h-4 w-4" />
+                  <span>{s.label}</span>
+                  {activeStock?.id === s.id && <Check className="ml-auto h-4 w-4" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : activeModule === 'almoxarifado' ? (
+          <div style={pillStyle}>
+            <Package2 size={15} />
+            <span>Almoxarifado</span>
+          </div>
+        ) : null}
 
         <form onSubmit={handleSearch} className="hidden md:flex relative">
           <Search

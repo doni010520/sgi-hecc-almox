@@ -32,6 +32,7 @@ import {
   PackageCheck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { PharmacyStock } from './stock-locations'
 
 export type SidebarModule = 'farmacia' | 'almoxarifado' | 'shared' | 'admin'
 
@@ -57,7 +58,12 @@ export interface VisibilityFlags {
   canManageRequests: boolean
 }
 
-export function buildSidebarSections(): SidebarSection[] {
+export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | null }): SidebarSection[] {
+  // Estoque de farmácia é escolhido no topo; a sidebar mostra só o estoque atual.
+  const stock = ctx?.pharmacyStock ?? null
+  const estoqueAtualItems: SidebarItem[] = stock
+    ? [{ name: stock.label, icon: Building2, href: `/inventory/stock/${stock.id}`, show: (f) => f.isManager || f.isAdmin || f.isAtendente }]
+    : []
   return [
     {
       title: 'Principal',
@@ -162,21 +168,14 @@ export function buildSidebarSections(): SidebarSection[] {
       ],
     },
     {
-      title: 'Estoques',
+      title: 'Estoque',
       module: 'farmacia',
-      items: [
-        { name: 'Entrada por NF', icon: FileText, href: '/inventory/pharmacy/nf-entry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'CAF', icon: Building2, href: '/inventory/stock/42c3b239-c354-4b5b-a2eb-d42b7a9edc10', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Satélite 1', icon: Pill, href: '/inventory/stock/fa96acab-9065-44ee-aeae-b87c5af8110a', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Satélite 2', icon: Pill, href: '/inventory/stock/cf2d0681-0cdd-48b4-9431-73c09e853048', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Satélite T', icon: Pill, href: '/inventory/stock/6f3fdf99-829a-46bb-b354-19a44fa36324', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-      ],
+      items: estoqueAtualItems,
     },
     {
       title: 'Estoque',
       module: 'almoxarifado',
       items: [
-        { name: 'Entrada por NF', icon: FileText, href: '/inventory/warehouse/nf-entry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
