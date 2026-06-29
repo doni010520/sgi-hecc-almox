@@ -897,26 +897,20 @@ class RequestService {
 
       requestCache.clear()
 
-      const { data: updatedRequest, error } = await supabase
-        .from('requests')
-        .update({
-          status: 'completed',
-          received_at: new Date().toISOString(),
-          received_by: user.id,
-          receipt_notes: receiptNotes ? sanitizeInput(receiptNotes) : null,
-          completed_at: new Date().toISOString(),
-          completed_by: user.id
-        })
-        .eq('id', id)
-        .select('id, status')
-        .maybeSingle()
+      // Confirma o recebimento via RPC atômica: para solicitações de FARMÁCIA gera
+      // os movimentos de estoque pelo ledger (saída no CAF + entrada no estoque do
+      // satélite solicitante, quando for o caso); para ALMOXARIFADO apenas conclui
+      // (a baixa já ocorreu na entrega). Registra received_by/completed_by.
+      const { error } = await supabase.rpc('confirmar_recebimento_solicitacao', {
+        p_request_id: id,
+        p_notes: receiptNotes ? sanitizeInput(receiptNotes) : null,
+      })
 
       if (error) throw new Error('Erro ao confirmar: ' + error.message)
-      if (!updatedRequest) throw new Error('Solicitação não encontrada ou sem permissão')
 
       const message = receiptNotes
         ? `Recebimento confirmado. Observações: ${sanitizeInput(receiptNotes)}`
-        : 'Recebimento confirmado pelo solicitante.'
+        : 'Recebimento confirmado.'
 
       try {
         await this.addComment(id, message)
@@ -924,7 +918,7 @@ class RequestService {
         console.warn('Comment failed but receipt confirmed:', commentErr)
       }
 
-      return this.getById(updatedRequest.id)
+      return this.getById(id)
     } catch (error) {
       console.error('Error confirming receipt:', error)
       throw error
