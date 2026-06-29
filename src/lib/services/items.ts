@@ -101,10 +101,14 @@ interface CreateItemData {
   category: ItemCategory
   unit: UnitType
   min_stock?: number
+  max_stock?: number
   current_stock?: number
   price?: number
   last_purchase_price?: number
   reference_price?: number
+  // Setores autorizados a solicitar o item; vazio = todos. Padronizado (farmácia).
+  allowed_department_ids?: string[]
+  padronizado?: boolean
   expiry_date?: string
   batch_number?: string
   invoice_number?: string
@@ -983,7 +987,10 @@ class ItemsService {
         category: data.category,
         unit: data.unit,
         min_stock: data.min_stock ?? 0,
-        current_stock: data.current_stock ?? 0
+        max_stock: data.max_stock ?? 0,
+        current_stock: data.current_stock ?? 0,
+        allowed_department_ids: data.allowed_department_ids ?? [],
+        padronizado: data.padronizado ?? false,
       }
 
       // Add optional fields only if they exist

@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Pill, AlertTriangle, Barcode } from 'lucide-react'
+import { Loader2, Pill, Barcode } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,8 @@ import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { itemsService } from '@/lib/services/items'
 import type { ItemCategory, UnitType } from '@/lib/services/items'
+import { departmentsService } from '@/lib/services/departments'
+import type { Department } from '@/lib/types/departments'
 import type { MedicationClass, Presentation } from '@/lib/types/farmacia'
 import {
   MEDICATION_CLASS_LABEL,
@@ -31,7 +33,8 @@ const itemSchema = z.object({
   description: z.string().optional(),
   category: z.string(),
   unit: z.string(),
-  min_stock: z.number().min(0, 'Estoque minimo deve ser maior ou igual a 0'),
+  min_stock: z.number().min(0).optional(),
+  max_stock: z.number().min(0).optional(),
   last_purchase_price: z.number().min(0).optional(),
   reference_price: z.number().min(0).optional(),
   // Farmacia (so usados quando type='pharmacy')
@@ -41,7 +44,7 @@ const itemSchema = z.object({
     'comprimidos', 'injetaveis', 'solucoes_orais', 'topicos', 'aerosol',
     'xarope', 'supositorio', 'gotas', 'outros',
   ]).optional(),
-  is_mav: z.boolean().optional(),
+  padronizado: z.boolean().optional(),
 })
 
 type ItemFormData = z.infer<typeof itemSchema>
@@ -79,6 +82,8 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
   const [error, setError] = useState<string | null>(null)
   const [scanningBarcode, setScanningBarcode] = useState(false)
   const barcodeInputRef = useRef<HTMLInputElement>(null)
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [allowedDepts, setAllowedDepts] = useState<string[]>([])
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -87,12 +92,21 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
       unit: 'Un',
       min_stock: 0,
       medication_class: type === 'pharmacy' ? 'uso_geral' : undefined,
-      is_mav: false,
+      padronizado: false,
     }
   })
 
   const medClass = watch('medication_class')
-  const isMav = watch('is_mav')
+
+  // Carrega os setores (para "quem pode solicitar")
+  useEffect(() => {
+    if (!open) return
+    departmentsService.getAll().then(setDepartments).catch((e) => console.error(e))
+  }, [open])
+
+  function toggleDept(id: string) {
+    setAllowedDepts((prev) => prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id])
+  }
 
   const onSubmit = async (data: ItemFormData) => {
     try {
@@ -108,20 +122,23 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         description: data.description,
         category: data.category as ItemCategory,
         unit: data.unit as UnitType,
-        min_stock: data.min_stock,
+        min_stock: data.min_stock ?? 0,
+        max_stock: data.max_stock ?? 0,
         current_stock: 0,
         price: 0,
         last_purchase_price: data.last_purchase_price,
         reference_price: data.reference_price,
+        allowed_department_ids: allowedDepts,
         // Farmacia
         medication_class: type === 'pharmacy' ? data.medication_class : undefined,
         controlled_subclass: type === 'pharmacy' && data.medication_class === 'controlados'
           ? data.controlled_subclass : null,
         presentation: type === 'pharmacy' ? data.presentation : undefined,
-        is_mav: type === 'pharmacy' ? !!data.is_mav : undefined,
+        padronizado: type === 'pharmacy' ? !!data.padronizado : undefined,
       }, type)
 
       reset()
+      setAllowedDepts([])
       onSuccess()
       onOpenChange(false)
     } catch (error: any) {
@@ -287,7 +304,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
             </div>
 
             <div>
-              <Label htmlFor="min_stock">Estoque Minimo *</Label>
+              <Label htmlFor="min_stock">Estoque Mínimo</Label>
               <Input
                 id="min_stock"
                 type="number"
@@ -296,9 +313,18 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                 className="mt-1"
                 placeholder="0"
               />
-              {errors.min_stock && (
-                <p className="text-sm text-red-500 mt-1">{errors.min_stock.message}</p>
-              )}
+            </div>
+
+            <div>
+              <Label htmlFor="max_stock">Estoque Máximo</Label>
+              <Input
+                id="max_stock"
+                type="number"
+                min="0"
+                {...register('max_stock', { valueAsNumber: true })}
+                className="mt-1"
+                placeholder="0"
+              />
             </div>
           </div>
 
@@ -391,33 +417,40 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
                   </select>
                 </div>
 
-                {/* MAV em linha propria — antes ficava espremido lado a lado
-                    com Apresentacao e o texto vazava do card. */}
                 <label className="flex items-start gap-3 p-3 rounded-lg cursor-pointer select-none border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <input
                     type="checkbox"
-                    {...register('is_mav')}
+                    {...register('padronizado')}
                     className="w-4 h-4 mt-0.5 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium flex items-center gap-1 text-gray-900">
-                      <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
-                      É Medicamento de Alta Vigilância (MAV)
-                    </div>
+                    <div className="text-sm font-medium text-gray-900">Medicamento padronizado</div>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      MAVs exigem dupla checagem na dispensação (digitar "CONFIRMO")
+                      Marque se este item faz parte da padronização da farmácia.
                     </p>
                   </div>
                 </label>
-                {isMav && (
-                  <div className="p-2 rounded bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                    ⚠️ Esse medicamento será marcado como MAV. Na dispensação, o farmacêutico
-                    será obrigado a digitar "CONFIRMO" antes de salvar.
-                  </div>
-                )}
               </div>
             </div>
           )}
+
+          {/* Setores que podem solicitar este item (vazio = todos) */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <span className="text-sm font-medium text-gray-800">Setores que podem solicitar</span>
+              <p className="text-xs text-gray-500 mt-0.5">Marque os setores autorizados. Nenhum marcado = todos podem solicitar.</p>
+            </div>
+            <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto bg-white">
+              {departments.length === 0 ? (
+                <p className="text-xs text-gray-400 col-span-full">Carregando setores...</p>
+              ) : departments.map((d) => (
+                <label key={d.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="checkbox" checked={allowedDepts.includes(d.id)} onChange={() => toggleDept(d.id)} className="w-4 h-4" />
+                  <span className="truncate">{d.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-xs text-blue-700">
             Este é o <strong>cadastro do item</strong> (sem estoque). Para dar entrada de
