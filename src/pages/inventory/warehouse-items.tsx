@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Package2, FileSpreadsheet, FileText,
-  Eye, Plus, Edit, Trash2, PackagePlus
+  Eye, Plus, Edit, Trash2, PackagePlus, PackageMinus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -192,7 +192,14 @@ export function WarehouseItems() {
               onClick={() => navigate('/inventory/warehouse/nf-entry')}
             >
               <FileText className="w-4 h-4 mr-2" />
-              Entrada por NF
+              Nova Entrada
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => navigate('/inventory/warehouse/saida-lote')}
+            >
+              <PackageMinus className="w-4 h-4 mr-2" />
+              Registrar Saída
             </Button>
             <Button
               className="bg-primary-500 hover:bg-primary-600 text-white"
