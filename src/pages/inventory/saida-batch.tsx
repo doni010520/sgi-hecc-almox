@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
 import { getErrorMessage } from '@/lib/utils/error-messages'
+import { suppliersService } from '@/lib/services/farmacia-cadastros'
+import { departmentsService } from '@/lib/services/departments'
+import { externalUnitsService } from '@/lib/services/external-units'
 
 interface SaidaBatchProps {
   type: 'pharmacy' | 'warehouse'
@@ -37,12 +40,22 @@ interface LineItem {
 const REASONS = [
   { value: 'quebra', label: 'Quebra / Avaria' },
   { value: 'vencimento', label: 'Vencimento' },
+  { value: 'transferencia', label: 'Transferência (para um destino)' },
+  { value: 'doacao', label: 'Doação' },
+  { value: 'permuta', label: 'Permuta' },
+  { value: 'consignado', label: 'Consignado' },
+  { value: 'troca_validade', label: 'Troca de validade' },
   { value: 'emprestimo', label: 'Empréstimo' },
   { value: 'devolucao_fornecedor', label: 'Devolução ao fornecedor' },
   { value: 'defeito_fabricacao', label: 'Defeito de fabricação' },
   { value: 'embalagem_violada', label: 'Embalagem violada' },
   { value: 'outro', label: 'Outro' },
 ] as const
+
+// Motivos que exigem informar um destino (quem recebe).
+const REQUIRES_DESTINO = new Set(['transferencia', 'doacao', 'permuta', 'consignado', 'troca_validade', 'emprestimo', 'devolucao_fornecedor'])
+
+interface DestinoOption { tipo: 'fornecedor' | 'unidade_externa' | 'setor_interno'; nome: string }
 
 function fmt(d: string | null) {
   if (!d) return '—'
@@ -56,8 +69,32 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
 
   const [reason, setReason] = useState<string>('quebra')
   const [reasonDetail, setReasonDetail] = useState('')
+  const [destino, setDestino] = useState('') // "tipo|nome"
+  const [destinos, setDestinos] = useState<{ fornecedores: DestinoOption[]; externas: DestinoOption[]; setores: DestinoOption[] }>({
+    fornecedores: [], externas: [], setores: [],
+  })
   const [lines, setLines] = useState<LineItem[]>([])
   const [lotsByItem, setLotsByItem] = useState<Record<string, LotRow[]>>({})
+
+  // Carrega as opções de destino (fornecedores, unidades externas, setores)
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const [sup, ext, deps] = await Promise.all([
+          suppliersService.list().catch(() => []),
+          externalUnitsService.list().catch(() => []),
+          departmentsService.getAll().catch(() => []),
+        ])
+        setDestinos({
+          fornecedores: sup.map((s) => ({ tipo: 'fornecedor' as const, nome: s.name })),
+          externas: ext.map((e) => ({ tipo: 'unidade_externa' as const, nome: e.name })),
+          setores: deps.map((d) => ({ tipo: 'setor_interno' as const, nome: d.name })),
+        })
+      } catch (e) { console.error(e) }
+    })()
+  }, [])
+
+  const needsDestino = REQUIRES_DESTINO.has(reason)
 
   const [search, setSearch] = useState('')
   const [results, setResults] = useState<ItemRow[]>([])
@@ -119,11 +156,17 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
   }
 
   const totalQty = lines.reduce((s, l) => s + (l.quantity || 0), 0)
-  const canSubmit = reason && lines.length > 0 && lines.every((l) => l.quantity > 0)
+  const canSubmit = reason && lines.length > 0 && lines.every((l) => l.quantity > 0) && (!needsDestino || !!destino)
 
   async function handleSubmit() {
     setError(null)
-    if (!canSubmit) { setError('Selecione o motivo e ao menos uma linha com quantidade válida.'); return }
+    if (!canSubmit) {
+      setError(needsDestino && !destino
+        ? 'Para este motivo, informe o destino.'
+        : 'Selecione o motivo e ao menos uma linha com quantidade válida.')
+      return
+    }
+    const [destinoTipo, destinoNome] = destino ? destino.split('|') : [null, null]
     setSubmitting(true)
     try {
       const { data, error: rpcError } = await supabase.rpc('registrar_saida_lote', {
@@ -131,6 +174,8 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
         p_reason: reason,
         p_reason_detail: reasonDetail.trim() || null,
         p_notes: null,
+        p_destino_tipo: destinoTipo,
+        p_destino_nome: destinoNome,
         p_items: lines.map((l) => ({
           item_id: l.item_id,
           quantity: l.quantity,
@@ -181,6 +226,34 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
             <Label htmlFor="detail">Detalhe / Observação {reason === 'outro' ? '*' : '(opcional)'}</Label>
             <Input id="detail" value={reasonDetail} onChange={(e) => setReasonDetail(e.target.value)} placeholder="Descreva o motivo" className="mt-1" />
           </div>
+          {needsDestino && (
+            <div className="md:col-span-2">
+              <Label htmlFor="destino">Destino *</Label>
+              <select id="destino" value={destino} onChange={(e) => setDestino(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm">
+                <option value="">— Selecione o destino —</option>
+                {destinos.fornecedores.length > 0 && (
+                  <optgroup label="Fornecedores">
+                    {destinos.fornecedores.map((d) => <option key={'f'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                  </optgroup>
+                )}
+                {destinos.externas.length > 0 && (
+                  <optgroup label="Unidades externas (parceiros)">
+                    {destinos.externas.map((d) => <option key={'e'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                  </optgroup>
+                )}
+                {destinos.setores.length > 0 && (
+                  <optgroup label="Setores (internos)">
+                    {destinos.setores.map((d) => <option key={'s'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                  </optgroup>
+                )}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Não está na lista de parceiros?{' '}
+                <a href="/farmacia/unidades-externas" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Cadastrar unidade externa</a>
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

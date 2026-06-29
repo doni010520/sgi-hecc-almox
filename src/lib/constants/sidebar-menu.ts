@@ -102,6 +102,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       module: 'farmacia',
       items: [
         { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: (f) => f.canManageRequests },
+        { name: 'Unidades Externas', icon: Building2, href: '/farmacia/unidades-externas', show: (f) => f.canManageRequests },
         { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: (f) => f.canManageRequests },
         { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: (f) => f.canManageRequests },
       ],

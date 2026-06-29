@@ -52,6 +52,7 @@ import { HistoricoDispensacoes } from '@/pages/dispensacao/historico'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { Fornecedores } from '@/pages/farmacia/fornecedores'
+import { UnidadesExternas } from '@/pages/farmacia/unidades-externas'
 import { Prescritores } from '@/pages/farmacia/prescritores'
 import { Pacientes } from '@/pages/farmacia/pacientes'
 import { IntervencaoFarmaceutica } from '@/pages/farmacia/intervencao-farmaceutica'
@@ -446,6 +447,13 @@ export default function App() {
                   </MainLayout>
                 </ProtectedRoute>
               } />
+              <Route path="/farmacia/unidades-externas" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <UnidadesExternas />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
               <Route path="/farmacia/prescritores" element={
                 <ProtectedRoute>
                   <MainLayout>
@@ -645,6 +653,7 @@ export default function App() {
                 <Route path="dispensacao/historico" element={<HistoricoDispensacoes />} />
                 <Route path="dispensacao/:id" element={<DispensationDetails />} />
                 <Route path="cadastros/fornecedores" element={<Fornecedores />} />
+                <Route path="cadastros/unidades-externas" element={<UnidadesExternas />} />
                 <Route path="cadastros/prescritores" element={<Prescritores />} />
                 <Route path="cadastros/pacientes" element={<Pacientes />} />
                 <Route path="intervencao-farmaceutica" element={<IntervencaoFarmaceutica />} />
