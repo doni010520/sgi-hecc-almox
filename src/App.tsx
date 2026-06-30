@@ -52,6 +52,7 @@ import { HistoricoDispensacoes } from '@/pages/dispensacao/historico'
 import { WarehouseDispatchList } from '@/pages/saida-direta/index'
 import { NewWarehouseDispatch } from '@/pages/saida-direta/new'
 import { PharmacyCatalogo } from '@/pages/farmacia/catalogo'
+import { HistoricoGlobal } from '@/pages/historico-global'
 import { Fornecedores } from '@/pages/farmacia/fornecedores'
 import { UnidadesExternas } from '@/pages/farmacia/unidades-externas'
 import { Prescritores } from '@/pages/farmacia/prescritores'
@@ -630,6 +631,15 @@ export default function App() {
               <Route path="/almoxarifado/movimentacoes/:id/imprimir" element={
                 <ProtectedRoute>
                   <PharmacyLoanDetail printMode />
+                </ProtectedRoute>
+              } />
+
+              {/* Histórico Global (admin) */}
+              <Route path="/historico-global" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <HistoricoGlobal />
+                  </MainLayout>
                 </ProtectedRoute>
               } />
 

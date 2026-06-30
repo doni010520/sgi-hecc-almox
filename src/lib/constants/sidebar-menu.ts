@@ -229,6 +229,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
           name: 'Tabelas', icon: Database, href: '/tables', show: (f) => f.isAdmin,
           submenu: [{ name: 'Setores', href: '/tables/departments', icon: Building2 }],
         },
+        { name: 'Histórico Global', icon: History, href: '/historico-global', show: (f) => f.isAdmin },
       ],
     },
     {
