@@ -26,6 +26,13 @@ import {
   PRESENTATION_LABEL,
 } from '@/lib/types/farmacia'
 
+// Converte vazio/NaN em undefined para campos numéricos opcionais
+// (valueAsNumber transforma '' em NaN, que faz z.number().optional() falhar).
+const optionalNumber = z.preprocess(
+  (v) => (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v)) ? undefined : Number(v)),
+  z.number().min(0).optional(),
+)
+
 const itemSchema = z.object({
   code: z.string().min(1, 'Codigo e obrigatorio'),
   barcode: z.string().optional(),
@@ -33,10 +40,10 @@ const itemSchema = z.object({
   description: z.string().optional(),
   category: z.string(),
   unit: z.string(),
-  min_stock: z.number().min(0).optional(),
-  max_stock: z.number().min(0).optional(),
-  last_purchase_price: z.number().min(0).optional(),
-  reference_price: z.number().min(0).optional(),
+  min_stock: optionalNumber,
+  max_stock: optionalNumber,
+  last_purchase_price: optionalNumber,
+  reference_price: optionalNumber,
   // Farmacia (so usados quando type='pharmacy')
   // medication_classes: classificação múltipla. O service grava o array e
   // sincroniza medication_class (single) com a primeira pra back-compat.
@@ -481,6 +488,15 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
           {error && (
             <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md border border-red-200">
               {error}
+            </div>
+          )}
+
+          {Object.keys(errors).length > 0 && (
+            <div className="p-3 text-sm text-amber-700 bg-amber-50 rounded-md border border-amber-200">
+              <strong>Corrija os campos:</strong>{' '}
+              {Object.entries(errors).map(([key, err]) => (
+                <span key={key}>{key}: {(err as any)?.message || 'inválido'}; </span>
+              ))}
             </div>
           )}
 
