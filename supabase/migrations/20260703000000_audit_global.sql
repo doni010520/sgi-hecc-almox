@@ -74,8 +74,8 @@ LEFT JOIN users u ON u.id = al.changed_by
 UNION ALL
 
 SELECT
-  sm.created_at                              AS ts,
-  sm.created_by                              AS actor_id,
+  sm.performed_at                            AS ts,
+  sm.performed_by                            AS actor_id,
   u.full_name                                AS actor_name,
   'stock'::text                              AS origem,
   sm.movement_type                           AS action,
@@ -83,21 +83,25 @@ SELECT
   sm.id                                      AS entity_id,
   jsonb_build_object(
     'item_id', sm.item_id,
+    'item_type', sm.item_type,
     'quantity', sm.quantity,
     'direction', sm.direction,
     'movement_type', sm.movement_type,
     'source_location_id', sm.source_location_id,
-    'destination_location_id', sm.destination_location_id,
-    'batch_number', sm.batch_number,
-    'expiry_date', sm.expiry_date,
+    'target_location_id', sm.target_location_id,
     'unit_cost', sm.unit_cost,
     'reason', sm.reason,
+    'reason_detail', sm.reason_detail,
+    'notes', sm.notes,
     'destino_tipo', sm.destino_tipo,
     'destino_nome', sm.destino_nome,
-    'dispensation_id', sm.dispensation_id
+    'request_id', sm.request_id,
+    'dispensation_id', sm.dispensation_id,
+    'patient_id', sm.patient_id,
+    'medical_record_number', sm.medical_record_number
   )                                          AS details
 FROM stock_movements sm
-LEFT JOIN users u ON u.id = sm.created_by;
+LEFT JOIN users u ON u.id = sm.performed_by;
 
 COMMENT ON VIEW v_global_audit_log IS
   'F3: histórico unificado audit_logs ∪ stock_movements. Filtros: ts/actor/entity/action.';
