@@ -1,12 +1,14 @@
 export type DispensationStatus = 'pending_approval' | 'completed' | 'cancelled'
+export type DispensationType = 'prescricao' | 'requisicao'
 
 export interface PharmacyDispensation {
   id: string
   dispensation_number: number
-  patient_name: string
+  tipo: DispensationType
+  patient_name?: string | null
   patient_bed_room?: string
-  medical_record_number: string
-  prescribing_doctor: string
+  medical_record_number?: string | null
+  prescribing_doctor?: string | null
   prescription_number?: string | null
   prescription_date?: string | null
   sector?: string
@@ -41,13 +43,14 @@ export interface PharmacyDispensationItem {
 }
 
 export interface CreateDispensationData {
-  patient_name: string
+  tipo: DispensationType
+  patient_name?: string | null
   patient_bed_room?: string
-  medical_record_number: string
-  prescribing_doctor: string
+  medical_record_number?: string | null
+  prescribing_doctor?: string | null
   prescription_number?: string | null
   prescription_date?: string | null
-  sector?: string
+  sector?: string | null
   notes?: string
   patient_id?: string | null
   admission_id?: string | null

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
-import { ArrowLeft, User, FileText, Pill as PillIcon, Clock, XCircle, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, User, FileText, Pill as PillIcon, Clock, XCircle, CheckCircle2, Loader2, AlertCircle, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -104,8 +104,17 @@ export function DispensationDetails() {
             color: txt,
           }}><ArrowLeft size={18} /></button>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>
+            <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
               Dispensacao #{d.dispensation_number}
+              {d.tipo === 'requisicao' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  <Building2 size={12} /> Requisicao
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <User size={12} /> Prescricao
+                </span>
+              )}
             </h1>
             <p className="text-sm" style={{ color: txtSec }}>
               {format(new Date(d.created_at), "dd 'de' MMMM 'de' yyyy 'as' HH:mm", { locale: ptBR })}
@@ -129,32 +138,48 @@ export function DispensationDetails() {
         </div>
       </div>
 
-      {/* Patient Info */}
-      <div className="p-6" style={glass}>
-        <div className="flex items-center gap-2 mb-4">
-          <User size={18} style={{ color: txt }} />
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Dados do Paciente</h2>
+      {d.tipo === 'requisicao' ? (
+        /* Requisição — só setor */
+        <div className="p-6" style={glass}>
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 size={18} style={{ color: txt }} />
+            <h2 className="text-lg font-semibold" style={{ color: txt }}>Requisição de Setor</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {infoItem('Setor solicitante', d.sector)}
+            {d.notes && infoItem('Observacoes', d.notes)}
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {infoItem('Nome do Paciente', d.patient_name)}
-          {infoItem('N. Prontuario', d.medical_record_number)}
-          {infoItem('Leito / Quarto', d.patient_bed_room)}
-          {infoItem('Setor', d.sector)}
-        </div>
-      </div>
+      ) : (
+        <>
+          {/* Patient Info */}
+          <div className="p-6" style={glass}>
+            <div className="flex items-center gap-2 mb-4">
+              <User size={18} style={{ color: txt }} />
+              <h2 className="text-lg font-semibold" style={{ color: txt }}>Dados do Paciente</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {infoItem('Nome do Paciente', d.patient_name || undefined)}
+              {infoItem('N. Prontuario', d.medical_record_number || undefined)}
+              {infoItem('Leito / Quarto', d.patient_bed_room)}
+              {infoItem('Setor', d.sector)}
+            </div>
+          </div>
 
-      {/* Prescription Info */}
-      <div className="p-6" style={glass}>
-        <div className="flex items-center gap-2 mb-4">
-          <FileText size={18} style={{ color: txt }} />
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Prescricao Medica</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {infoItem('Medico Prescritor', d.prescribing_doctor)}
-          {infoItem('N. da Prescricao', d.prescription_number || undefined)}
-          {d.notes && infoItem('Observacoes', d.notes)}
-        </div>
-      </div>
+          {/* Prescription Info */}
+          <div className="p-6" style={glass}>
+            <div className="flex items-center gap-2 mb-4">
+              <FileText size={18} style={{ color: txt }} />
+              <h2 className="text-lg font-semibold" style={{ color: txt }}>Prescricao Medica</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {infoItem('Medico Prescritor', d.prescribing_doctor || undefined)}
+              {infoItem('N. da Prescricao', d.prescription_number || undefined)}
+              {d.notes && infoItem('Observacoes', d.notes)}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Items */}
       <div className="p-6" style={glass}>

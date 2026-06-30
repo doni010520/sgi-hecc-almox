@@ -3,13 +3,16 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
 import {
   ArrowLeft, ArrowRight, Search, Trash2, Loader2, AlertCircle, AlertTriangle,
-  UserCheck, Stethoscope, Pill, CheckCircle2,
+  UserCheck, Stethoscope, Pill, CheckCircle2, Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import { patientsService, prescribersService } from '@/lib/services/farmacia-cadastros'
+import { departmentsService } from '@/lib/services/departments'
 import type { Patient, Prescriber, PatientAdmission } from '@/lib/types/farmacia'
+import type { Department } from '@/lib/types/departments'
+import type { DispensationType } from '@/lib/types/dispensation'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
 interface SelectedItem {
@@ -45,13 +48,17 @@ interface LotRow {
   current_quantity: number
 }
 
-const STEPS = [
+const STEPS_PRESCRICAO = [
   { label: 'Paciente', icon: UserCheck },
   { label: 'Prescritor', icon: Stethoscope },
   { label: 'Medicamentos', icon: Pill },
   { label: 'Resumo', icon: CheckCircle2 },
 ]
-const STEP_RESUMO = 3
+const STEPS_REQUISICAO = [
+  { label: 'Setor', icon: Building2 },
+  { label: 'Medicamentos', icon: Pill },
+  { label: 'Resumo', icon: CheckCircle2 },
+]
 
 export function NewDispensation() {
   const navigate = useNavigate()
@@ -88,12 +95,24 @@ export function NewDispensation() {
 
   const [step, setStep] = useState(0)
 
-  // Etapa 1 — Paciente (pode vir pré-selecionado da tela /dispensacao/paciente)
-  const prefilledPatient = (location.state as { patient?: Patient } | null)?.patient ?? null
+  // Tipo: 'prescricao' (paciente+prescritor) | 'requisicao' (só setor).
+  const navState = (location.state as { patient?: Patient; tipo?: DispensationType } | null) ?? null
+  const tipo: DispensationType = navState?.tipo ?? 'prescricao'
+  const isRequisicao = tipo === 'requisicao'
+  const STEPS = isRequisicao ? STEPS_REQUISICAO : STEPS_PRESCRICAO
+  const STEP_RESUMO = STEPS.length - 1
+  const STEP_MEDS = isRequisicao ? 1 : 2
+
+  // Etapa Paciente (presc.) — vem pré-selecionado da tela /dispensacao/paciente
+  const prefilledPatient = navState?.patient ?? null
   const [patientSearch, setPatientSearch] = useState('')
   const [patientResults, setPatientResults] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(prefilledPatient)
   const [openAdmission, setOpenAdmission] = useState<PatientAdmission | null>(null)
+
+  // Etapa Setor (req.)
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [selectedSector, setSelectedSector] = useState<string>('')
 
   // Prescrição (data) + prescritor
   const [prescriptionDate, setPrescriptionDate] = useState('')
@@ -122,6 +141,13 @@ export function NewDispensation() {
     () => selectedItems.some((i) => i.is_mav || i.medication_class === 'controlados' || i.medication_class === 'antimicrobianos'),
     [selectedItems]
   )
+
+  useEffect(() => {
+    if (!isRequisicao) return
+    departmentsService.getAll()
+      .then(setDepartments)
+      .catch((e) => console.error('Falha ao carregar setores:', e))
+  }, [isRequisicao])
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -260,21 +286,35 @@ export function NewDispensation() {
   async function doSubmit() {
     setSubmitting(true); setError('')
     try {
-      const result = await pharmacyDispensationService.create({
-        patient_name: selectedPatient!.full_name,
-        medical_record_number: selectedPatient!.medical_record_number,
-        prescribing_doctor: `${selectedPresc!.name} (CRM ${selectedPresc!.crm}/${selectedPresc!.crm_uf})`,
-        prescription_date: prescriptionDate,
-        patient_id: selectedPatient!.id,
-        admission_id: openAdmission?.id ?? null,
-        prescriber_id: selectedPresc!.id,
-        mav_confirmado: hasMav ? true : false,
-        items: selectedItems.map((i) => ({
-          item_id: i.item_id, quantity: i.quantity,
-          expiry_tracking_id: i.expiry_tracking_id,
-          batch_number: i.batch_number, expiry_date: i.expiry_date,
-        })),
-      })
+      const result = await pharmacyDispensationService.create(
+        isRequisicao
+          ? {
+              tipo: 'requisicao',
+              sector: selectedSector,
+              mav_confirmado: hasMav ? true : false,
+              items: selectedItems.map((i) => ({
+                item_id: i.item_id, quantity: i.quantity,
+                expiry_tracking_id: i.expiry_tracking_id,
+                batch_number: i.batch_number, expiry_date: i.expiry_date,
+              })),
+            }
+          : {
+              tipo: 'prescricao',
+              patient_name: selectedPatient!.full_name,
+              medical_record_number: selectedPatient!.medical_record_number,
+              prescribing_doctor: `${selectedPresc!.name} (CRM ${selectedPresc!.crm}/${selectedPresc!.crm_uf})`,
+              prescription_date: prescriptionDate,
+              patient_id: selectedPatient!.id,
+              admission_id: openAdmission?.id ?? null,
+              prescriber_id: selectedPresc!.id,
+              mav_confirmado: hasMav ? true : false,
+              items: selectedItems.map((i) => ({
+                item_id: i.item_id, quantity: i.quantity,
+                expiry_tracking_id: i.expiry_tracking_id,
+                batch_number: i.batch_number, expiry_date: i.expiry_date,
+              })),
+            }
+      )
       const msg = result?.needsApproval
         ? 'Aguardando aprovação do farmacêutico'
         : 'Dispensação registrada com sucesso'
@@ -286,12 +326,18 @@ export function NewDispensation() {
     }
   }
 
-  const canAdvance: boolean[] = [
-    !!selectedPatient,
-    !!prescriptionDate && !!selectedPresc,
-    selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
-    true,
-  ]
+  const canAdvance: boolean[] = isRequisicao
+    ? [
+        !!selectedSector,
+        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
+        true,
+      ]
+    : [
+        !!selectedPatient,
+        !!prescriptionDate && !!selectedPresc,
+        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
+        true,
+      ]
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -308,8 +354,14 @@ export function NewDispensation() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: txt }}>Nova Dispensação</h1>
-          <p className="text-sm" style={{ color: txtSec }}>Dispensação de medicamentos por prescrição médica</p>
+          <h1 className="text-2xl font-bold" style={{ color: txt }}>
+            Nova Dispensação {isRequisicao ? '· Requisição' : '· Prescrição'}
+          </h1>
+          <p className="text-sm" style={{ color: txtSec }}>
+            {isRequisicao
+              ? 'Atendimento direto a um setor (sem paciente individual)'
+              : 'Dispensação de medicamentos por prescrição médica'}
+          </p>
         </div>
       </div>
 
@@ -356,8 +408,41 @@ export function NewDispensation() {
         </div>
       )}
 
+      {/* Etapa 0 — Setor (Requisição) */}
+      {isRequisicao && step === 0 && (
+        <div className="p-6 space-y-4" style={card}>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 1 — Setor solicitante</h2>
+          <p className="text-xs" style={{ color: txtMut }}>
+            Selecione o setor que receberá os medicamentos. Em requisição, paciente e prescritor não se aplicam.
+          </p>
+
+          <div>
+            <label style={lbl}>Setor *</label>
+            <select
+              value={selectedSector}
+              onChange={(e) => setSelectedSector(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">— selecionar —</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={() => setStep(1)}
+              disabled={!canAdvance[0]}
+              className="bg-blue-600 hover:bg-blue-700 text-white">
+              Continuar <ArrowRight size={14} className="ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Etapa 1 — Paciente */}
-      {step === 0 && (
+      {!isRequisicao && step === 0 && (
         <div className="p-6 space-y-4" style={card}>
           <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 1 — Paciente</h2>
 
@@ -429,7 +514,7 @@ export function NewDispensation() {
       )}
 
       {/* Etapa 2 — Prescritor + Data */}
-      {step === 1 && (
+      {!isRequisicao && step === 1 && (
         <div className="p-6 space-y-4" style={card}>
           <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 2 — Prescritor e Data</h2>
 
@@ -501,10 +586,12 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 3 — Medicamentos */}
-      {step === 2 && (
+      {/* Etapa Medicamentos */}
+      {step === STEP_MEDS && (
         <div className="p-6 space-y-4" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 3 — Medicamentos</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>
+            Etapa {STEP_MEDS + 1} — Medicamentos
+          </h2>
           <p className="text-xs" style={{ color: txtMut }}>
             Busque e clique para adicionar. O lote que vence primeiro (FEFO) é escolhido automaticamente — você pode trocar abaixo.
           </p>
@@ -638,12 +725,12 @@ export function NewDispensation() {
           )}
 
           <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(1)}>
+            <Button variant="outline" onClick={() => setStep(STEP_MEDS - 1)}>
               <ArrowLeft size={14} className="mr-2" /> Voltar
             </Button>
             <Button
               onClick={() => setStep(STEP_RESUMO)}
-              disabled={!canAdvance[2]}
+              disabled={!canAdvance[STEP_MEDS]}
               className="bg-blue-600 hover:bg-blue-700 text-white">
               Revisar Resumo <ArrowRight size={14} className="ml-2" />
             </Button>
@@ -651,35 +738,50 @@ export function NewDispensation() {
         </div>
       )}
 
-      {/* Etapa 4 — Resumo */}
+      {/* Etapa Resumo */}
       {step === STEP_RESUMO && (
         <div className="p-6 space-y-5" style={card}>
-          <h2 className="text-lg font-semibold" style={{ color: txt }}>Etapa 4 — Resumo</h2>
+          <h2 className="text-lg font-semibold" style={{ color: txt }}>
+            Etapa {STEP_RESUMO + 1} — Resumo
+          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isRequisicao ? (
             <div className="p-4 rounded-xl space-y-1"
-              style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Paciente</p>
-              <p className="font-semibold" style={{ color: txt }}>{selectedPatient?.full_name}</p>
-              <p className="text-sm" style={{ color: txtSec }}>
-                Prontuário {selectedPatient?.medical_record_number}
-                {openAdmission ? ` · Internado desde ${fmt(openAdmission.admission_date)}` : ''}
+              style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Setor solicitante</p>
+              <p className="font-semibold flex items-center gap-2" style={{ color: txt }}>
+                <Building2 size={16} className="text-indigo-500" /> {selectedSector}
               </p>
+              <p className="text-xs" style={{ color: txtSec }}>Tipo: Requisição (sem paciente individual)</p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl space-y-1"
+                  style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Paciente</p>
+                  <p className="font-semibold" style={{ color: txt }}>{selectedPatient?.full_name}</p>
+                  <p className="text-sm" style={{ color: txtSec }}>
+                    Prontuário {selectedPatient?.medical_record_number}
+                    {openAdmission ? ` · Internado desde ${fmt(openAdmission.admission_date)}` : ''}
+                  </p>
+                </div>
 
-            <div className="p-4 rounded-xl space-y-1"
-              style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Prescritor</p>
-              <p className="font-semibold" style={{ color: txt }}>{selectedPresc?.name}</p>
-              <p className="text-sm" style={{ color: txtSec }}>CRM {selectedPresc?.crm}/{selectedPresc?.crm_uf}</p>
-            </div>
-          </div>
+                <div className="p-4 rounded-xl space-y-1"
+                  style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Prescritor</p>
+                  <p className="font-semibold" style={{ color: txt }}>{selectedPresc?.name}</p>
+                  <p className="text-sm" style={{ color: txtSec }}>CRM {selectedPresc?.crm}/{selectedPresc?.crm_uf}</p>
+                </div>
+              </div>
 
-          <div className="p-4 rounded-xl"
-            style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
-            <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
-          </div>
+              <div className="p-4 rounded-xl"
+                style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Data da Prescrição</p>
+                <p className="font-semibold" style={{ color: txt }}>{fmt(prescriptionDate)}</p>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>
@@ -723,7 +825,7 @@ export function NewDispensation() {
 
           <div className="flex justify-between pt-2">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(2)}>
+              <Button variant="outline" onClick={() => setStep(STEP_MEDS)}>
                 <ArrowLeft size={14} className="mr-2" /> Voltar
               </Button>
               <Button variant="outline" onClick={() => setStep(0)}>
@@ -765,9 +867,15 @@ export function NewDispensation() {
               ))}
             </ul>
             <div className="text-xs space-y-0.5" style={{ color: txtSec }}>
-              <p>✓ Paciente: {selectedPatient?.full_name} ({selectedPatient?.medical_record_number})</p>
-              <p>✓ Prescritor: {selectedPresc?.name} (CRM {selectedPresc?.crm})</p>
-              <p>✓ Data da prescrição: {fmt(prescriptionDate)}</p>
+              {isRequisicao ? (
+                <p>✓ Setor solicitante: {selectedSector}</p>
+              ) : (
+                <>
+                  <p>✓ Paciente: {selectedPatient?.full_name} ({selectedPatient?.medical_record_number})</p>
+                  <p>✓ Prescritor: {selectedPresc?.name} (CRM {selectedPresc?.crm})</p>
+                  <p>✓ Data da prescrição: {fmt(prescriptionDate)}</p>
+                </>
+              )}
             </div>
             <div>
               <label style={lbl}>Para confirmar, digite "CONFIRMO" *</label>

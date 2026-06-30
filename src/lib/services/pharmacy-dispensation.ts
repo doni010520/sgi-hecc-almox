@@ -68,6 +68,7 @@ class PharmacyDispensationService {
       let results = data.map((d: any) => ({
         id: d.id,
         dispensation_number: d.dispensation_number,
+        tipo: (d.tipo ?? 'prescricao') as 'prescricao' | 'requisicao',
         patient_name: d.patient_name,
         patient_bed_room: d.patient_bed_room,
         medical_record_number: d.medical_record_number,
@@ -96,10 +97,11 @@ class PharmacyDispensationService {
         const q = filters.search.toLowerCase()
         results = results.filter(
           (d) =>
-            d.patient_name.toLowerCase().includes(q) ||
-            d.medical_record_number.toLowerCase().includes(q) ||
-            d.prescribing_doctor.toLowerCase().includes(q) ||
+            (d.patient_name || '').toLowerCase().includes(q) ||
+            (d.medical_record_number || '').toLowerCase().includes(q) ||
+            (d.prescribing_doctor || '').toLowerCase().includes(q) ||
             (d.prescription_number || '').toLowerCase().includes(q) ||
+            (d.sector || '').toLowerCase().includes(q) ||
             String(d.dispensation_number).includes(q)
         )
       }
@@ -149,6 +151,7 @@ class PharmacyDispensationService {
       return {
         id: data.id,
         dispensation_number: data.dispensation_number,
+        tipo: (data.tipo ?? 'prescricao') as 'prescricao' | 'requisicao',
         patient_name: data.patient_name,
         patient_bed_room: data.patient_bed_room,
         medical_record_number: data.medical_record_number,
@@ -183,10 +186,12 @@ class PharmacyDispensationService {
       // itens e, se não precisar de aprovação, já baixa o estoque pelo ledger
       // (PRESCRICAO out@CAF + lote) numa única transação. needsApproval é
       // decidido no servidor (MAV / controlado / antimicrobiano).
+      // p_tipo: 'prescricao' (paciente+prescritor) ou 'requisicao' (só setor).
       const { data: result, error } = await supabase.rpc('criar_dispensacao', {
-        p_patient_name: data.patient_name,
-        p_medical_record_number: data.medical_record_number,
-        p_prescribing_doctor: data.prescribing_doctor,
+        p_tipo: data.tipo,
+        p_patient_name: data.patient_name ?? null,
+        p_medical_record_number: data.medical_record_number ?? null,
+        p_prescribing_doctor: data.prescribing_doctor ?? null,
         p_prescription_number: data.prescription_number ?? null,
         p_prescription_date: data.prescription_date ?? null,
         p_items: data.items.map((i) => ({
@@ -271,6 +276,7 @@ class PharmacyDispensationService {
       return data.map((d: any) => ({
         id: d.id,
         dispensation_number: d.dispensation_number,
+        tipo: (d.tipo ?? 'prescricao') as 'prescricao' | 'requisicao',
         patient_name: d.patient_name,
         patient_bed_room: d.patient_bed_room,
         medical_record_number: d.medical_record_number,

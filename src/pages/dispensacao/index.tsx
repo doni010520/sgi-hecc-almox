@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
-import { Plus, Search, Calendar, RefreshCw, XCircle, CheckCircle2, Clock } from 'lucide-react'
+import { Plus, Search, Calendar, RefreshCw, XCircle, CheckCircle2, Clock, User, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -16,6 +16,7 @@ export function DispensationList() {
   const [search, setSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [showTypePicker, setShowTypePicker] = useState(false)
 
   const txt = mode === 'dark' ? '#fff' : '#0d2e1c'
   const txtSec = mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(13,46,28,0.65)'
@@ -72,7 +73,7 @@ export function DispensationList() {
         </div>
         <Button
           className="bg-primary-500 hover:bg-primary-600 text-white"
-          onClick={() => navigate('/dispensacao/paciente')}
+          onClick={() => setShowTypePicker(true)}
         >
           <Plus className="w-4 h-4 mr-2" />
           Nova Dispensacao
@@ -111,7 +112,7 @@ export function DispensationList() {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
-              {['N\u00ba', 'Data', 'Paciente', 'Prontuario', 'Medico', 'Itens', 'Status'].map((h) => (
+              {['N\u00ba', 'Data', 'Tipo', 'Paciente / Setor', 'Prontuario / Medico', 'Itens', 'Status'].map((h) => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: txtMut }}>
                   {h}
                 </th>
@@ -140,9 +141,25 @@ export function DispensationList() {
                   <td className="px-4 py-3 text-sm" style={{ color: txtSec }}>
                     {format(new Date(d.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: txt }}>{d.patient_name}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: txtSec }}>{d.medical_record_number}</td>
-                  <td className="px-4 py-3 text-sm" style={{ color: txtSec }}>{d.prescribing_doctor}</td>
+                  <td className="px-4 py-3">
+                    {d.tipo === 'requisicao' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        <Building2 size={12} /> Requisicao
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <User size={12} /> Prescricao
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: txt }}>
+                    {d.tipo === 'requisicao' ? (d.sector || '—') : (d.patient_name || '—')}
+                  </td>
+                  <td className="px-4 py-3 text-sm" style={{ color: txtSec }}>
+                    {d.tipo === 'requisicao'
+                      ? <span style={{ color: txtMut }}>—</span>
+                      : `${d.medical_record_number || ''} · ${d.prescribing_doctor || ''}`}
+                  </td>
                   <td className="px-4 py-3 text-sm" style={{ color: txtSec }}>
                     {d.items.length} {d.items.length === 1 ? 'item' : 'itens'}
                   </td>
@@ -171,6 +188,73 @@ export function DispensationList() {
       <div className="text-sm" style={{ color: txtMut }}>
         {dispensations.length} dispensacao(oes) encontrada(s)
       </div>
+
+      {showTypePicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => setShowTypePicker(false)}
+        >
+          <div
+            className="w-full max-w-lg p-6 space-y-4"
+            style={glass}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-lg font-bold" style={{ color: txt }}>Tipo de Dispensação</h3>
+              <p className="text-sm" style={{ color: txtSec }}>Escolha o fluxo</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                onClick={() => { setShowTypePicker(false); navigate('/dispensacao/paciente') }}
+                className="text-left p-4 rounded-xl transition-all"
+                style={{
+                  background: mode === 'dark' ? 'rgba(59,130,246,0.10)' : 'rgba(59,130,246,0.07)',
+                  border: '1px solid rgba(59,130,246,0.30)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.18)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = mode === 'dark' ? 'rgba(59,130,246,0.10)' : 'rgba(59,130,246,0.07)' }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <User size={18} className="text-blue-500" />
+                  <span className="font-semibold" style={{ color: txt }}>Prescrição</span>
+                </div>
+                <p className="text-xs" style={{ color: txtSec }}>
+                  Paciente identificado + prescritor + receita médica.
+                </p>
+              </button>
+
+              <button
+                onClick={() => { setShowTypePicker(false); navigate('/dispensacao/new', { state: { tipo: 'requisicao' } }) }}
+                className="text-left p-4 rounded-xl transition-all"
+                style={{
+                  background: mode === 'dark' ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)',
+                  border: '1px solid rgba(99,102,241,0.30)',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.18)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = mode === 'dark' ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)' }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Building2 size={18} className="text-indigo-500" />
+                  <span className="font-semibold" style={{ color: txt }}>Requisição</span>
+                </div>
+                <p className="text-xs" style={{ color: txtSec }}>
+                  Atendimento direto a um setor (sem paciente individual).
+                </p>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" onClick={() => setShowTypePicker(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
