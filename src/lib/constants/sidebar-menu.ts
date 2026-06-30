@@ -101,6 +101,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       title: 'Cadastros Farmácia',
       module: 'farmacia',
       items: [
+        { name: 'Catálogo de Medicamentos', icon: BookOpen, href: '/farmacia/catalogo', show: (f) => f.canManageRequests },
         { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: (f) => f.canManageRequests },
         { name: 'Unidades Externas', icon: Building2, href: '/farmacia/unidades-externas', show: (f) => f.canManageRequests },
         { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: (f) => f.canManageRequests },

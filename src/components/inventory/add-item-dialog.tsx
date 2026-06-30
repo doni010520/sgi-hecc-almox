@@ -38,7 +38,8 @@ const itemSchema = z.object({
   last_purchase_price: z.number().min(0).optional(),
   reference_price: z.number().min(0).optional(),
   // Farmacia (so usados quando type='pharmacy')
-  medication_class: z.enum(['uso_geral', 'antimicrobianos', 'controlados', 'mav', 'sgv', 'curativo', 'anticoagulante']).optional(),
+  // medication_classes: classificação múltipla. O service grava o array e
+  // sincroniza medication_class (single) com a primeira pra back-compat.
   controlled_subclass: z.enum(['A1', 'A2', 'A3', 'B1', 'B2', 'C1', 'C2', 'C3', 'C4']).optional(),
   presentation: z.enum([
     'comprimidos', 'injetaveis', 'solucoes_orais', 'topicos', 'aerosol',
@@ -84,6 +85,9 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
   const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [allowedDepts, setAllowedDepts] = useState<string[]>([])
+  // Classificação múltipla — checkboxes. Default vazio (mas se vazio na hora
+  // de submeter, assumimos 'uso_geral' pra não quebrar a validação da RPC).
+  const [selectedClasses, setSelectedClasses] = useState<MedicationClass[]>([])
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ItemFormData>({
     resolver: zodResolver(itemSchema),
@@ -91,12 +95,11 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
       category: type === 'pharmacy' ? 'MEDICAMENTO' : 'MATERIAL HOSPITALAR',
       unit: 'Un',
       min_stock: 0,
-      medication_class: type === 'pharmacy' ? 'uso_geral' : undefined,
       padronizado: false,
     }
   })
 
-  const medClass = watch('medication_class')
+  const hasControlados = selectedClasses.includes('controlados')
 
   // Carrega os setores (para "quem pode solicitar")
   useEffect(() => {
@@ -108,6 +111,10 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
     setAllowedDepts((prev) => prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id])
   }
 
+  function toggleClass(c: MedicationClass) {
+    setSelectedClasses((prev) => prev.includes(c) ? prev.filter((k) => k !== c) : [...prev, c])
+  }
+
   const onSubmit = async (data: ItemFormData) => {
     try {
       setLoading(true)
@@ -115,6 +122,12 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
       // Cadastro puro do item — SEM estoque. A entrada de estoque é uma ação
       // separada (botão "Entrada por NF" na tela do estoque).
+      // Pharmacy: garante pelo menos uma classe (default 'uso_geral') pra
+      // não quebrar a RPC criar_dispensacao em prod que ainda olha o single.
+      const classes: MedicationClass[] = type === 'pharmacy'
+        ? (selectedClasses.length > 0 ? selectedClasses : ['uso_geral'])
+        : []
+
       await itemsService.create({
         code: data.code,
         barcode: data.barcode || undefined,
@@ -130,8 +143,8 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
         reference_price: data.reference_price,
         allowed_department_ids: allowedDepts,
         // Farmacia
-        medication_class: type === 'pharmacy' ? data.medication_class : undefined,
-        controlled_subclass: type === 'pharmacy' && data.medication_class === 'controlados'
+        medication_classes: type === 'pharmacy' ? classes : undefined,
+        controlled_subclass: type === 'pharmacy' && hasControlados
           ? data.controlled_subclass : null,
         presentation: type === 'pharmacy' ? data.presentation : undefined,
         padronizado: type === 'pharmacy' ? !!data.padronizado : undefined,
@@ -139,6 +152,7 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
 
       reset()
       setAllowedDepts([])
+      setSelectedClasses([])
       onSuccess()
       onOpenChange(false)
     } catch (error: any) {
@@ -363,29 +377,36 @@ export function AddItemDialog({ type, open, onOpenChange, onSuccess }: AddItemDi
               </div>
               <div className="p-4 space-y-4 bg-white">
                 <div>
-                  <Label>Classe do medicamento *</Label>
-                  {/* min-h garante mesma altura de todos os cards mesmo com textos
-                      de tamanho diferente; leading-tight reduz altura de linha
-                      no MAV que quebra em 2-3 linhas no card estreito. */}
+                  <Label>Classes do medicamento (uma ou mais)</Label>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-2">
+                    Clique para marcar/desmarcar. Itens controlados ou antimicrobianos
+                    exigem aprovação farmacêutica na dispensação.
+                  </p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                    {(Object.entries(MEDICATION_CLASS_LABEL) as Array<[MedicationClass, string]>).map(([k, label]) => (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => setValue('medication_class', k, { shouldDirty: true })}
-                        className={`px-2 py-2 text-xs rounded-lg border text-center leading-tight transition-colors flex items-center justify-center min-h-[60px] ${
-                          medClass === k
-                            ? 'bg-blue-100 border-blue-500 text-blue-900 font-semibold'
-                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                    {(Object.entries(MEDICATION_CLASS_LABEL) as Array<[MedicationClass, string]>).map(([k, label]) => {
+                      const selected = selectedClasses.includes(k)
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => toggleClass(k)}
+                          className={`px-2 py-2 text-xs rounded-lg border text-center leading-tight transition-colors flex items-center justify-center gap-1 min-h-[60px] ${
+                            selected
+                              ? 'bg-blue-100 border-blue-500 text-blue-900 font-semibold'
+                              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className={`inline-block w-3 h-3 rounded-sm border ${selected ? 'bg-blue-600 border-blue-600' : 'border-gray-400'}`}>
+                            {selected && <span className="text-white text-[10px] leading-3 block text-center">✓</span>}
+                          </span>
+                          {label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
-                {medClass === 'controlados' && (
+                {hasControlados && (
                   <div>
                     <Label>Lista (Portaria 344/98) *</Label>
                     <select

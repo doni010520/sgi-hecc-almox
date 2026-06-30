@@ -299,11 +299,11 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
               Registrar Saída
             </Button>
             <Button
-              className="bg-primary-500 hover:bg-primary-600 text-white"
-              onClick={() => setShowAddItemDialog(true)}
+              variant="outline"
+              onClick={() => navigate('/farmacia/catalogo')}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Novo Item
+              Cadastro
             </Button>
             <AdvancedFilters
               categories={['Medicamentos', 'Material Hospitalar']}

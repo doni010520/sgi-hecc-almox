@@ -65,11 +65,16 @@ export interface Item {
   // Campos novos da farmacia (F1):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
+  // F2: classificação múltipla (array). medication_class é mantido em sync com
+  // a primeira classe pra back-compat com a RPC criar_dispensacao em prod.
+  medication_classes?: Array<'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'>
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
     | 'xarope' | 'supositorio' | 'gotas' | 'outros'
   is_mav?: boolean
+  padronizado?: boolean
+  allowed_department_ids?: string[]
 }
 
 interface StockEntry {
@@ -123,6 +128,7 @@ interface CreateItemData {
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
+  medication_classes?: Array<'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'>
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
@@ -159,11 +165,13 @@ interface UpdateItemData {
   // Campos novos (farmacia multi-estoque):
   supplier_id?: string | null
   medication_class?: 'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'
+  medication_classes?: Array<'uso_geral' | 'antimicrobianos' | 'controlados' | 'mav' | 'sgv' | 'curativo' | 'anticoagulante'>
   controlled_subclass?: 'A1' | 'A2' | 'A3' | 'B1' | 'B2' | 'C1' | 'C2' | 'C3' | 'C4' | null
   presentation?:
     | 'comprimidos' | 'injetaveis' | 'solucoes_orais' | 'topicos' | 'aerosol'
     | 'xarope' | 'supositorio' | 'gotas' | 'outros'
   is_mav?: boolean
+  padronizado?: boolean
 }
 
 export interface ImportItemData {
@@ -1046,7 +1054,14 @@ class ItemsService {
       // Campos novos da farmacia (so se for pharmacy_items)
       if (table === 'pharmacy_items') {
         if (data.supplier_id) insertData.supplier_id = data.supplier_id
-        if (data.medication_class) insertData.medication_class = data.medication_class
+        if (data.medication_classes && data.medication_classes.length > 0) {
+          insertData.medication_classes = data.medication_classes
+          // Sync da primeira classe pra back-compat com a RPC criar_dispensacao
+          insertData.medication_class = data.medication_classes[0]
+        } else if (data.medication_class) {
+          insertData.medication_class = data.medication_class
+          insertData.medication_classes = [data.medication_class]
+        }
         if (data.controlled_subclass !== undefined) insertData.controlled_subclass = data.controlled_subclass
         if (data.presentation) insertData.presentation = data.presentation
         if (data.is_mav !== undefined) insertData.is_mav = data.is_mav
@@ -1177,14 +1192,21 @@ class ItemsService {
       if (!id || typeof id !== 'string') {
         throw new Error('ID do item é obrigatório')
       }
-      
+
       if (data.name && data.name.trim().length < 3) {
         throw new Error('Nome deve ter pelo menos 3 caracteres')
       }
 
+      // Sync medication_class (single) com a primeira de medication_classes (array)
+      // pra back-compat com a RPC criar_dispensacao em prod.
+      const payload: any = { ...data }
+      if (type === 'pharmacy' && Array.isArray(payload.medication_classes) && payload.medication_classes.length > 0) {
+        payload.medication_class = payload.medication_classes[0]
+      }
+
       const { data: item, error } = await supabase
         .from(this.getTableName(type))
-        .update(data)
+        .update(payload)
         .eq('id', id)
         .select()
         .maybeSingle()
