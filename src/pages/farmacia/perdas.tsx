@@ -191,6 +191,15 @@ export function Perdas() {
     if (!form.item_nome.trim()) { setFormError('Item é obrigatório'); return }
     if (!form.quantity || form.quantity <= 0) { setFormError('Quantidade deve ser maior que zero'); return }
     if (!form.motivo) { setFormError('Motivo é obrigatório'); return }
+    if (!form.stock_location_id) { setFormError('Local de estoque é obrigatório'); return }
+    if (!form.batch_number?.trim()) { setFormError('Lote é obrigatório (rastreabilidade)'); return }
+    if (!form.expiry_date) { setFormError('Validade é obrigatória'); return }
+    if (!form.responsavel_nome?.trim()) { setFormError('Responsável é obrigatório'); return }
+    // Portaria 344/98 art.67-68: para controlados, exige número do termo + justificativa
+    if (form.is_controlado) {
+      if (!form.documento?.trim()) { setFormError('Para medicamentos controlados, o número do termo/ata de inutilização é obrigatório (Portaria 344/98)'); return }
+      if (!form.observacao?.trim()) { setFormError('Para medicamentos controlados, a justificativa técnica é obrigatória (Portaria 344/98)'); return }
+    }
     setSaving(true); setFormError('')
     try {
       if (editingId) {

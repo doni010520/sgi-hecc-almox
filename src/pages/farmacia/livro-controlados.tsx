@@ -228,6 +228,17 @@ export function LivroControlados() {
   async function abrirLivro() {
     if (!abrirForm.numero_livro) { setLivroError('Informe o número do livro'); return }
     if (!abrirForm.termo_abertura_data) { setLivroError('Data de abertura é obrigatória'); return }
+    // Portaria 344/98 art.34: livro deve ser aberto pelo RT (Responsável Técnico)
+    if (!abrirForm.responsavel_tecnico_nome?.trim()) {
+      setLivroError('Nome do Responsável Técnico é obrigatório (Portaria 344/98 art.34)'); return
+    }
+    if (!abrirForm.responsavel_tecnico_crf?.trim()) {
+      setLivroError('CRF do Responsável Técnico é obrigatório (Portaria 344/98 art.34)'); return
+    }
+    // CRF formato: 2 letras (estado) + dígitos. Ex: CRF-BA/12345 ou BA/12345
+    if (!/^(CRF-?)?[A-Z]{2}[\s\/-]*\d+$/i.test(abrirForm.responsavel_tecnico_crf.trim())) {
+      setLivroError('CRF inválido. Formato esperado: CRF-BA/12345 ou BA-12345'); return
+    }
     setSavingLivro(true); setLivroError('')
     try {
       const { error: err } = await supabase.from('livros_controlados').insert({

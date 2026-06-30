@@ -145,6 +145,21 @@ export function Talidomida() {
     if (!form.paciente_nome.trim()) { setFormError('Nome do paciente é obrigatório'); return }
     if (!form.prontuario.trim())    { setFormError('Prontuário é obrigatório'); return }
     if (!form.numero_notificacao.trim()) { setFormError('Número da notificação é obrigatório'); return }
+    // RDC 11/2011: idade, sexo e CID são exigidos pra identificação do paciente em risco teratogênico
+    if (!form.data_nascimento)      { setFormError('Data de nascimento é obrigatória (RDC 11/2011)'); return }
+    if (!form.sexo)                 { setFormError('Sexo é obrigatório (RDC 11/2011 — risco teratogênico)'); return }
+    if (!form.cid10?.trim())        { setFormError('CID-10 é obrigatório (RDC 11/2011 — indicação clínica)'); return }
+    if (!form.prescriber_nome?.trim()) { setFormError('Nome do prescritor é obrigatório'); return }
+    if (!form.prescriber_crm?.trim())  { setFormError('CRM do prescritor é obrigatório'); return }
+    if (!form.lote?.trim())         { setFormError('Lote é obrigatório (rastreabilidade)'); return }
+    if (!form.validade)             { setFormError('Validade do lote é obrigatória'); return }
+    // Mulher em idade fértil (12-50) exige justificativa/contracepção
+    if (form.sexo === 'F' && form.data_nascimento) {
+      const idade = Math.floor((Date.now() - new Date(form.data_nascimento).getTime()) / (365.25 * 86400000))
+      if (idade >= 12 && idade < 50 && !form.observacoes?.trim()) {
+        setFormError('Para paciente do sexo feminino em idade fértil (12-50 anos), as observações devem registrar o método contraceptivo e/ou justificativa clínica (RDC 11/2011)'); return
+      }
+    }
     if (!form.quantidade_comprimidos || form.quantidade_comprimidos <= 0) {
       setFormError('Quantidade de comprimidos deve ser maior que zero'); return
     }
