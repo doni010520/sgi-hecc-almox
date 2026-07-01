@@ -216,20 +216,28 @@ export function WarehouseItems({ locationId, locationName }: WarehouseItemsProps
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => navigate('/inventory/warehouse/nf-entry')}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Nova Entrada
-            </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => navigate('/inventory/warehouse/saida-lote')}
-            >
-              <PackageMinus className="w-4 h-4 mr-2" />
-              Registrar Saída
-            </Button>
+            {/* Entrada e Saida so aparecem no almoxarifado central (sem
+                locationId). Satelites de material (SAT_T) sao abastecidos
+                por requisicao/transferencia do almox central — nao aceitam
+                entrada direta nem saida por esta tela. */}
+            {!locationId && (
+              <>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => navigate('/inventory/warehouse/nf-entry')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Nova Entrada
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => navigate('/inventory/warehouse/saida-lote')}
+                >
+                  <PackageMinus className="w-4 h-4 mr-2" />
+                  Registrar Saída
+                </Button>
+              </>
+            )}
             <Button
               className="bg-primary-500 hover:bg-primary-600 text-white"
               onClick={() => setShowAddItemDialog(true)}

@@ -286,20 +286,29 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => navigate('/inventory/pharmacy/nf-entry')}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Nova Entrada
-            </Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => navigate('/inventory/pharmacy/saida-lote')}
-            >
-              <PackageMinus className="w-4 h-4 mr-2" />
-              Registrar Saída
-            </Button>
+            {/* Entrada e Saida so aparecem no CAF. Satelites (SAT_1/SAT_2/
+                SAT_T) sao abastecidos exclusivamente via requisicoes/
+                transferencias do CAF — nao aceitam entrada direta nem
+                registro de saida por esta tela. Saidas de satelite ocorrem
+                por dispensacao, devolucao, quebra etc (fluxos proprios). */}
+            {activeStock?.code === 'CAF' && (
+              <>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => navigate('/inventory/pharmacy/nf-entry')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Nova Entrada
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => navigate('/inventory/pharmacy/saida-lote')}
+                >
+                  <PackageMinus className="w-4 h-4 mr-2" />
+                  Registrar Saída
+                </Button>
+              </>
+            )}
             <Button
               variant="outline"
               onClick={() => navigate('/farmacia/catalogo')}
