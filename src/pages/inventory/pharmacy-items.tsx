@@ -51,10 +51,9 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
-  // Filtros começam DESMARCADOS: o usuário vê todos os itens ao abrir a tela
-  // e marca apenas se quiser esconder zerados / sem lote.
-  const [hideZeroStock, setHideZeroStock] = useState(false)
-  const [hideNoLot, setHideNoLot] = useState(false)
+  // Removidos os checkboxes "Ocultar zerados" e "Ocultar sem lote/validade":
+  // vinham marcados por padrão e escondiam itens que o usuário precisava ver.
+  // Agora a tela sempre mostra TODOS os itens.
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
   // Modal de lotes do item
   const [lotModalItem, setLotModalItem] = useState<Item | null>(null)
@@ -213,23 +212,12 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
     return 0
   })
 
-  const hasLotInfo = (item: Item) => {
-    const lots = lotsByItem.get(item.id) ?? []
-    if (lots.length > 0) return true
-    return !!((item as any).batch_number) && !!item.expiry_date
-  }
-
   const filteredItems = sortedItems
-    .filter(item => !hideZeroStock || (item.current_stock ?? 0) > 0)
-    .filter(item => !hideNoLot || hasLotInfo(item))
     .filter(item =>
       searchTerm === '' ||
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.code?.toLowerCase().includes(searchTerm.toLowerCase())
     )
-
-  const zeroStockCount = sortedItems.filter(item => (item.current_stock ?? 0) === 0).length
-  const noLotCount = sortedItems.filter(item => (item.current_stock ?? 0) > 0 && !hasLotInfo(item)).length
 
   if (loading) {
     return (
@@ -587,32 +575,6 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
               })}
             </tbody>
           </table>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center flex-wrap px-4 py-3 border-t border-gray-100 bg-gray-50/40">
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hideZeroStock}
-              onChange={(e) => setHideZeroStock(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-            />
-            Ocultar itens zerados
-            {hideZeroStock && zeroStockCount > 0 && (
-              <span className="text-xs text-gray-500">({zeroStockCount} ocultos)</span>
-            )}
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hideNoLot}
-              onChange={(e) => setHideNoLot(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-            />
-            Ocultar itens sem lote/validade
-            {hideNoLot && noLotCount > 0 && (
-              <span className="text-xs text-gray-500">({noLotCount} ocultos)</span>
-            )}
-          </label>
         </div>
       </div>
 
