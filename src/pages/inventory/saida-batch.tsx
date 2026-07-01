@@ -310,7 +310,16 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
                         <p className="text-xs text-gray-400">{l.code || 'sem código'} · {l.unit}</p>
                       </td>
                       <td className="py-2 px-2">
-                        <Input type="number" min={1} value={l.quantity} onChange={(e) => updateLine(idx, { quantity: parseInt(e.target.value) || 0 })} onWheel={(e) => e.currentTarget.blur()} className="w-20 text-right" />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={l.quantity === 0 ? '' : l.quantity}
+                          placeholder="0"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => updateLine(idx, { quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })}
+                          onWheel={(e) => e.currentTarget.blur()}
+                          className="w-20 text-right"
+                        />
                       </td>
                       {type === 'pharmacy' && (
                         <td className="py-2 px-2">

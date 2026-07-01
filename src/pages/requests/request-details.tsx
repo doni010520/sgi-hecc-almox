@@ -59,9 +59,11 @@ function ItemRow({ item, canEdit, isAdmin, canSeeStock }: { item: Request['reque
           <Input
             type="number"
             min="0"
-            value={suppliedQty}
+            value={suppliedQty === 0 ? '' : suppliedQty}
+            placeholder="0"
+            onFocus={(e) => e.target.select()}
             onChange={(e) => {
-              const val = Math.max(0, parseInt(e.target.value) || 0)
+              const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0)
               setSuppliedQty(val)
             }}
             onBlur={() => saveField('supplied_quantity', suppliedQty)}

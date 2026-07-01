@@ -846,8 +846,10 @@ export function AdminConsumptionManagement() {
                 id="quantity"
                 type="number"
                 min="1"
-                value={consumptionQuantity}
-                onChange={(e) => setConsumptionQuantity(parseInt(e.target.value) || 0)}
+                value={consumptionQuantity === 0 ? '' : consumptionQuantity}
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setConsumptionQuantity(e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                 className="mt-1"
               />
             </div>
@@ -941,8 +943,10 @@ export function AdminConsumptionManagement() {
                     id="bulk-quantity"
                     type="number"
                     min="1"
-                    value={consumptionQuantity}
-                    onChange={(e) => setConsumptionQuantity(parseInt(e.target.value) || 0)}
+                    value={consumptionQuantity === 0 ? '' : consumptionQuantity}
+                    placeholder="0"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setConsumptionQuantity(e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                     className="mt-1"
                   />
                 </div>
