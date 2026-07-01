@@ -236,7 +236,10 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      {/* flex-wrap pra os botões quebrarem linha em tela estreita — antes
+          ficavam em UMA linha só e os últimos (ex: "Confirmar Recebimento")
+          saíam de vista. justify-end pra alinhar à direita como CTA. */}
+      <div className="flex flex-wrap items-center gap-2 justify-end pt-2">
         {/* Approve/Reject Actions */}
         {canManage && (
           <>
