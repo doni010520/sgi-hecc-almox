@@ -290,15 +290,15 @@ function DirectionSection({
       <table className="w-full text-xs border border-gray-800">
         <thead>
           <tr className="bg-gray-100 border-b border-gray-800">
-            <th className="p-1 border-r border-gray-800">ITEM</th>
-            <th className="p-1 border-r border-gray-800 w-12">UF</th>
-            <th className="p-1 border-r border-gray-800 w-16">QTDE</th>
-            <th className="p-1 border-r border-gray-800 w-20">R$ UNIT.</th>
-            <th className="p-1 border-r border-gray-800 w-24">R$ TOTAL</th>
-            <th className="p-1 border-r border-gray-800 w-24">VALIDADE</th>
-            <th className="p-1 border-r border-gray-800 w-20">LOTE</th>
-            <th className="p-1 border-r border-gray-800 w-32">CÓDIGO SIMPAS</th>
-            <th className="p-1">OBSERVAÇÃO</th>
+            <th className="p-1 border-r border-gray-800 text-center">ITEM</th>
+            <th className="p-1 border-r border-gray-800 text-center w-12">UF</th>
+            <th className="p-1 border-r border-gray-800 text-center w-16">QTDE</th>
+            <th className="p-1 border-r border-gray-800 text-center w-20">R$ UNIT.</th>
+            <th className="p-1 border-r border-gray-800 text-center w-24">R$ TOTAL</th>
+            <th className="p-1 border-r border-gray-800 text-center w-24">VALIDADE</th>
+            <th className="p-1 border-r border-gray-800 text-center w-24">LOTE</th>
+            <th className="p-1 border-r border-gray-800 text-center w-40">CÓDIGO SIMPAS</th>
+            <th className="p-1 text-center">OBSERVAÇÃO</th>
           </tr>
         </thead>
         <tbody>
@@ -347,7 +347,7 @@ function DirectionSection({
                     : '—'}
                 </td>
                 <td className="p-1 border-r border-gray-800 text-center">{it.batch_number || '—'}</td>
-                <td className="p-1 border-r border-gray-800 font-mono">{it.codigo_simpas || '—'}</td>
+                <td className="p-1 border-r border-gray-800 font-mono text-center whitespace-nowrap">{it.codigo_simpas || '—'}</td>
                 <td className="p-1">{it.observation || '—'}</td>
               </tr>
             )
