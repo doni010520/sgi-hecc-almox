@@ -19,7 +19,7 @@ import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
-function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean }) {
+function ItemRow({ item, canEdit, isAdmin, canSeeStock }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean, canSeeStock: boolean }) {
   const [suppliedQty, setSuppliedQty] = useState<number | ''>(item.supplied_quantity ?? '')
   // Observations stored as lines separated by \n
   const [observations, setObservations] = useState<string[]>(() => {
@@ -47,11 +47,13 @@ function ItemRow({ item, canEdit, isAdmin }: { item: Request['request_items'][0]
       </td>
       <td className="text-center py-3 px-2 text-gray-600">{item.item.unit || 'UN'}</td>
       <td className="text-center py-3 px-2 font-medium">{item.quantity}</td>
-      <td className="text-center py-3 px-2">
-        <span className={`font-medium ${(item.item.current_stock || 0) < item.quantity ? 'text-red-600' : 'text-green-600'}`}>
-          {item.item.current_stock ?? 0}
-        </span>
-      </td>
+      {canSeeStock && (
+        <td className="text-center py-3 px-2">
+          <span className={`font-medium ${(item.item.current_stock || 0) < item.quantity ? 'text-red-600' : 'text-green-600'}`}>
+            {item.item.current_stock ?? 0}
+          </span>
+        </td>
+      )}
       <td className="text-center py-3 px-2">
         {canEdit ? (
           <Input
@@ -589,7 +591,11 @@ export function RequestDetails() {
                 <th className="text-left py-3 px-3 font-medium text-gray-600">Nome</th>
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-20">UF</th>
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Qtd Solic.</th>
-                <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Saldo</th>
+                {/* Coluna "Saldo" só aparece pra staff da farmácia/almox — solicitante
+                    (setor solicitante) não deve ver o estoque, senão informa consumo. */}
+                {(user?.role === 'administrador' || user?.role === 'gestor' || user?.role === 'atendente') && (
+                  <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Saldo</th>
+                )}
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-28">Qtd Fornec.</th>
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-44">Observação</th>
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Confirmar</th>
@@ -605,6 +611,7 @@ export function RequestDetails() {
                     item={item}
                     canEdit={isStaff && statusAllowsEdit}
                     isAdmin={user?.role === 'administrador'}
+                    canSeeStock={isStaff}
                   />
                 )
               })}
