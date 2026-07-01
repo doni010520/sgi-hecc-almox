@@ -16,6 +16,7 @@ import { requestService } from '@/lib/services/requests'
 import { RequestStatusBadge } from '@/components/request-status-badge'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
 import { PeriodFilterDialog } from '@/components/period-filter-dialog'
 import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
 import type { Request } from '@/lib/services/requests'
@@ -25,6 +26,7 @@ export function MyRequests() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const { activeStock } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -61,13 +63,20 @@ export function MyRequests() {
     }
   }
 
+  // Se ha estoque ativo (usuario num satelite/CAF), so contabiliza as
+  // requisicoes atendidas por esse estoque — o mesmo criterio usado
+  // pela Inbox e pelo restante do fluxo de estoque.
+  const scopedRequests = activeStock
+    ? requests.filter(r => r.source_location_id === activeStock.id)
+    : requests
+
   const getRequestStats = () => {
-    const total = requests.length
-    const pending = requests.filter(r => r.status === 'pending').length
-    const approved = requests.filter(r => r.status === 'approved' || r.status === 'processing').length
-    const rejected = requests.filter(r => r.status === 'rejected').length
-    const delivered = requests.filter(r => r.status === 'delivered' || r.status === 'completed').length
-    const cancelled = requests.filter(r => r.status === 'cancelled').length
+    const total = scopedRequests.length
+    const pending = scopedRequests.filter(r => r.status === 'pending').length
+    const approved = scopedRequests.filter(r => r.status === 'approved' || r.status === 'processing').length
+    const rejected = scopedRequests.filter(r => r.status === 'rejected').length
+    const delivered = scopedRequests.filter(r => r.status === 'delivered' || r.status === 'completed').length
+    const cancelled = scopedRequests.filter(r => r.status === 'cancelled').length
 
     return { total, pending, approved, rejected, delivered, cancelled }
   }
@@ -76,7 +85,7 @@ export function MyRequests() {
     setDateRange({ startDate, endDate })
   }
 
-  const filteredRequests = requests.filter(request => {
+  const filteredRequests = scopedRequests.filter(request => {
     const matchesSearch = searchTerm === '' || 
       request.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.request_items.some(item => 
@@ -106,11 +115,11 @@ export function MyRequests() {
       }`}
       onClick={() => navigate(`/requests/${request.id}`)}
     >
-      {/* Request Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="space-y-3">
+      {/* Request Header — flex-wrap pra nao estourar em telas medias */}
+      <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+        <div className="space-y-3 min-w-0 flex-1">
           {/* Request ID and Priority */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200 shadow-sm">
               <span className="text-sm text-gray-500">Solicitação Nº</span>
               <span className="text-lg font-semibold text-gray-900">
@@ -135,26 +144,28 @@ export function MyRequests() {
             </span>
           </div>
 
-          {/* Department and Date Info */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm">
-              <Building2 className="w-4 h-4 text-gray-500" />
-              <span className="text-xs text-gray-400 mr-1">Solicitante:</span>
+          {/* Info do departamento e data — flex-wrap pra nao estourar em
+              telas medias; whitespace-nowrap nos chips pra "01 de julho,
+              as 14:44" nao quebrar em pedacos */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm whitespace-nowrap">
+              <Building2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="text-xs text-gray-400">Solicitante:</span>
               <span className="text-sm font-medium text-gray-700">
                 {getDepartmentName(request.department)}
               </span>
             </div>
             {request.destination_department && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-sm">
-                <ArrowRightLeft className="w-4 h-4 text-blue-500" />
-                <span className="text-xs text-blue-400 mr-1">Solicitado:</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-sm whitespace-nowrap">
+                <ArrowRightLeft className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <span className="text-xs text-blue-400">Solicitado:</span>
                 <span className="text-sm font-medium text-blue-700">
                   {getDepartmentName(request.destination_department)}
                 </span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-gray-500">
-              <Calendar className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 text-gray-500 whitespace-nowrap">
+              <Calendar className="w-4 h-4 flex-shrink-0" />
               <span className="text-sm">
                 {format(new Date(request.created_at), "dd 'de' MMMM', às' HH:mm", {
                   locale: ptBR,
@@ -162,8 +173,8 @@ export function MyRequests() {
               </span>
             </div>
             {request.comments.length > 0 && (
-              <div className="flex items-center gap-1 text-gray-500">
-                <AlertCircle className="w-4 h-4" />
+              <div className="inline-flex items-center gap-1 text-gray-500 whitespace-nowrap">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">{request.comments.length} comentário(s)</span>
               </div>
             )}
@@ -276,79 +287,29 @@ export function MyRequests() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary-100 rounded-lg">
-                <Activity className="w-5 h-5 text-primary-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pendentes</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.pending}</p>
+        {/* Stats — layout compacto (icone + label empilhados) que aguenta 6
+            colunas sem truncar. Em xl vira 6, em md/lg 3, em telas curtas 2. */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+          {[
+            { label: 'Total',     value: stats.total,     Icon: Activity,     bg: 'bg-primary-100',  fg: 'text-primary-600'  },
+            { label: 'Pendentes', value: stats.pending,   Icon: Clock,        bg: 'bg-yellow-100',   fg: 'text-yellow-600'   },
+            { label: 'Aprovadas', value: stats.approved,  Icon: CheckCircle2, bg: 'bg-green-100',    fg: 'text-green-600'    },
+            { label: 'Rejeitadas',value: stats.rejected,  Icon: XCircle,      bg: 'bg-red-100',      fg: 'text-red-600'      },
+            { label: 'Entregues', value: stats.delivered, Icon: CheckCircle2, bg: 'bg-emerald-100',  fg: 'text-emerald-600'  },
+            { label: 'Canceladas',value: stats.cancelled, Icon: Ban,          bg: 'bg-gray-100',     fg: 'text-gray-600'     },
+          ].map(({ label, value, Icon, bg, fg }) => (
+            <div key={label} className="bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 ${bg} rounded-lg flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 ${fg}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-500 truncate">{label}</p>
+                  <p className="text-lg font-semibold text-gray-900 leading-tight">{value}</p>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Aprovadas</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.approved}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Rejeitadas</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.rejected}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Entregues</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.delivered}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Ban className="w-5 h-5 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Canceladas</p>
-                <p className="text-lg font-semibold text-gray-900">{stats.cancelled}</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Search */}
