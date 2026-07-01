@@ -63,6 +63,9 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
   const [stocksByItem, setStocksByItem] = useState<Map<string, Record<string, number>>>(new Map())
   // Lotes ativos por item, ordenados por validade (FEFO).
   const [lotsByItem, setLotsByItem] = useState<Map<string, LotRow[]>>(new Map())
+  // Índice do lote selecionado por item (default 0 = FEFO). Quando o usuário
+  // troca o lote no dropdown, a coluna Validade atualiza pra refletir esse lote.
+  const [selectedLotByItem, setSelectedLotByItem] = useState<Map<string, number>>(new Map())
 
   const handleRegisterEntry = (item: Item) => {
     setSelectedItem(item)
@@ -437,23 +440,41 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                     <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">{item.category}</td>
                     <td className="px-2 py-2 text-xs text-center text-gray-700 font-medium">{item.unit}</td>
                     {(() => {
-                      // Lote FEFO + contagem de lotes adicionais (preferência: expiry_tracking).
+                      // Lote selecionado (default FEFO = índice 0). Se houver
+                      // múltiplos lotes, exibe um dropdown que permite trocar; a
+                      // coluna Validade acompanha o lote escolhido.
                       const lots = lotsByItem.get(item.id) ?? []
-                      const fefo = lots[0]
-                      const extra = Math.max(lots.length - 1, 0)
-                      const batchDisplay = fefo?.batch_number || (item as any).batch_number || '-'
-                      const expiryDisplay = fefo?.expiry_date || item.expiry_date || null
+                      const selectedIdx = selectedLotByItem.get(item.id) ?? 0
+                      const currentLot = lots[selectedIdx] ?? lots[0]
+                      const batchDisplay = currentLot?.batch_number || (item as any).batch_number || '-'
+                      const expiryDisplay = currentLot?.expiry_date || item.expiry_date || null
                       return (
                         <>
                           <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
-                            <span className="font-medium">{batchDisplay}</span>
-                            {extra > 0 && (
-                              <span
-                                className="ml-1 inline-block px-1.5 py-0 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium"
-                                title={`Mais ${extra} lote(s) — clique para ver detalhes`}
+                            {lots.length > 1 ? (
+                              <select
+                                value={selectedIdx}
+                                onChange={(e) => {
+                                  const idx = Number(e.target.value)
+                                  setSelectedLotByItem((prev) => {
+                                    const next = new Map(prev)
+                                    next.set(item.id, idx)
+                                    return next
+                                  })
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-7 px-1.5 py-0 text-xs font-medium bg-white border border-emerald-200 rounded hover:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                                title={`${lots.length} lotes disponíveis — troque pra ver a validade correspondente`}
                               >
-                                +{extra}
-                              </span>
+                                {lots.map((l, idx) => (
+                                  <option key={`${l.batch_number}-${idx}`} value={idx}>
+                                    {idx === 0 ? '★ ' : ''}{l.batch_number}
+                                    {l.current_quantity ? ` (${l.current_quantity})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="font-medium">{batchDisplay}</span>
                             )}
                           </td>
                           <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">
