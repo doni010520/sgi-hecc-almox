@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { CurrencyInput } from '@/components/ui/currency-input'
 import { supabase } from '@/lib/supabase'
 import { getErrorMessage } from '@/lib/utils/error-messages'
+import { suppliersService } from '@/lib/services/farmacia-cadastros'
+import { externalUnitsService } from '@/lib/services/external-units'
 
 interface NfEntryProps {
   type: 'pharmacy' | 'warehouse'
@@ -59,6 +61,41 @@ export function NfEntry({ type }: NfEntryProps) {
   const [afmNumber, setAfmNumber] = useState('')
   const [supplierCnpj, setSupplierCnpj] = useState('')
   const [supplierName, setSupplierName] = useState('')
+
+  // Lista suspensa de origem (Suppliers + Unidades Externas + "Outro")
+  interface OrigemOption { tipo: 'supplier' | 'external_unit' | 'outro'; nome: string; cnpj?: string }
+  const [origens, setOrigens] = useState<OrigemOption[]>([])
+  const [origemKey, setOrigemKey] = useState<string>('') // "tipo|nome"
+
+  useEffect(() => {
+    (async () => {
+      const [sup, ext] = await Promise.all([
+        suppliersService.list().catch(() => []),
+        externalUnitsService.list().catch(() => []),
+      ])
+      const opts: OrigemOption[] = [
+        ...sup.map((s: any) => ({ tipo: 'supplier' as const, nome: s.name, cnpj: s.cnpj })),
+        ...ext.map((e: any) => ({ tipo: 'external_unit' as const, nome: e.nome, cnpj: e.cnpj || '' })),
+      ].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+      setOrigens(opts)
+    })()
+  }, [])
+
+  function onOrigemChange(key: string) {
+    setOrigemKey(key)
+    if (!key || key === 'outro|') {
+      // Outro: limpa e libera pra digitar
+      setSupplierName('')
+      setSupplierCnpj('')
+      return
+    }
+    const [, nome] = key.split('|')
+    const found = origens.find((o) => `${o.tipo}|${o.nome}` === key)
+    setSupplierName(found?.nome || nome)
+    if (found?.cnpj) setSupplierCnpj(formatCNPJ(found.cnpj))
+  }
+
+  const isOutro = origemKey === 'outro|'
 
   const [lines, setLines] = useState<LineItem[]>([])
   const [search, setSearch] = useState('')
@@ -193,12 +230,41 @@ export function NfEntry({ type }: NfEntryProps) {
             <Input id="afm" value={afmNumber} onChange={(e) => setAfmNumber(e.target.value)} placeholder="Ex: AFM-2026-001" className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="cnpj">CNPJ (opcional)</Label>
-            <Input id="cnpj" value={supplierCnpj} onChange={(e) => setSupplierCnpj(formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" maxLength={18} className="mt-1" />
+            <Label htmlFor="forn">{isCompra ? 'Fornecedor *' : 'Fornecedor / Origem *'}</Label>
+            <select
+              id="forn"
+              value={origemKey}
+              onChange={(e) => onOrigemChange(e.target.value)}
+              className="mt-1 w-full h-9 rounded-md border border-input bg-white px-3 py-1 text-sm"
+            >
+              <option value="">— selecionar —</option>
+              {origens.map((o) => (
+                <option key={`${o.tipo}|${o.nome}`} value={`${o.tipo}|${o.nome}`}>
+                  {o.nome} {o.tipo === 'external_unit' ? '(externa)' : ''}
+                </option>
+              ))}
+              <option value="outro|">Outro (digitar)</option>
+            </select>
+            {isOutro && (
+              <Input
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder={isCompra ? 'Empresa fornecedora' : 'Quem forneceu / origem'}
+                className="mt-2"
+              />
+            )}
           </div>
           <div>
-            <Label htmlFor="forn">{isCompra ? 'Fornecedor *' : 'Fornecedor / Origem *'}</Label>
-            <Input id="forn" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder={isCompra ? 'Empresa fornecedora' : 'Quem forneceu / origem'} className="mt-1" />
+            <Label htmlFor="cnpj">CNPJ {isOutro || !origemKey ? '(opcional)' : ''}</Label>
+            <Input
+              id="cnpj"
+              value={supplierCnpj}
+              onChange={(e) => setSupplierCnpj(formatCNPJ(e.target.value))}
+              placeholder="00.000.000/0000-00"
+              maxLength={18}
+              className="mt-1"
+              readOnly={!!origemKey && !isOutro}
+            />
           </div>
         </div>
       </div>

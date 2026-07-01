@@ -37,15 +37,14 @@ interface LineItem {
   expiry_tracking_id: string | null
 }
 
+// Motivos de saída avulsa (quebras, vencimentos, transferência interna,
+// devolução ao fornecedor, defeitos). Doação / Permuta / Empréstimo /
+// Consignado / Troca de validade são fluxos separados em NOVA MOVIMENTAÇÃO
+// (formulário próprio + pendência de aprovação).
 const REASONS = [
   { value: 'quebra', label: 'Quebra / Avaria' },
   { value: 'vencimento', label: 'Vencimento' },
   { value: 'transferencia', label: 'Transferência (para um destino)' },
-  { value: 'doacao', label: 'Doação' },
-  { value: 'permuta', label: 'Permuta' },
-  { value: 'consignado', label: 'Consignado' },
-  { value: 'troca_validade', label: 'Troca de validade' },
-  { value: 'emprestimo', label: 'Empréstimo' },
   { value: 'devolucao_fornecedor', label: 'Devolução ao fornecedor' },
   { value: 'defeito_fabricacao', label: 'Defeito de fabricação' },
   { value: 'embalagem_violada', label: 'Embalagem violada' },
@@ -53,7 +52,7 @@ const REASONS = [
 ] as const
 
 // Motivos que exigem informar um destino (quem recebe).
-const REQUIRES_DESTINO = new Set(['transferencia', 'doacao', 'permuta', 'consignado', 'troca_validade', 'emprestimo', 'devolucao_fornecedor'])
+const REQUIRES_DESTINO = new Set(['transferencia', 'devolucao_fornecedor'])
 
 interface DestinoOption { tipo: 'fornecedor' | 'unidade_externa' | 'setor_interno'; nome: string }
 

@@ -355,6 +355,25 @@ export function DevolucaoInterna() {
         </div>
       </div>
 
+      {/* Cabeçalho de/para */}
+      <div className="p-4 rounded-xl flex flex-col md:flex-row items-stretch md:items-center gap-3"
+        style={{
+          background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+        }}>
+        <div className="flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>De (Setor solicitante)</p>
+          <p className="text-sm font-semibold" style={{ color: txt }}>
+            {user?.department?.name || <span style={{ color: txtMut }}>— setor não vinculado ao usuário —</span>}
+          </p>
+        </div>
+        <div className="hidden md:block" style={{ color: txtMut }}>➜</div>
+        <div className="flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Para (Estoque)</p>
+          <p className="text-sm font-semibold" style={{ color: txt }}>CAF — Central de Abastecimento Farmacêutico</p>
+        </div>
+      </div>
+
       {error && (
         <div className="p-4 rounded-xl bg-red-100 border border-red-200 flex items-center gap-2 text-red-800 text-sm">
           <AlertCircle size={16} /> {error}
