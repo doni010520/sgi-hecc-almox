@@ -7,10 +7,12 @@ import { AlertTriangle, X, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 
-const SESSION_KEY = 'expiry_alert_shown'
+const SESSION_KEY_PHARM = 'expiry_alert_shown_pharm'
+const SESSION_KEY_WH = 'expiry_alert_shown_wh'
 
 interface ExpiringAlertRow {
   id: string
+  item_type: 'pharmacy' | 'warehouse'
   item_name: string
   lote: string | null
   expiry_date: string
@@ -47,7 +49,12 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 // Hook: useExpiryAlerts — lightweight, reads from same session + supabase
 // ---------------------------------------------------------------------------
-export function useExpiryAlerts() {
+/**
+ * Hook lightweight que retorna a contagem de itens a vencer.
+ * Aceita filtro por item_type ('pharmacy' | 'warehouse') pra o sidebar
+ * mostrar contagem só do módulo em que o usuário está.
+ */
+export function useExpiryAlerts(itemType?: 'pharmacy' | 'warehouse') {
   const [hasAlerts, setHasAlerts] = useState(false)
   const [alertCount, setAlertCount] = useState(0)
 
@@ -55,8 +62,10 @@ export function useExpiryAlerts() {
     let cancelled = false
     ;(async () => {
       try {
+        let q = supabase.from('v_itens_a_vencer').select('expiry_tracking_id, color_band, item_type')
+        if (itemType) q = q.eq('item_type', itemType)
         const [alertData, resData] = await Promise.all([
-          supabase.from('v_itens_a_vencer').select('expiry_tracking_id, color_band'),
+          q,
           supabase.from('expiry_alert_resolutions').select('expiry_tracking_id, color_band'),
         ])
         if (cancelled) return
@@ -80,7 +89,7 @@ export function useExpiryAlerts() {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [itemType])
 
   return { hasAlerts, alertCount }
 }
@@ -98,12 +107,15 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
   const [items, setItems] = useState<ExpiringAlertRow[]>([])
 
   const canNavigate = !!user?.role && NAVIGATE_ROLES.has(user.role)
-  // Popup só faz sentido pra farmácia (v_itens_a_vencer é só de farmácia).
-  // Se o usuário está explicitamente no módulo Almoxarifado, NUNCA aparece —
-  // não faz sentido incomodar o pessoal do almox com alerta de outro estoque.
-  // Nos demais casos (activeModule === 'farmacia' OU null pra
-  // atendente/solicitante/enfermagem que não escolhem módulo), aparece.
-  const moduleAllowsPopup = activeModule !== 'almoxarifado'
+  // Cada módulo vê os SEUS próprios vencimentos:
+  //   - Farmácia → lotes de farmácia (via expiry_tracking)
+  //   - Almoxarifado → itens de warehouse_items com expiry_date
+  // Se o operador está fora de módulo específico, mostra ambos (fallback).
+  const itemTypeFilter: 'pharmacy' | 'warehouse' | null =
+    activeModule === 'farmacia' ? 'pharmacy' :
+    activeModule === 'almoxarifado' ? 'warehouse' :
+    null
+  const sessionKey = activeModule === 'almoxarifado' ? SESSION_KEY_WH : SESSION_KEY_PHARM
 
   const isDark = mode === 'dark'
   const overlayBg = 'rgba(0,0,0,0.55)'
@@ -115,16 +127,16 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
   const dividerColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'
 
   useEffect(() => {
-    // Não abre se não estamos no módulo farmácia
-    if (!moduleAllowsPopup) return
-    // Skip if session already shown
-    if (sessionStorage.getItem(SESSION_KEY)) return
+    // Skip if this module's session key already shown
+    if (sessionStorage.getItem(sessionKey)) return
 
     let cancelled = false
     ;(async () => {
       try {
+        let q = supabase.from('v_itens_a_vencer').select('*').order('expiry_date')
+        if (itemTypeFilter) q = q.eq('item_type', itemTypeFilter)
         const [alertData, resData] = await Promise.all([
-          supabase.from('v_itens_a_vencer').select('*').order('expiry_date'),
+          q,
           supabase.from('expiry_alert_resolutions').select('expiry_tracking_id, color_band'),
         ])
         if (cancelled) return
@@ -149,16 +161,17 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
       }
     })()
     return () => { cancelled = true }
-  }, [moduleAllowsPopup]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [itemTypeFilter, sessionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleClose() {
-    sessionStorage.setItem(SESSION_KEY, '1')
+    sessionStorage.setItem(sessionKey, '1')
     setOpen(false)
   }
 
   function handleNavigate() {
     handleClose()
-    navigate('/estoque/vencimentos')
+    // Farmácia tem tela dedicada; almox usa a lista do estoque
+    navigate(activeModule === 'almoxarifado' ? '/inventory/warehouse' : '/estoque/vencimentos')
   }
 
   if (!open || items.length === 0) return null
