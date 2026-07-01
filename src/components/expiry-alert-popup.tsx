@@ -91,17 +91,19 @@ export function useExpiryAlerts() {
 export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: number) => void }) {
   const { user } = useAuth()
   const { mode } = useTheme()
-  const { activeModule, isModuleUser } = useModule()
+  const { activeModule } = useModule()
   const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<ExpiringAlertRow[]>([])
 
   const canNavigate = !!user?.role && NAVIGATE_ROLES.has(user.role)
-  // Popup só faz sentido no contexto de farmácia.
-  // Para admin/gestor (isModuleUser=true): só aparece quando activeModule==='farmacia'.
-  // Para demais perfis (atendente/solicitante/enfermagem): sempre — eles não escolhem módulo.
-  const moduleAllowsPopup = !isModuleUser || activeModule === 'farmacia'
+  // Popup só faz sentido pra farmácia (v_itens_a_vencer é só de farmácia).
+  // Se o usuário está explicitamente no módulo Almoxarifado, NUNCA aparece —
+  // não faz sentido incomodar o pessoal do almox com alerta de outro estoque.
+  // Nos demais casos (activeModule === 'farmacia' OU null pra
+  // atendente/solicitante/enfermagem que não escolhem módulo), aparece.
+  const moduleAllowsPopup = activeModule !== 'almoxarifado'
 
   const isDark = mode === 'dark'
   const overlayBg = 'rgba(0,0,0,0.55)'

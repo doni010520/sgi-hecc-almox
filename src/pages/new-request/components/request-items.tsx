@@ -155,15 +155,21 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     return cls
   }
 
-  // Filter items based on search term, sort items with stock first
+  // Filter items based on search term, sort items with stock first.
+  // Pra quem NÃO pode ver estoque (solicitante), esconde itens zerados
+  // — não faz sentido oferecer pedir algo que não tem no estoque.
+  // Para farmácia (multi-estoque), current_stock aqui é o agregado; o
+  // solicitante que está no fluxo comum não precisa ver zerados.
   const filteredItems = items
     .filter(item => {
+      // Solicitante: esconde zerados permanentemente. Staff mantém tudo.
+      if (!canSeeStock && ((item as any).current_stock || 0) <= 0) return false
       return searchTerm === '' ||
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
     })
     .sort((a, b) => {
-      // Items with stock come first, then 0-stock at the bottom
+      // Items with stock come first, then 0-stock at the bottom (só staff vê zerados)
       const aStock = (a as any).current_stock || 0
       const bStock = (b as any).current_stock || 0
       if (aStock > 0 && bStock <= 0) return -1
