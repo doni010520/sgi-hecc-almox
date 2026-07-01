@@ -16,6 +16,7 @@ import {
   type LoanScope,
 } from '@/lib/services/pharmacy-loan'
 import { getErrorMessage } from '@/lib/utils/error-messages'
+import { externalUnitsService } from '@/lib/services/external-units'
 
 const HECC_NAME = 'HOSPITAL ESTADUAL COSTA DOS COQUEIROS'
 
@@ -48,6 +49,20 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
   const [contatoOrigem, setContatoOrigem] = useState(user?.full_name || '')
   const [contatoDestino, setContatoDestino] = useState('')
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  // Unidades externas cadastradas (parceiros) — carregadas do banco. Junto
+  // com HECC formam as opcoes de origem/destino no dropdown.
+  const [externalUnits, setExternalUnits] = useState<string[]>([])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const list = await externalUnitsService.list()
+        setExternalUnits(list.map((u: any) => u.name).filter(Boolean))
+      } catch (e) {
+        console.error('Falha ao carregar unidades externas:', e)
+      }
+    })()
+  }, [])
 
   // Tipos de movimentação
   const [enviandoEnabled, setEnviandoEnabled] = useState(true)
@@ -251,22 +266,32 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="origem">Origem *</Label>
-            <Input
+            <select
               id="origem"
               value={origem}
               onChange={(e) => setOrigem(e.target.value)}
-              className="mt-1"
-            />
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <option value={HECC_NAME}>{HECC_NAME}</option>
+              {externalUnits.map((name) => (
+                <option key={`orig-${name}`} value={name}>{name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <Label htmlFor="destino">Destino *</Label>
-            <Input
+            <select
               id="destino"
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
-              className="mt-1"
-              placeholder="Ex: CAPES AD, FUNDAC, Hospital São Rafael..."
-            />
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <option value="">— Selecione o destino —</option>
+              <option value={HECC_NAME}>{HECC_NAME}</option>
+              {externalUnits.map((name) => (
+                <option key={`dest-${name}`} value={name}>{name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <Label htmlFor="contato_origem">Contato (Origem)</Label>
@@ -288,15 +313,23 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
           </div>
           <div>
             <Label htmlFor="form_date">Data</Label>
+            {/* Data usa w-fit pra nao esticar pra largura toda da coluna —
+                um input de data com ~180px ja e o suficiente. */}
             <Input
               id="form_date"
               type="date"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
-              className="mt-1"
+              className="mt-1 w-fit min-w-[180px]"
             />
           </div>
         </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Não está na lista?{' '}
+          <a href="/farmacia/unidades-externas" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+            Cadastrar unidade externa
+          </a>
+        </p>
       </div>
 
       {/* ENVIANDO */}
