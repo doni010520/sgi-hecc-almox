@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   PackageCheck,
   Loader2,
@@ -7,6 +8,7 @@ import {
   Building2,
   User,
   AlertCircle,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -53,6 +55,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 }
 
 export function ReceiptConfirmation() {
+  const navigate = useNavigate()
   const { activeStock } = useModule()
   const [requests, setRequests] = useState<DeliveredRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -209,7 +212,8 @@ export function ReceiptConfirmation() {
           {requests.map((req, index) => (
             <div
               key={req.id}
-              className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden ${
+              onClick={() => navigate(`/requests/${req.id}`)}
+              className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-200 transition-all ${
                 index % 2 === 0 ? 'border-l-4 border-l-green-400' : 'border-l-4 border-l-blue-400'
               }`}
             >
@@ -251,25 +255,42 @@ export function ReceiptConfirmation() {
                     )}
                   </div>
 
-                  {/* Confirm button */}
-                  <Button
-                    onClick={() => handleConfirm(req)}
-                    disabled={confirming === req.id}
-                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
-                    size="sm"
-                  >
-                    {confirming === req.id ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Confirmando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Confirmar Recebimento
-                      </>
-                    )}
-                  </Button>
+                  {/* Acoes — Ver detalhes + Confirmar. stopPropagation nos
+                      dois pra nao disparar o navigate do card. */}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/requests/${req.id}`)
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Ver detalhes
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleConfirm(req)
+                      }}
+                      disabled={confirming === req.id}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      size="sm"
+                    >
+                      {confirming === req.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Confirmando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Confirmar Recebimento
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 

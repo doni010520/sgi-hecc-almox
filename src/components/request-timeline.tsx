@@ -100,7 +100,7 @@ export function RequestTimeline({ request }: RequestTimelineProps) {
       case 'processing':
         return 'Processamento iniciado'
       case 'delivered':
-        return 'Itens entregues'
+        return 'Saiu para entrega — aguardando confirmação'
       case 'completed':
         return 'Recebimento confirmado'
       case 'cancelled':
@@ -177,9 +177,9 @@ export function RequestTimeline({ request }: RequestTimelineProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex min-w-0 flex-1 justify-between space-x-4">
-                  <div>
-                    <p className="text-sm text-gray-500">
+                <div className="flex min-w-0 flex-1 flex-col gap-1 lg:flex-row lg:justify-between lg:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-500 break-words">
                       {event.type === 'status' ? (
                         <>
                           <span className="font-medium text-gray-900">
@@ -220,8 +220,8 @@ export function RequestTimeline({ request }: RequestTimelineProps) {
                       )}
                     </p>
                   </div>
-                  <div className="whitespace-nowrap text-right text-sm text-gray-500">
-                    {format(new Date(event.date), "dd 'de' MMMM', às' HH:mm", {
+                  <div className="whitespace-nowrap text-xs lg:text-sm text-gray-400 lg:text-right lg:text-gray-500 flex-shrink-0">
+                    {format(new Date(event.date), "dd/MM/yy HH:mm", {
                       locale: ptBR,
                     })}
                   </div>

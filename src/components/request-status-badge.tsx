@@ -62,7 +62,7 @@ export function RequestStatusBadge({ status }: RequestStatusBadgeProps) {
       case 'processing':
         return 'Em Processamento'
       case 'delivered':
-        return 'Entregue'
+        return 'Aguardando confirmação'
       case 'completed':
         return 'Concluído'
       case 'cancelled':

@@ -404,8 +404,11 @@ export function RequestDetails() {
       </div>
 
       {/* Status and Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:grid-cols-1 print:gap-2">
-        <div className="col-span-2 space-y-6 print:space-y-2 print:col-span-1">
+      {/* Grid mudou de md:grid-cols-3 para xl:grid-cols-3: em telas medias
+          (tablet) a linha do tempo comprimia num "canto" estreito e o texto
+          quebrava palavra-por-palavra. Agora so vira coluna lateral em xl+ */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 print:grid-cols-1 print:gap-2">
+        <div className="xl:col-span-2 space-y-6 print:space-y-2 print:col-span-1">
           {/* Request Info */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 print:p-2 print:border-0 print:shadow-none">
             <div className="flex items-center justify-between mb-6 print:mb-2">
