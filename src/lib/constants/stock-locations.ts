@@ -18,3 +18,24 @@ export function pharmacyStockById(id?: string | null): PharmacyStock | null {
   if (!id) return null
   return PHARMACY_STOCKS.find((s) => s.id === id) ?? null
 }
+
+/**
+ * Confere se o nome de um departamento corresponde ao setor "dono" do
+ * estoque — usado pra filtrar telas que operam em contexto do setor
+ * (ex.: Confirmar Recebimento, onde quem confirma é o setor solicitante).
+ *
+ * Regras:
+ * - Satélites (SAT_1/SAT_2/SAT_T): o nome do estoque bate exatamente com
+ *   o nome do departamento ("Farmácia Satélite 1º Andar", etc).
+ * - CAF: o departamento se chama "CAF (Central de abastecimento
+ *   farmaceutico)" — casa pelo prefixo "caf".
+ * Comparação normalizada (lowercase, trim), ignora diferenças de espaço.
+ */
+export function departmentBelongsToStock(departmentName: string | null | undefined, stock: PharmacyStock): boolean {
+  if (!departmentName) return false
+  const d = departmentName.trim().toLowerCase()
+  const s = stock.name.trim().toLowerCase()
+  if (d === s) return true
+  if (stock.code === 'CAF' && d.startsWith('caf')) return true
+  return false
+}

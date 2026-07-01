@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { requestService } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 import { useModule } from '@/contexts/module'
+import { departmentBelongsToStock } from '@/lib/constants/stock-locations'
 
 interface RequestItem {
   id: string
@@ -66,10 +67,10 @@ export function ReceiptConfirmation() {
     try {
       setLoading(true)
 
-      // Pedidos entregues aguardando confirmação de recebimento. Qualquer usuário
-      // logado pode confirmar — quem marca a entrega e quem confere os itens
-      // costumam ser pessoas diferentes (a RLS permite delivered -> completed).
-      let q = supabase
+      // Pedidos entregues aguardando confirmação de recebimento. Quem confirma
+      // é o SETOR SOLICITANTE (foi ele que recebeu os itens). A RLS permite
+      // delivered → completed pra qualquer user autenticado do setor.
+      const { data, error } = await supabase
         .from('requests')
         .select(`
           id,
@@ -90,15 +91,18 @@ export function ReceiptConfirmation() {
         .eq('status', 'delivered')
         // Recente → antigo (usuário rola até achar; entregas de hoje no topo)
         .order('delivered_at', { ascending: false, nullsFirst: false })
-      // Se o operador está trabalhando num estoque específico, filtra por origem.
-      if (activeStock?.id) {
-        q = q.or(`source_location_id.eq.${activeStock.id},source_location_id.is.null`)
-      }
-      const { data, error } = await q
 
       if (error) throw error
 
-      const mapped: DeliveredRequest[] = (data || []).map((req: any) => ({
+      const raw = (data || []) as any[]
+
+      // Se o operador está num estoque (satélite/CAF), só mostra pedidos que
+      // aquele setor solicitou — quem confirma recebimento é quem pediu.
+      const scoped = activeStock
+        ? raw.filter((r) => departmentBelongsToStock(r.department?.name, activeStock))
+        : raw
+
+      const mapped: DeliveredRequest[] = scoped.map((req: any) => ({
         id: req.id,
         request_number: req.request_number,
         requester_name: req.requester?.full_name ?? '—',
