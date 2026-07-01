@@ -25,7 +25,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         <Header toggleSidebar={toggleSidebar} isSidebarOpen={sidebarOpen} />
         <ActiveStockBanner />
 
-        <main className="flex-1 overflow-auto p-4 md:p-8">
+        {/* overflow-y-auto (nao overflow-auto): overflow horizontal do
+            conteudo e clipado aqui, forcando o scroll a acontecer dentro
+            da tabela (via overflow-x-auto da propria tabela). Antes, a tela
+            inteira scrollava lateralmente e a tabela nao mostrava barra. */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 min-w-0">
           {children}
         </main>
       </div>

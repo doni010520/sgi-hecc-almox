@@ -326,10 +326,12 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
         </div>
       </div>
 
-      {/* Inventory Table */}
+      {/* Inventory Table — barra de rolagem sempre visivel embaixo, pra o
+          usuario perceber que da pra rolar horizontal (a tabela tem ~15
+          colunas e nao cabe em telas medias). */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-scroll pb-1 min-w-0" style={{ scrollbarWidth: 'thin' }}>
+          <table className="w-full border-collapse min-w-[1400px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th

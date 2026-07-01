@@ -276,10 +276,10 @@ export function WarehouseItems({ locationId, locationName }: WarehouseItemsProps
         </div>
       </div>
 
-      {/* Inventory Table */}
+      {/* Inventory Table — barra de rolagem sempre visivel embaixo. */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-scroll pb-1 min-w-0" style={{ scrollbarWidth: 'thin' }}>
+          <table className="w-full border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th 
