@@ -156,6 +156,7 @@ export function Fornecedores() {
             Nenhum fornecedor cadastrado.
           </p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr style={{ background: mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
@@ -181,6 +182,7 @@ export function Fornecedores() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

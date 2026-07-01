@@ -97,6 +97,7 @@ export function UnidadesExternas() {
         ) : units.length === 0 ? (
           <div className="p-10 text-center text-gray-400">Nenhuma unidade externa cadastrada.</div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-400 uppercase border-b">
@@ -126,6 +127,7 @@ export function UnidadesExternas() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

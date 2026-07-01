@@ -110,7 +110,8 @@ export function DispensationList() {
 
       {/* Table */}
       <div style={glass} className="overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr style={{ borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
               {['N\u00ba', 'Data', 'Tipo', 'Paciente / Setor', 'Prontuario / Medico', 'Itens', 'Status'].map((h) => (
@@ -184,6 +185,7 @@ export function DispensationList() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="text-sm" style={{ color: txtMut }}>

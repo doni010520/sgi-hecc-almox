@@ -191,6 +191,7 @@ export function DispensationDetails() {
             {d.items.length} {d.items.length === 1 ? 'item' : 'itens'} | {totalItems} unidades
           </span>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}` }}>
@@ -214,6 +215,7 @@ export function DispensationDetails() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Metadata */}
