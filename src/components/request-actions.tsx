@@ -255,8 +255,11 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                 try {
                   setLoading(true)
                   const updatedRequest = await requestService.approve(request.id, itemQuantities, '')
-                  onUpdate(updatedRequest)
+                  // Abre o modal ANTES de chamar onUpdate — se o parent
+                  // remontar o componente durante o reload, o modal ja tera
+                  // pintado. Reload subsequente e silencioso na pagina.
                   setShowApprovalToast(true)
+                  onUpdate(updatedRequest)
                 } catch (error) {
                   console.error('Error approving:', error)
                 } finally {

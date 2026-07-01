@@ -177,15 +177,17 @@ export function RequestDetails() {
     }
   }, [])
 
-  async function loadRequest(requestId: string) {
+  // silent=true reloada os dados sem trocar loading -> nao remonta o
+  // RequestActions (senao o modal de aprovacao some antes de renderizar).
+  async function loadRequest(requestId: string, silent = false) {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await requestService.getById(requestId)
       setRequest(data)
     } catch (error) {
       console.error('Error loading request:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -625,7 +627,7 @@ export function RequestDetails() {
       <div className="print:hidden">
         <RequestActions
           request={request}
-          onUpdate={() => { if (id) loadRequest(id) }}
+          onUpdate={() => { if (id) loadRequest(id, true) }}
         />
       </div>
 
