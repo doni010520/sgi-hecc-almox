@@ -22,6 +22,7 @@ import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
 import type { Item, FilterOptions } from '@/lib/services/items'
 import { ImportDialog } from '@/components/inventory/import-dialog'
 import { AddItemDialog } from '@/components/inventory/add-item-dialog'
@@ -33,6 +34,7 @@ interface PharmacyItemsProps {
 
 export function PharmacyItems({ locationId: _locationId, locationName }: PharmacyItemsProps = {}) {
   const { user } = useAuth()
+  const { activeStock } = useModule()
   const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,6 +73,16 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
 
   const isAdmin = user?.role === 'administrador'
   const canEdit = user?.role === 'administrador' || user?.role === 'gestor'
+
+  // Saldo do item NO ESTOQUE ATIVO (CAF/SAT_1/SAT_2/SAT_T).
+  // Cada satelite tem o seu proprio saldo em item_stocks; a coluna
+  // "current_stock" da tabela pharmacy_items eh o total global fossilizado
+  // no cadastro do item e nao serve pra visao multi-estoque.
+  const getLocalQty = (item: Item): number => {
+    if (!activeStock) return item.current_stock ?? 0
+    const bucket = stocksByItem.get(item.id) ?? {}
+    return bucket[activeStock.code] ?? 0
+  }
 
   useEffect(() => {
     loadItems()
@@ -374,16 +386,17 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                 <th
                   className="px-2 py-2 text-right text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
                   onClick={() => handleSort('current_stock')}
+                  title={activeStock ? `Saldo no ${activeStock.name}` : 'Saldo global'}
                 >
                   <div className="flex items-center justify-end gap-1">
-                    Estoque CAF
+                    Estoque {activeStock?.label ?? ''}
                     {sortColumn === 'current_stock' && (
                       <ArrowUpDown className="w-3 h-3" />
                     )}
                   </div>
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 whitespace-nowrap" title="Saldo nos demais estoques (Satelite 1, Satelite 2, Satelite T)">
-                  Sat. 1/2/T
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-600 whitespace-nowrap" title="Saldo nos outros estoques da farmacia">
+                  Outros estoques
                 </th>
                 <th
                   className="px-2 py-2 text-right text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap"
@@ -487,7 +500,7 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                         className="inline-flex items-center gap-1 hover:text-blue-600 hover:underline cursor-pointer"
                         title="Ver lotes disponíveis"
                       >
-                        {item.current_stock} {item.unit}
+                        {getLocalQty(item)} {item.unit}
                         {(lotsByItem.get(item.id) ?? []).length > 0 && (
                           <Layers className="w-3 h-3 text-blue-400" />
                         )}
@@ -496,11 +509,15 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                     <td className="px-2 py-2">
                       {(() => {
                         const bucket = stocksByItem.get(item.id) ?? {}
-                        // Mostra apenas locais satelite que tem saldo > 0 ou existem como chave.
-                        // CAF ja aparece na coluna "Estoque CAF".
-                        const sat1 = bucket['SAT_1'] ?? 0
-                        const sat2 = bucket['SAT_2'] ?? 0
-                        const satT = bucket['SAT_T'] ?? 0
+                        // Mostra os outros estoques da farmacia (exclui o local ativo — esse ja
+                        // aparece na coluna principal). Sao 4 locais possiveis (CAF/SAT_1/SAT_2/SAT_T).
+                        const OTHERS: Array<{ code: string; label: string }> = [
+                          { code: 'CAF',   label: 'CAF' },
+                          { code: 'SAT_1', label: 'S1'  },
+                          { code: 'SAT_2', label: 'S2'  },
+                          { code: 'SAT_T', label: 'ST'  },
+                        ]
+                        const list = OTHERS.filter((o) => o.code !== activeStock?.code)
                         const chip = (label: string, value: number) => (
                           <span
                             key={label}
@@ -517,9 +534,7 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                         )
                         return (
                           <div className="flex flex-wrap gap-0.5 justify-start">
-                            {chip('S1', sat1)}
-                            {chip('S2', sat2)}
-                            {chip('ST', satT)}
+                            {list.map((o) => chip(o.label, bucket[o.code] ?? 0))}
                           </div>
                         )
                       })()}
@@ -532,15 +547,13 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                     </td>
                     <td className="px-2 py-2">
                       <div className="flex justify-center">
-                        {item.current_stock === 0 ? (
-                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-50 text-red-600 border border-red-200 whitespace-nowrap">Sem Estoque</span>
-                        ) : item.current_stock <= item.min_stock ? (
-                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200 whitespace-nowrap">Estoque Baixo</span>
-                        ) : item.current_stock <= supplyPoint ? (
-                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">Ponto Pedido</span>
-                        ) : (
-                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
-                        )}
+                        {(() => {
+                          const localQty = getLocalQty(item)
+                          if (localQty === 0)                     return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-50 text-red-600 border border-red-200 whitespace-nowrap">Sem Estoque</span>
+                          if (localQty <= item.min_stock)         return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200 whitespace-nowrap">Estoque Baixo</span>
+                          if (localQty <= supplyPoint)            return <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">Ponto Pedido</span>
+                          return                                          <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
+                        })()}
                       </div>
                     </td>
                     <td className="px-2 py-2">

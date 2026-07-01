@@ -273,6 +273,42 @@ class ItemsService {
     return this.getAllFromTable(table, filters, pagination)
   }
 
+  /**
+   * Lista itens de farmácia com saldo do estoque especificado (CAF/SAT_1/
+   * SAT_2/SAT_T). O `current_stock` retornado é o saldo NESSE local (via
+   * item_stocks), NÃO o campo global fossilizado em pharmacy_items. Ideal
+   * pra tela do estoque: cada satélite vê o seu próprio saldo.
+   *
+   * Se um item nunca teve movimentação no local, `current_stock` = 0.
+   * min_stock / max_stock também vêm de item_stocks (quando existirem);
+   * caso contrário caem no valor global do cadastro.
+   */
+  async getPharmacyItemsByLocation(locationId: string, filters?: FilterOptions, pagination?: PaginationOptions) {
+    const items = (await this.getAllFromTable('pharmacy_items', filters, pagination)) ?? []
+
+    const { data: stocks, error } = await supabase
+      .from('item_stocks')
+      .select('item_id, quantity, min_qty, max_qty')
+      .eq('location_id', locationId)
+      .eq('item_type', 'pharmacy')
+
+    if (error) {
+      console.error('getPharmacyItemsByLocation stocks:', error)
+      throw error
+    }
+
+    const byItem = new Map((stocks ?? []).map((s: any) => [s.item_id, s]))
+    return items.map((it: any) => {
+      const s = byItem.get(it.id)
+      return {
+        ...it,
+        current_stock: s?.quantity ?? 0,
+        min_stock: s?.min_qty ?? it.min_stock ?? 0,
+        max_stock: s?.max_qty ?? it.max_stock ?? 0,
+      }
+    })
+  }
+
   private async getAllFromTable(table: string, filters?: FilterOptions, pagination?: PaginationOptions) {
     try {
       let query = supabase
