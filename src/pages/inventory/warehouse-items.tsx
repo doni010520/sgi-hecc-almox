@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Package2, FileSpreadsheet, FileText,
-  Eye, Plus, Edit, Trash2, PackagePlus, PackageMinus
+  Eye, Plus, Edit, Trash2, PackageMinus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,6 @@ import { ImportDialog } from '@/components/inventory/import-dialog'
 import { AddItemDialog } from '@/components/inventory/add-item-dialog'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
-import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
@@ -35,15 +34,9 @@ export function WarehouseItems() {
   const [showAddItemDialog, setShowAddItemDialog] = useState(false)
   const [showEditStockDialog, setShowEditStockDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [hideZeroStock, setHideZeroStock] = useState(true)
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
-
-  const handleRegisterEntry = (item: Item) => {
-    setSelectedItem(item)
-    setShowEntryDialog(true)
-  }
 
   const handleEditItem = (item: Item) => {
     setSelectedItem(item)
@@ -408,11 +401,6 @@ export function WarehouseItems() {
                       <div className="flex justify-center">
                         <div className="flex items-center gap-1">
                           {canEdit && (
-                            <Button variant="outline" size="sm" onClick={() => handleRegisterEntry(item)} title="Registrar Entrada de Material" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 px-2">
-                              <PackagePlus className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {canEdit && (
                             <Button variant="outline" size="sm" onClick={() => handleEditItem(item)} title="Editar item" className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -472,20 +460,6 @@ export function WarehouseItems() {
           type="warehouse"
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          onSuccess={() => {
-            loadItems()
-            setSelectedItem(null)
-          }}
-        />
-      )}
-
-      {/* Register Entry Dialog (form completo) */}
-      {selectedItem && (
-        <AddStockDialog
-          item={selectedItem}
-          type="warehouse"
-          open={showEntryDialog}
-          onOpenChange={setShowEntryDialog}
           onSuccess={() => {
             loadItems()
             setSelectedItem(null)

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, Download, AlertCircle,
   Loader2, ArrowUpDown, Pill, FileSpreadsheet, FileText,
-  Eye, Plus, Edit, Trash2, PackagePlus, PackageMinus, X, Layers
+  Eye, Plus, Edit, Trash2, PackageMinus, X, Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,6 @@ interface LotRow {
 import { AdvancedFilters } from '@/components/inventory/advanced-filters'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
-import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
@@ -49,7 +48,6 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
   const [showAddItemDialog, setShowAddItemDialog] = useState(false)
   const [showEditStockDialog, setShowEditStockDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   // Removidos os checkboxes "Ocultar zerados" e "Ocultar sem lote/validade":
   // vinham marcados por padrão e escondiam itens que o usuário precisava ver.
@@ -65,11 +63,6 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
   // Índice do lote selecionado por item (default 0 = FEFO). Quando o usuário
   // troca o lote no dropdown, a coluna Validade atualiza pra refletir esse lote.
   const [selectedLotByItem, setSelectedLotByItem] = useState<Map<string, number>>(new Map())
-
-  const handleRegisterEntry = (item: Item) => {
-    setSelectedItem(item)
-    setShowEntryDialog(true)
-  }
 
   const handleEditItem = (item: Item) => {
     setSelectedItem(item)
@@ -554,11 +547,6 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                       <div className="flex justify-center">
                         <div className="flex items-center gap-1">
                           {canEdit && (
-                            <Button variant="outline" size="sm" onClick={() => handleRegisterEntry(item)} title="Registrar Entrada de Material" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 px-2">
-                              <PackagePlus className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {canEdit && (
                             <Button variant="outline" size="sm" onClick={() => handleEditItem(item)} title="Editar item" className="text-amber-600 border-amber-200 hover:bg-amber-50 h-8 px-2">
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -618,20 +606,6 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
           type="pharmacy"
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          onSuccess={() => {
-            loadItems()
-            setSelectedItem(null)
-          }}
-        />
-      )}
-
-      {/* Register Entry Dialog (form completo) */}
-      {selectedItem && (
-        <AddStockDialog
-          item={selectedItem}
-          type="pharmacy"
-          open={showEntryDialog}
-          onOpenChange={setShowEntryDialog}
           onSuccess={() => {
             loadItems()
             setSelectedItem(null)
