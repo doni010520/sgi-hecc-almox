@@ -25,7 +25,7 @@ import { formatRequestNumber } from '@/lib/utils/request'
 export function RequestPending() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { activeModule } = useModule()
+  const { activeModule, activeStock } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
 
   // Derive the request type from the active module
@@ -101,8 +101,11 @@ export function RequestPending() {
 
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
     const matchesModule = request.type === moduleRequestType
+    // Filtro por estoque de origem (satélite ativo).
+    const matchesSourceStock =
+      !activeStock || !request.source_location_id || request.source_location_id === activeStock.id
 
-    return matchesSearch && matchesTab && matchesDate && matchesModule
+    return matchesSearch && matchesTab && matchesDate && matchesModule && matchesSourceStock
   })
 
   const renderRequestCard = (request: Request, index: number) => (

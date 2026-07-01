@@ -19,9 +19,11 @@ import { PeriodFilterDialog } from '@/components/period-filter-dialog'
 import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
 import type { Request, RequestType } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
+import { useModule } from '@/contexts/module'
 
 export function RequestHistory() {
   const navigate = useNavigate()
+  const { activeStock } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -73,8 +75,11 @@ export function RequestHistory() {
     const matchesTab = activeTab === 'all' || request.status === activeTab
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
     const matchesType = request.type === requestType
+    // Filtro por estoque de origem (satélite ativo).
+    const matchesSourceStock =
+      !activeStock || !request.source_location_id || request.source_location_id === activeStock.id
 
-    return matchesSearch && matchesTab && matchesDate && matchesType
+    return matchesSearch && matchesTab && matchesDate && matchesType && matchesSourceStock
   })
 
   const renderRequestCard = (request: Request, index: number) => (

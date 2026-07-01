@@ -25,7 +25,7 @@ import { formatRequestNumber } from '@/lib/utils/request'
 
 export function RequestProcessing() {
   const navigate = useNavigate()
-  const { activeModule } = useModule()
+  const { activeModule, activeStock } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -163,8 +163,13 @@ export function RequestProcessing() {
     const matchesTab = activeTab === 'all' || request.type === activeTab
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
     const matchesModule = request.type === moduleRequestType
+    // Filtro por estoque de origem: cada satélite (CAF/SAT_1/SAT_2/SAT_T)
+    // vê só as solicitações que serão atendidas por ele. Fallback pra
+    // solicitações antigas sem source_location_id.
+    const matchesSourceStock =
+      !activeStock || !request.source_location_id || request.source_location_id === activeStock.id
 
-    return matchesSearch && matchesTab && matchesDate && matchesModule
+    return matchesSearch && matchesTab && matchesDate && matchesModule && matchesSourceStock
   })
 
   // Mantém a ref sempre atualizada

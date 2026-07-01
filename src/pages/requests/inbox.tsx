@@ -85,15 +85,17 @@ export function RequestInbox() {
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
     const matchesType = request.type === moduleRequestType
 
-    // Filtro por estoque destino: se o operador está trabalhando em um estoque
-    // específico (CAF/SAT_1/SAT_2/SAT_T), só vê solicitações destinadas a ele.
-    // Se target_location_id é null (solicitação antiga sem destino), aceita.
-    const matchesTargetStock =
+    // Filtro por estoque de origem: se o operador está trabalhando num estoque
+    // específico (CAF/SAT_1/SAT_2/SAT_T), só vê solicitações que serão atendidas
+    // por ele. O roteamento automático usa department.default_pharmacy_location_id
+    // pra decidir qual estoque atende cada setor. Solicitações antigas sem
+    // source_location_id caem em "todos" (fallback pra não sumirem).
+    const matchesSourceStock =
       !activeStock ||
-      !request.target_location_id ||
-      request.target_location_id === activeStock.id
+      !request.source_location_id ||
+      request.source_location_id === activeStock.id
 
-    return matchesSearch && matchesTab && matchesDate && matchesType && matchesTargetStock
+    return matchesSearch && matchesTab && matchesDate && matchesType && matchesSourceStock
   })
 
   const renderRequestCard = (request: Request, index: number) => (

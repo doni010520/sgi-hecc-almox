@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale'
 import { supabase } from '@/lib/supabase'
 import { requestService } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
+import { useModule } from '@/contexts/module'
 
 interface RequestItem {
   id: string
@@ -51,6 +52,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
 }
 
 export function ReceiptConfirmation() {
+  const { activeStock } = useModule()
   const [requests, setRequests] = useState<DeliveredRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -67,13 +69,14 @@ export function ReceiptConfirmation() {
       // Pedidos entregues aguardando confirmação de recebimento. Qualquer usuário
       // logado pode confirmar — quem marca a entrega e quem confere os itens
       // costumam ser pessoas diferentes (a RLS permite delivered -> completed).
-      const { data, error } = await supabase
+      let q = supabase
         .from('requests')
         .select(`
           id,
           request_number,
           created_at,
           delivered_at,
+          source_location_id,
           requester:users!requests_requester_id_fkey(full_name),
           department:departments!requests_department_id_fkey(name),
           delivered_by_user:users!requests_delivered_by_fkey(full_name),
@@ -87,6 +90,11 @@ export function ReceiptConfirmation() {
         .eq('status', 'delivered')
         // Recente → antigo (usuário rola até achar; entregas de hoje no topo)
         .order('delivered_at', { ascending: false, nullsFirst: false })
+      // Se o operador está trabalhando num estoque específico, filtra por origem.
+      if (activeStock?.id) {
+        q = q.or(`source_location_id.eq.${activeStock.id},source_location_id.is.null`)
+      }
+      const { data, error } = await q
 
       if (error) throw error
 
@@ -117,7 +125,7 @@ export function ReceiptConfirmation() {
     } finally {
       setLoading(false)
     }
-  }, [showToast])
+  }, [showToast, activeStock?.id])
 
   useEffect(() => {
     loadDeliveredRequests()
