@@ -13,8 +13,6 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
 import { getErrorMessage } from '@/lib/utils/error-messages'
-import { ActiveStockBadge } from '@/components/active-stock-badge'
-
 const MOTIVO_OPTIONS = [
   { value: 'melhora_clinica', label: 'Melhora clínica' },
   { value: 'suspensao_medica', label: 'Suspensão médica' },
@@ -346,7 +344,7 @@ export function DevolucaoInterna() {
         </button>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
-            <Undo2 size={22} /> Devolução da Enfermagem <ActiveStockBadge />
+            <Undo2 size={22} /> Devolução da Enfermagem
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             {isPharmacy

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import type { PharmacyDispensation, DispensationStatus } from '@/lib/types/dispensation'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 const PAGE_SIZE = 15
 
 const STATUS_CONFIG: Record<DispensationStatus, { label: string; bg: string; color: string; border: string }> = {
@@ -115,7 +114,7 @@ export function HistoricoDispensacoes() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Histórico de Dispensações <ActiveStockBadge /></h1>
+          <h1 className="text-2xl font-bold" style={{ color: txt }}>Histórico de Dispensações</h1>
           <p className="text-sm" style={{ color: txtSec }}>Registro completo de dispensações com drill-down por itens</p>
         </div>
       </div>

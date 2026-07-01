@@ -18,7 +18,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 type Tab = 'prontuario' | 'local' | 'usuario' | 'global' | 'parado' | 'perdas'
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -156,7 +155,7 @@ export function FarmaciaMultiEstoqueReport() {
               <Pill className="w-6 h-6" style={{ color: '#10b981' }} />
             </div>
             <div>
-              <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Relatorios da Farmacia (multi-estoque) <ActiveStockBadge /></h1>
+              <h1 className="text-2xl font-bold" style={{ color: txt }}>Relatorios da Farmacia (multi-estoque)</h1>
               <p className="text-sm" style={{ color: txtSec }}>
                 Consumo por prontuario, por estoque e global · valor parado e perdas
               </p>

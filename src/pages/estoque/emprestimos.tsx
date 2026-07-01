@@ -26,7 +26,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ---------- Tipos ----------
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 type LoanCategory = 'emprestimo' | 'doacao' | 'permuta' | 'troca_validade'
 
 const CATEGORY_LABEL: Record<LoanCategory, string> = {
@@ -408,8 +407,7 @@ export function EmprestimosAbertos() {
                 className="text-2xl font-bold flex items-center gap-2"
                 style={{ color: txt }}
               >
-                <Handshake size={22} /> Emprestimos / Doacoes
-               <ActiveStockBadge /></h1>
+                <Handshake size={22} /> Emprestimos / Doacoes</h1>
               <p className="text-sm" style={{ color: txtSec }}>
                 Controle de saidas por emprestimo, doacao, permuta e troca de
                 validade.

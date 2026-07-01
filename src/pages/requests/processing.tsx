@@ -23,7 +23,6 @@ import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
 import type { Request } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function RequestProcessing() {
   const navigate = useNavigate()
   const { activeModule } = useModule()
@@ -342,7 +341,7 @@ export function RequestProcessing() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Em Processamento <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">Em Processamento</h1>
             <p className="text-sm text-gray-500 mt-1">
               Solicitações que estão sendo atendidas
             </p>

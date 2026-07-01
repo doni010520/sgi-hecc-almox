@@ -18,7 +18,6 @@ import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
 import type { Item, FilterOptions } from '@/lib/services/items'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function WarehouseItems() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -164,7 +163,7 @@ export function WarehouseItems() {
               <Package2 className="w-6 h-6 text-purple-600" />
             </div>
             <div className="min-w-0">
-              <h1 className="inline-flex items-center gap-2 flex-wrap text-xl sm:text-2xl font-bold text-gray-900">Itens do Almoxarifado <ActiveStockBadge /></h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Itens do Almoxarifado</h1>
               <p className="text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque de materiais
               </p>

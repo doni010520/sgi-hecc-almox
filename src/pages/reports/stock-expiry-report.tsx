@@ -12,7 +12,6 @@ import { format, differenceInDays, parseISO } from 'date-fns'
 
 // --------------- Tipos ---------------
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface ExpiryItem {
   id: string
   code: string
@@ -374,7 +373,7 @@ export function StockExpiryReport() {
             <CalendarClock size={20} style={{ color: mode === 'dark' ? '#5ee8b8' : '#059669' }} />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-xl font-bold" style={{ color: txt }}>Relatório de Validade de Estoque <ActiveStockBadge /></h1>
+            <h1 className="text-xl font-bold" style={{ color: txt }}>Relatório de Validade de Estoque</h1>
             <p className="text-sm" style={{ color: txtSec }}>
               {filteredItems.length} de {items.length} itens | Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
             </p>

@@ -14,7 +14,6 @@ import { itemsService } from '@/lib/services/items'
 import { useBarcodeScanner } from '@/hooks/use-barcode-scanner'
 import type { Item } from '@/lib/services/items'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface SelectedItem {
   item_id: string
   name: string
@@ -249,7 +248,7 @@ export function NewWarehouseDispatch() {
             <Package2 className="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Nova Saída Direta <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">Nova Saída Direta</h1>
             <p className="text-sm text-gray-500">
               Registre uma saída do almoxarifado sem solicitação prévia. O estoque é abatido automaticamente.
             </p>

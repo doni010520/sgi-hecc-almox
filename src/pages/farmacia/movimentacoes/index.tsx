@@ -22,7 +22,6 @@ import {
 } from '@/lib/services/pharmacy-loan'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function PharmacyLoansList({ scope }: { scope: LoanScope }) {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -91,9 +90,8 @@ export function PharmacyLoansList({ scope }: { scope: LoanScope }) {
             <ArrowRightLeft className="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">
-              Movimentações entre Unidades — {LOAN_SCOPE_LABELS[scope]}
-             <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Movimentações entre Unidades — {LOAN_SCOPE_LABELS[scope]}</h1>
             <p className="text-sm text-gray-500">
               Empréstimo, devolução, permuta, troca de validade, consignação e doação de itens do estoque de {LOAN_SCOPE_LABELS[scope]}.
             </p>

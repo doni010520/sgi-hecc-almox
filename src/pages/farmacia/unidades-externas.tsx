@@ -9,7 +9,6 @@ import {
 import { externalUnitsService, type ExternalUnit } from '@/lib/services/external-units'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function UnidadesExternas() {
   const [units, setUnits] = useState<ExternalUnit[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,7 +82,7 @@ export function UnidadesExternas() {
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-lg"><Building2 className="w-6 h-6 text-blue-600" /></div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Unidades Externas <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">Unidades Externas</h1>
             <p className="text-sm text-gray-500">Hospitais parceiros e unidades externas (destino de saídas).</p>
           </div>
         </div>

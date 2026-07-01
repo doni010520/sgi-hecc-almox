@@ -8,7 +8,6 @@ import { ptBR } from 'date-fns/locale'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import type { PharmacyDispensation } from '@/lib/types/dispensation'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function DispensationDetails() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -115,8 +114,7 @@ export function DispensationDetails() {
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   <User size={12} /> Prescricao
                 </span>
-              )}
-             <ActiveStockBadge /></h1>
+              )}</h1>
             <p className="text-sm" style={{ color: txtSec }}>
               {format(new Date(d.created_at), "dd 'de' MMMM 'de' yyyy 'as' HH:mm", { locale: ptBR })}
             </p>

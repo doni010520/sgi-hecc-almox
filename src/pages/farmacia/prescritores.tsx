@@ -11,7 +11,6 @@ import { prescribersService } from '@/lib/services/farmacia-cadastros'
 import type { Prescriber } from '@/lib/types/farmacia'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 const ALLOWED_ROLES = new Set([
   'admin', 'manager', 'administrador', 'gestor', 'pharmacist',
 ])
@@ -100,7 +99,7 @@ export function Prescritores() {
     return (
       <div className="max-w-3xl mx-auto p-6">
         <div className="p-6" style={card}>
-          <h1 className="inline-flex items-center gap-2 flex-wrap text-xl font-semibold" style={{ color: txt }}>Sem permissão <ActiveStockBadge /></h1>
+          <h1 className="text-xl font-semibold" style={{ color: txt }}>Sem permissão</h1>
           <p className="text-sm mt-2" style={{ color: txtSec }}>
             Apenas a coordenação/farmacêutico podem cadastrar prescritores.
           </p>

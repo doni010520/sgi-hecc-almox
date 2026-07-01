@@ -41,7 +41,6 @@ import type { Item } from '@/lib/services/items'
 import type { Department } from '@/lib/types/departments'
 
 // Types for consumption data
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface ConsumptionData {
   date: string;
   quantity: number;
@@ -478,7 +477,7 @@ export function PharmacyConsumptionReport() {
               <BarChart3 className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Estatísticas de Consumo - Farmácia <ActiveStockBadge /></h1>
+              <h1 className="text-2xl font-bold text-gray-900">Estatísticas de Consumo - Farmácia</h1>
               <p className="text-sm text-gray-500 mt-1">
                 Análise detalhada do consumo de medicamentos e materiais hospitalares
               </p>

@@ -11,8 +11,6 @@ import { supabase } from '@/lib/supabase'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import { suppliersService } from '@/lib/services/farmacia-cadastros'
 import { externalUnitsService } from '@/lib/services/external-units'
-import { ActiveStockBadge } from '@/components/active-stock-badge'
-
 interface NfEntryProps {
   type: 'pharmacy' | 'warehouse'
 }
@@ -196,7 +194,6 @@ export function NfEntry({ type }: NfEntryProps) {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
             <FileText className="w-6 h-6 text-emerald-600" />
             Nova Entrada — {type === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}
-            <ActiveStockBadge />
           </h1>
           <p className="text-sm text-gray-500">Lance vários itens de uma vez. Escolha o tipo de entrada.</p>
         </div>

@@ -17,7 +17,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 type Lista = 'A1_A2' | 'A3_B1_B2' | 'C1_C2_C4_C5' | 'C3' | 'antimicrobianos'
 
 const LISTAS: { value: Lista; label: string; sublabel: string }[] = [
@@ -372,7 +371,7 @@ export function LivroControlados() {
             <BookOpen className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Livro de Registro Específico <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold" style={{ color: txt }}>Livro de Registro Específico</h1>
             <p className="text-sm" style={{ color: txtSec }}>Portaria SVS/MS 344/98 — Controle de psicotrópicos e entorpecentes</p>
           </div>
         </div>

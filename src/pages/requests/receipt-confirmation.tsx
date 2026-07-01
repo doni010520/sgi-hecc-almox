@@ -15,7 +15,6 @@ import { supabase } from '@/lib/supabase'
 import { requestService } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface RequestItem {
   id: string
   quantity: number
@@ -158,7 +157,7 @@ export function ReceiptConfirmation() {
             <PackageCheck className="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Confirmar Recebimento <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">Confirmar Recebimento</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               Pedidos entregues aguardando confirmação. Confira os itens e confirme o recebimento.
             </p>

@@ -19,7 +19,6 @@ import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 function ItemRow({ item, canEdit, isAdmin, canSeeStock }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean, canSeeStock: boolean }) {
   const [suppliedQty, setSuppliedQty] = useState<number | ''>(item.supplied_quantity ?? '')
   // Observations stored as lines separated by \n
@@ -369,9 +368,8 @@ export function RequestDetails() {
             Voltar
           </Button>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">
-              Solicitação #{request?.request_number || formatRequestNumber(request.id)}
-             <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Solicitação #{request?.request_number || formatRequestNumber(request.id)}</h1>
             
             {/* Error Message */}
             {error && (

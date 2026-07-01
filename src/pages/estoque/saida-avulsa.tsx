@@ -28,7 +28,6 @@ import type {
 } from '@/lib/types/stock'
 import { SAIDA_AVULSA_REASON_LABEL } from '@/lib/types/stock'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface PharmacyItemRow {
   id: string
   code: string | null
@@ -236,9 +235,8 @@ export function SaidaAvulsa() {
     return (
       <div className="max-w-3xl mx-auto p-6">
         <div className="p-6" style={glass}>
-          <h1 className="inline-flex items-center gap-2 flex-wrap text-xl font-semibold" style={{ color: txt }}>
-            Sem permissao
-           <ActiveStockBadge /></h1>
+          <h1 className="text-xl font-semibold" style={{ color: txt }}>
+            Sem permissao</h1>
           <p className="text-sm mt-2" style={{ color: txtSec }}>
             Apenas a coordenacao e o farmaceutico (ou almoxarife) podem registrar saidas avulsas.
           </p>

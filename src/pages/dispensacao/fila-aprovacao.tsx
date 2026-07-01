@@ -8,7 +8,6 @@ import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensatio
 import type { PharmacyDispensation } from '@/lib/types/dispensation'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 const APPROVAL_ROLES = new Set(['pharmacist', 'gestor', 'administrador'])
 
 function classBadge(cls: string | null | undefined, isMav: boolean | undefined) {
@@ -94,7 +93,7 @@ export function FilaAprovacaoFarmaceutica() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Fila de Aprovação <ActiveStockBadge /></h1>
+          <h1 className="text-2xl font-bold" style={{ color: txt }}>Fila de Aprovação</h1>
           <p className="text-sm" style={{ color: txtSec }}>Dispensações aguardando aprovação farmacêutica</p>
         </div>
         <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full"

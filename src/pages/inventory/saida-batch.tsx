@@ -11,8 +11,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 import { suppliersService } from '@/lib/services/farmacia-cadastros'
 import { departmentsService } from '@/lib/services/departments'
 import { externalUnitsService } from '@/lib/services/external-units'
-import { ActiveStockBadge } from '@/components/active-stock-badge'
-
 interface SaidaBatchProps {
   type: 'pharmacy' | 'warehouse'
 }
@@ -204,7 +202,6 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
             <PackageMinus className="w-6 h-6 text-red-600" />
             Registrar Saída — {type === 'pharmacy' ? 'Farmácia' : 'Almoxarifado'}
-            <ActiveStockBadge />
           </h1>
           <p className="text-sm text-gray-500">Dê baixa em vários itens de uma vez. Escolha o motivo.</p>
         </div>

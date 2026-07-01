@@ -15,8 +15,6 @@ import type { Department } from '@/lib/types/departments'
 import type { DispensationType } from '@/lib/types/dispensation'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import { useModule } from '@/contexts/module'
-import { ActiveStockBadge } from '@/components/active-stock-badge'
-
 interface SelectedItem {
   item_id: string
   name: string
@@ -383,7 +381,6 @@ export function NewDispensation() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
             Nova Dispensação {isRequisicao ? '· Requisição' : '· Prescrição'}
-            <ActiveStockBadge />
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             {isRequisicao

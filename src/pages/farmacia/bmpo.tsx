@@ -22,7 +22,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 const fmtNum = (n: number | null | undefined) =>
   n == null ? '0' : n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
 
@@ -229,9 +228,8 @@ export function BMPO() {
           <ClipboardList className="w-6 h-6 text-teal-600" />
         </div>
         <div>
-          <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>
-            BMPO — Balanço de Medicamentos Psicoativos
-           <ActiveStockBadge /></h1>
+          <h1 className="text-2xl font-bold" style={{ color: txt }}>
+            BMPO — Balanço de Medicamentos Psicoativos</h1>
           <p className="text-sm" style={{ color: txtSec }}>
             Portaria SVS/MS 344/98, Art. 64 — balanço periódico de substâncias controladas
           </p>

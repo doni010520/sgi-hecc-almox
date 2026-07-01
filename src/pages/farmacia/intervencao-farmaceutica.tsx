@@ -15,7 +15,6 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 
 // ─── Tipos ───────────────────────────────────────────────────────────
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 type PRM = 'ADESAO' | 'EFETIVIDADE' | 'INDICACAO' | 'SEGURANCA'
 type Acatado = 'SIM' | 'NAO_C_JUST' | 'NAO_S_JUST'
 type Gravidade = 'LEVE' | 'MODERADA' | 'GRAVE' | 'MUITO_GRAVE'
@@ -333,7 +332,7 @@ export function IntervencaoFarmaceutica() {
             <Stethoscope className="w-6 h-6 text-purple-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Intervenção Farmacêutica <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold" style={{ color: txt }}>Intervenção Farmacêutica</h1>
             <p className="text-sm" style={{ color: txtSec }}>Registro e acompanhamento de intervenções</p>
           </div>
         </div>

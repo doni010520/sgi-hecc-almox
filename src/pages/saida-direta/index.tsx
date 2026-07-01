@@ -20,7 +20,6 @@ import {
 } from '@/lib/services/warehouse-dispatch'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 
-import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function WarehouseDispatchList() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -86,7 +85,7 @@ export function WarehouseDispatchList() {
             <Package2 className="w-6 h-6 text-primary-600" />
           </div>
           <div>
-            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Saídas Diretas — Almoxarifado <ActiveStockBadge /></h1>
+            <h1 className="text-2xl font-bold text-gray-900">Saídas Diretas — Almoxarifado</h1>
             <p className="text-sm text-gray-500">
               Saídas registradas sem solicitação prévia. O estoque é abatido automaticamente no momento do registro.
             </p>
