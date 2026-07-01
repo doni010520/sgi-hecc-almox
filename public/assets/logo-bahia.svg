@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" role="img" aria-label="Governo da Bahia">
+  <rect width="200" height="140" fill="#ffffff" stroke="#0a4a8b" stroke-width="3" rx="8"/>
+  <text x="100" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="800" fill="#0a4a8b">BAHIA</text>
+  <text x="100" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#0a4a8b">GOVERNO DO ESTADO</text>
+  <text x="100" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#0a4a8b">Secretaria da Saúde — SESAB</text>
+</svg>

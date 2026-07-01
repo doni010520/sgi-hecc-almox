@@ -132,7 +132,7 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
         <div className="grid grid-cols-[80px_1fr_80px] items-center gap-3 border-b-2 border-gray-800 pb-3 mb-4">
           <div className="flex items-center justify-center h-14">
             <img
-              src="/assets/logo-fesf.png"
+              src="/assets/logo-fesf.svg"
               alt="FESF-SUS"
               className="max-h-14 max-w-full object-contain"
               onError={(e) => {
@@ -151,7 +151,7 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
           </div>
           <div className="flex items-center justify-center h-14">
             <img
-              src="/assets/logo-bahia.png"
+              src="/assets/logo-bahia.svg"
               alt="Governo do Estado da Bahia"
               className="max-h-14 max-w-full object-contain"
               onError={(e) => {
