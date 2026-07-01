@@ -73,14 +73,37 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
       return
     }
     const path = location.pathname
+    // Path dita o modulo quando explicito (/farmacia/* ou /almox/*)
     if (path.startsWith('/farmacia')) {
       setActiveModuleState('farmacia')
       localStorage.setItem(STORAGE_KEY, 'farmacia')
-    } else if (path.startsWith('/almox')) {
+      return
+    }
+    if (path.startsWith('/almox')) {
       setActiveModuleState('almoxarifado')
       localStorage.setItem(STORAGE_KEY, 'almoxarifado')
+      return
     }
+    // Path neutro (ex.: /requests/*, /dashboard) — restaura do localStorage.
+    // Sem esse fallback, um F5/Ctrl+Shift+R fora de /farmacia deixava o
+    // header sem dropdown de estoque porque o initial useState rodou
+    // enquanto user ainda estava null (auth async).
+    setActiveModuleState((current) => {
+      if (current) return current
+      const stored = localStorage.getItem(STORAGE_KEY)
+      return (stored === 'farmacia' || stored === 'almoxarifado') ? stored : null
+    })
   }, [location.pathname, isModuleUser])
+
+  // activeStock tambem depende da hidratacao do localStorage; caso o
+  // initial useState tenha rodado antes do provider estar pronto, revalida.
+  useEffect(() => {
+    if (!activeStock) {
+      const restored = pharmacyStockById(localStorage.getItem(STOCK_KEY))
+      if (restored) setActiveStockState(restored)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModuleUser])
 
   return (
     <ModuleContext.Provider value={{ activeModule, setActiveModule, isModuleUser, activeStock, setActiveStock }}>
