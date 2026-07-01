@@ -45,13 +45,29 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const allSections = buildSidebarSections({ pharmacyStock: activeModule === 'farmacia' ? activeStock : null })
 
-  const filteredSections = filterSectionsByModule(allSections, activeModule)
+  const filteredSections = mergeSectionsByTitle(filterSectionsByModule(allSections, activeModule))
 
   function filterSectionsByModule(sections: SidebarSection[], mod: typeof activeModule): SidebarSection[] {
     if (!mod) return sections
     return sections.filter(s =>
       s.module === 'shared' || s.module === 'admin' || s.module === mod
     )
+  }
+
+  // Duas secoes com o mesmo titulo (ex.: "Inicio" pra shared+farmacia+almox)
+  // devem virar UMA no render, com os itens concatenados. Sem esse merge,
+  // aparecia "INICIO" 3x seguidos no header — bagunca visual.
+  function mergeSectionsByTitle(sections: SidebarSection[]): SidebarSection[] {
+    const merged: SidebarSection[] = []
+    for (const s of sections) {
+      const idx = merged.findIndex((m) => m.title === s.title)
+      if (idx >= 0) {
+        merged[idx] = { ...merged[idx], items: [...merged[idx].items, ...s.items] }
+      } else {
+        merged.push({ ...s, items: [...s.items] })
+      }
+    }
+    return merged
   }
 
   const modulePrefix = activeModule
@@ -192,7 +208,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           if (visibleItems.length === 0) return null
 
           return (
-            <div key={`${section.module}--${section.title}`}>
+            <div key={section.title}>
               <h3 style={{
                 padding: '0 8px', fontSize: 11, fontWeight: 600,
                 color: colors.sidebarTextMuted, textTransform: 'uppercase',

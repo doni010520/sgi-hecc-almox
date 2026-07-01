@@ -86,7 +86,9 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Painel TV', icon: Tv, href: '/tv/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
-    // --- SOLICITAÇÕES: fluxo do solicitante (todos veem) ---
+    // --- SOLICITAÇÕES: fluxo do solicitante + gestao pra staff. Usuario
+    //     comum ve so os 3 primeiros; staff (canManageRequests) ve todos —
+    //     assim nao precisa procurar em 2 secoes o que precisa aprovar. ---
     {
       title: 'Solicitações',
       module: 'shared',
@@ -94,6 +96,10 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: () => true },
         { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: () => true },
         { name: 'Confirmar Recebimento', icon: PackageCheck, href: '/requests/receipt-confirmation', show: () => true },
+        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: (f) => f.canManageRequests },
+        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
+        { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
       ],
     },
     // --- ESTOQUE ---
@@ -111,7 +117,9 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
-    // --- OPERAÇÕES: quebras, devoluções, empréstimos, vencimentos (compartilhado) ---
+    // --- OPERAÇÕES: reune tudo que opera sobre o estoque — quebras, devolucoes,
+    //     emprestimos, vencimentos, movimentacoes entre unidades e saida direta.
+    //     Consolidado em uma secao so pra nao ter varias secoes pequenas. ---
     {
       title: 'Operações',
       module: 'shared',
@@ -120,6 +128,26 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Devoluções', icon: Undo2, href: '/estoque/devolucao', show: () => true },
         { name: 'Empréstimos', icon: Handshake, href: '/estoque/emprestimos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Vencimentos', icon: CalendarX, href: '/estoque/vencimentos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+      ],
+    },
+    {
+      title: 'Operações',
+      module: 'farmacia',
+      items: [
+        { name: 'Movimentações', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: (f) => f.canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/farmacia/movimentacoes/pendencias', show: (f) => f.canManageRequests },
+      ],
+    },
+    {
+      title: 'Operações',
+      module: 'almoxarifado',
+      items: [
+        { name: 'Movimentações', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: (f) => f.canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/almoxarifado/movimentacoes/pendencias', show: (f) => f.canManageRequests },
+        { name: 'Saída Direta', icon: Package2, href: '/saida-direta', show: (f) => f.canManageRequests },
+        { name: 'Nova Saída Direta', icon: ListChecks, href: '/saida-direta/new', show: (f) => f.canManageRequests },
       ],
     },
     // --- DISPENSAÇÃO (só satélites de farmácia) ---
@@ -131,45 +159,6 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => isSat && f.canManageRequests },
         { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => isSat && f.canManageRequests },
         { name: 'Histórico', icon: History, href: '/dispensacao/historico', show: (f) => isSat && f.canManageRequests },
-      ],
-    },
-    // --- MOVIMENTAÇÕES entre unidades (farmácia ou almox) ---
-    {
-      title: 'Movimentações',
-      module: 'farmacia',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: (f) => f.canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: Clock, href: '/farmacia/movimentacoes/pendencias', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Movimentações',
-      module: 'almoxarifado',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: (f) => f.canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: Clock, href: '/almoxarifado/movimentacoes/pendencias', show: (f) => f.canManageRequests },
-      ],
-    },
-    // --- SAÍDA DIRETA (só almox) ---
-    {
-      title: 'Saída Direta',
-      module: 'almoxarifado',
-      items: [
-        { name: 'Saídas', icon: Package2, href: '/saida-direta', show: (f) => f.canManageRequests },
-        { name: 'Nova Saída', icon: ListChecks, href: '/saida-direta/new', show: (f) => f.canManageRequests },
-      ],
-    },
-    // --- GESTÃO (staff): inbox, processing, history, pending ---
-    {
-      title: 'Gestão',
-      module: 'shared',
-      items: [
-        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: (f) => f.canManageRequests },
-        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
-        { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
       ],
     },
     // --- CADASTROS (farmácia) ---
@@ -184,9 +173,9 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: (f) => f.canManageRequests },
       ],
     },
-    // --- PORTARIA 344/98 (farmácia — controlados) ---
+    // --- CONTROLADOS + CCIH (farmacia — regulatório junto pra reduzir secoes) ---
     {
-      title: 'Portaria 344/98',
+      title: 'Controlados e CCIH',
       module: 'farmacia',
       items: [
         { name: 'Livro de Controlados', icon: BookOpen, href: '/farmacia/livro-controlados', show: (f) => f.canManageRequests },
@@ -194,13 +183,6 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'BMPO', icon: BarChart3, href: '/farmacia/bmpo', show: (f) => f.canManageRequests },
         { name: 'Perdas', icon: PackageMinus, href: '/farmacia/perdas', show: (f) => f.canManageRequests },
         { name: 'Talidomida', icon: AlertOctagon, href: '/farmacia/talidomida', show: (f) => f.canManageRequests },
-      ],
-    },
-    // --- CCIH (farmácia) ---
-    {
-      title: 'CCIH',
-      module: 'farmacia',
-      items: [
         { name: 'Antimicrobianos', icon: Shield, href: '/farmacia/antimicrobianos', show: (f) => f.canManageRequests },
         { name: 'Intervenção Farmacêutica', icon: Stethoscope, href: '/farmacia/intervencao-farmaceutica', show: (f) => f.canManageRequests },
       ],
