@@ -15,9 +15,17 @@ import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
+import { supabase } from '@/lib/supabase'
 import type { Item, FilterOptions } from '@/lib/services/items'
 
-export function WarehouseItems() {
+interface WarehouseItemsProps {
+  // Quando um satelite (ex.: SAT_T) opera sobre itens do almoxarifado, a rota
+  // /inventory/stock/:id passa o location. Sem prop = almoxarifado central.
+  locationId?: string
+  locationName?: string
+}
+
+export function WarehouseItems({ locationId, locationName }: WarehouseItemsProps = {}) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
@@ -37,6 +45,9 @@ export function WarehouseItems() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [hideZeroStock, setHideZeroStock] = useState(true)
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
+  // Saldo local (item_id -> quantity NESTE location) quando ha locationId.
+  // Vazio => usa o current_stock global do cadastro.
+  const [localQtyById, setLocalQtyById] = useState<Map<string, number>>(new Map())
 
   const handleEditItem = (item: Item) => {
     setSelectedItem(item)
@@ -45,12 +56,33 @@ export function WarehouseItems() {
 
   const isAdmin = user?.role === 'administrador'
   const canEdit = user?.role === 'administrador' || user?.role === 'gestor'
+
+  // Saldo do item NESTE location (quando prop presente). Fallback pro campo
+  // global do cadastro — usado pela rota do almoxarifado central.
+  const getLocalQty = (item: Item): number => {
+    if (!locationId) return item.current_stock ?? 0
+    return localQtyById.get(item.id) ?? 0
+  }
+
   const loadItems = async () => {
     try {
       setLoading(true)
       setError(null)
       const data = await itemsService.getByType('warehouse', filters)
       setItems(data)
+
+      // Se estamos num satelite (SAT_T), carrega saldo por location de item_stocks.
+      if (locationId) {
+        const { data: stocks, error: stocksErr } = await supabase
+          .from('item_stocks')
+          .select('item_id, quantity')
+          .eq('location_id', locationId)
+          .eq('item_type', 'warehouse')
+        if (stocksErr) throw stocksErr
+        setLocalQtyById(new Map((stocks ?? []).map((s: any) => [s.item_id, s.quantity])))
+      } else {
+        setLocalQtyById(new Map())
+      }
     } catch (error) {
       console.error('Error loading items:', error)
       setError('Erro ao carregar itens. Por favor, tente novamente.')
@@ -61,7 +93,8 @@ export function WarehouseItems() {
 
   useEffect(() => {
     loadItems()
-  }, [filters])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, locationId])
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -113,14 +146,14 @@ export function WarehouseItems() {
   })
 
   const filteredItems = sortedItems
-    .filter(item => !hideZeroStock || (item.current_stock ?? 0) > 0)
+    .filter(item => !hideZeroStock || getLocalQty(item) > 0)
     .filter(item =>
       searchTerm === '' ||
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.code?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-  const zeroStockCount = sortedItems.filter(item => (item.current_stock ?? 0) === 0).length
+  const zeroStockCount = sortedItems.filter(item => getLocalQty(item) === 0).length
 
   if (loading) {
     return (
@@ -158,7 +191,9 @@ export function WarehouseItems() {
               <Package2 className="w-6 h-6 text-purple-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight break-words">Itens do Almoxarifado</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight break-words">
+                {locationName ? `Estoque — ${locationName}` : 'Itens do Almoxarifado'}
+              </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque de materiais
               </p>
@@ -368,7 +403,7 @@ export function WarehouseItems() {
                       {Math.round(avgConsumption)} {item.unit}/mês
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-medium">
-                      {item.current_stock} {item.unit}
+                      {getLocalQty(item)} {item.unit}
                     </td>
                     <td className="px-4 py-3 text-sm text-right text-gray-600">
                       {item.min_stock} {item.unit}
@@ -378,23 +413,13 @@ export function WarehouseItems() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-center">
-                        {item.current_stock === 0 ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200">
-                            Sem Estoque
-                          </span>
-                        ) : item.current_stock <= item.min_stock ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200">
-                            Estoque Baixo
-                          </span>
-                        ) : item.current_stock <= supplyPoint ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">
-                            Ponto de Pedido
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-600 border border-green-200">
-                            Normal
-                          </span>
-                        )}
+                        {(() => {
+                          const q = getLocalQty(item)
+                          if (q === 0)                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200">Sem Estoque</span>
+                          if (q <= item.min_stock)    return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-50 text-yellow-600 border border-yellow-200">Estoque Baixo</span>
+                          if (q <= supplyPoint)       return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">Ponto de Pedido</span>
+                          return                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-600 border border-green-200">Normal</span>
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-3">
