@@ -156,21 +156,22 @@ export function WarehouseItems() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
-        {/* Layout: empilha em < xl porque com 4 botoes + titulo + sidebar, falta espaco em telas medias */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        {/* Header — mesmo padrao de pharmacy-items: SEMPRE coluna (titulo full-width,
+            botoes em flex-wrap embaixo). 5 botoes + sidebar quebravam titulo em varias
+            linhas entre 640-1280px com o antigo xl:flex-row. */}
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-100 rounded-lg flex-shrink-0">
               <Package2 className="w-6 h-6 text-purple-600" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Itens do Almoxarifado</h1>
-              <p className="text-sm text-gray-500 mt-1">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight break-words">Itens do Almoxarifado</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque de materiais
               </p>
             </div>
           </div>
-          {/* flex-wrap garante que os botoes nao espremam em larguras intermediarias */}
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
