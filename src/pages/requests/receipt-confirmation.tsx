@@ -85,7 +85,8 @@ export function ReceiptConfirmation() {
           )
         `)
         .eq('status', 'delivered')
-        .order('delivered_at', { ascending: true, nullsFirst: false })
+        // Recente → antigo (usuário rola até achar; entregas de hoje no topo)
+        .order('delivered_at', { ascending: false, nullsFirst: false })
 
       if (error) throw error
 

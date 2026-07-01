@@ -538,7 +538,7 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
 
       <Button
         type="button"
-        className="w-full"
+        className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold"
         disabled={selectedItems.length === 0 || submitting}
         onClick={handleSubmit}
       >

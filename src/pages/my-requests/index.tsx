@@ -171,9 +171,24 @@ export function MyRequests() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button 
-            variant="outline" 
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botão de confirmar recebimento quando o pedido foi entregue mas
+              ainda não confirmado — leva pra tela dedicada de confirmação. */}
+          {request.status === 'delivered' && (
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate('/requests/receipt-confirmation')
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Confirmar Recebimento
+            </Button>
+          )}
+          <Button
+            variant="outline"
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
