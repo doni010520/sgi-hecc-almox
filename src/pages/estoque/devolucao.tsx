@@ -229,7 +229,9 @@ export function DevolucaoInterna() {
         .insert({
           target_location_id: cafLocationId,
           returned_by_user_id: user.id,
-          created_by: user.id,
+          // department_id vem do usuário logado — de onde a devolução partiu
+          // (ex: setor "Emergência"). Fica exibido no de/para do cabeçalho.
+          department_id: user.department_id ?? null,
           patient_name: patientName.trim(),
           patient_prontuario: prontuario.trim(),
           return_reason: motivo,
