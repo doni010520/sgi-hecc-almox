@@ -244,23 +244,27 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header — SEMPRE empilhado: titulo em cima full-width, botoes abaixo
+          com flex-wrap. Nao usa flex-row porque comprimiam titulo em telas
+          medias e o CAF ficava quebrado em varias linhas ("desconfigurado"). */}
       <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
-        {/* Layout: empilha em < xl porque com 4 botoes + titulo + sidebar, falta espaco em telas medias */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-100 rounded-lg flex-shrink-0">
               <Pill className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{locationName ? `Estoque — ${locationName}` : 'Itens da Farmácia'}</h1>
-              <p className="text-sm text-gray-500 mt-1">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 leading-tight break-words">
+                {locationName ? `Estoque — ${locationName}` : 'Itens da Farmácia'}
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque farmacêutico
               </p>
             </div>
           </div>
-          {/* flex-wrap garante que os botoes nao espremam em larguras intermediarias */}
-          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+          {/* Barra de botoes — ocupa linha inteira abaixo do titulo,
+              wrapa naturalmente em telas menores */}
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"

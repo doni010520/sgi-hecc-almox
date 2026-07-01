@@ -63,31 +63,30 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
   const stock = ctx?.pharmacyStock ?? null
   // Dispensação só ocorre nas farmácias satélites — não no CAF.
   const isSat = !!stock && stock.code !== 'CAF'
-  const estoqueAtualItems: SidebarItem[] = stock
-    ? [{ name: stock.label, icon: Building2, href: `/inventory/stock/${stock.id}`, show: (f) => f.isManager || f.isAdmin || f.isAtendente }]
-    : []
   return [
+    // --- PRINCIPAL: dashboard + painéis de TV numa seção só, compacta ---
     {
-      title: 'Principal',
+      title: 'Início',
       module: 'shared',
       items: [
         { name: 'Dashboard', icon: LayoutDashboard, href: '/', show: (f) => !f.isEnfermagem },
       ],
     },
     {
-      title: 'Painel TV',
-      module: 'almoxarifado',
+      title: 'Início',
+      module: 'farmacia',
       items: [
-        { name: 'Painel TV - Almoxarifado', icon: Tv, href: '/tv/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Painel TV', icon: Tv, href: '/tv/pharmacy', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     {
-      title: 'Painel TV',
-      module: 'farmacia',
+      title: 'Início',
+      module: 'almoxarifado',
       items: [
-        { name: 'Painel TV - Farmácia', icon: Tv, href: '/tv/pharmacy', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Painel TV', icon: Tv, href: '/tv/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
+    // --- SOLICITAÇÕES: fluxo do solicitante (todos veem) ---
     {
       title: 'Solicitações',
       module: 'shared',
@@ -97,86 +96,13 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Confirmar Recebimento', icon: PackageCheck, href: '/requests/receipt-confirmation', show: () => true },
       ],
     },
-    {
-      title: 'Cadastros Farmácia',
-      module: 'farmacia',
-      items: [
-        { name: 'Catálogo de Medicamentos', icon: BookOpen, href: '/farmacia/catalogo', show: (f) => f.canManageRequests },
-        { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: (f) => f.canManageRequests },
-        { name: 'Unidades Externas', icon: Building2, href: '/farmacia/unidades-externas', show: (f) => f.canManageRequests },
-        { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: (f) => f.canManageRequests },
-        { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Controle Legal — Portaria 344/98',
-      module: 'farmacia',
-      items: [
-        { name: 'Livro de Controlados', icon: BookOpen, href: '/farmacia/livro-controlados', show: (f) => f.canManageRequests },
-        { name: 'Notificação de Receita', icon: FileText, href: '/farmacia/notificacao-receita', show: (f) => f.canManageRequests },
-        { name: 'BMPO — Balanço', icon: BarChart3, href: '/farmacia/bmpo', show: (f) => f.canManageRequests },
-        { name: 'Perdas / Inutilização', icon: PackageMinus, href: '/farmacia/perdas', show: (f) => f.canManageRequests },
-        { name: 'Talidomida', icon: AlertOctagon, href: '/farmacia/talidomida', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Conformidade e CCIH',
-      module: 'farmacia',
-      items: [
-        { name: 'Controle de Antimicrobianos', icon: Shield, href: '/farmacia/antimicrobianos', show: (f) => f.canManageRequests },
-        { name: 'Intervenção Farmacêutica', icon: Stethoscope, href: '/farmacia/intervencao-farmaceutica', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Dispensação',
-      module: 'farmacia',
-      items: [
-        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: (f) => isSat && f.canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => isSat && f.canManageRequests },
-        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => isSat && f.canManageRequests },
-        { name: 'Histórico de Prescrições', icon: History, href: '/dispensacao/historico', show: (f) => isSat && f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Movimentação entre Unidades — Farmácia',
-      module: 'farmacia',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: (f) => f.canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: Clock, href: '/farmacia/movimentacoes/pendencias', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Movimentação entre Unidades — Almoxarifado',
-      module: 'almoxarifado',
-      items: [
-        { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: (f) => f.canManageRequests },
-        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: Clock, href: '/almoxarifado/movimentacoes/pendencias', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Saída Direta — Almoxarifado',
-      module: 'almoxarifado',
-      items: [
-        { name: 'Saídas Registradas', icon: Package2, href: '/saida-direta', show: (f) => f.canManageRequests },
-        { name: 'Nova Saída', icon: ListChecks, href: '/saida-direta/new', show: (f) => f.canManageRequests },
-      ],
-    },
-    {
-      title: 'Gestão de Solicitações',
-      module: 'shared',
-      items: [
-        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: (f) => f.canManageRequests },
-        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
-        { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
-        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
-      ],
-    },
+    // --- ESTOQUE ---
     {
       title: 'Estoque',
       module: 'farmacia',
-      items: estoqueAtualItems,
+      items: stock
+        ? [{ name: stock.label, icon: Building2, href: `/inventory/stock/${stock.id}`, show: (f) => f.isManager || f.isAdmin || f.isAtendente }]
+        : [],
     },
     {
       title: 'Estoque',
@@ -185,8 +111,9 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
+    // --- OPERAÇÕES: quebras, devoluções, empréstimos, vencimentos (compartilhado) ---
     {
-      title: 'Operações de Estoque',
+      title: 'Operações',
       module: 'shared',
       items: [
         { name: 'Quebras e Avarias', icon: PackageMinus, href: '/estoque/saida-avulsa', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
@@ -195,33 +122,114 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Vencimentos', icon: CalendarX, href: '/estoque/vencimentos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
+    // --- DISPENSAÇÃO (só satélites de farmácia) ---
+    {
+      title: 'Dispensação',
+      module: 'farmacia',
+      items: [
+        { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: (f) => isSat && f.canManageRequests },
+        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => isSat && f.canManageRequests },
+        { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => isSat && f.canManageRequests },
+        { name: 'Histórico', icon: History, href: '/dispensacao/historico', show: (f) => isSat && f.canManageRequests },
+      ],
+    },
+    // --- MOVIMENTAÇÕES entre unidades (farmácia ou almox) ---
+    {
+      title: 'Movimentações',
+      module: 'farmacia',
+      items: [
+        { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: (f) => f.canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/farmacia/movimentacoes/pendencias', show: (f) => f.canManageRequests },
+      ],
+    },
+    {
+      title: 'Movimentações',
+      module: 'almoxarifado',
+      items: [
+        { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: (f) => f.canManageRequests },
+        { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/almoxarifado/movimentacoes/pendencias', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- SAÍDA DIRETA (só almox) ---
+    {
+      title: 'Saída Direta',
+      module: 'almoxarifado',
+      items: [
+        { name: 'Saídas', icon: Package2, href: '/saida-direta', show: (f) => f.canManageRequests },
+        { name: 'Nova Saída', icon: ListChecks, href: '/saida-direta/new', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- GESTÃO (staff): inbox, processing, history, pending ---
+    {
+      title: 'Gestão',
+      module: 'shared',
+      items: [
+        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: (f) => f.canManageRequests },
+        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
+        { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- CADASTROS (farmácia) ---
+    {
+      title: 'Cadastros',
+      module: 'farmacia',
+      items: [
+        { name: 'Catálogo', icon: BookOpen, href: '/farmacia/catalogo', show: (f) => f.canManageRequests },
+        { name: 'Fornecedores', icon: Building2, href: '/farmacia/fornecedores', show: (f) => f.canManageRequests },
+        { name: 'Unidades Externas', icon: Building2, href: '/farmacia/unidades-externas', show: (f) => f.canManageRequests },
+        { name: 'Prescritores', icon: Stethoscope, href: '/farmacia/prescritores', show: (f) => f.canManageRequests },
+        { name: 'Pacientes', icon: UsersRound, href: '/farmacia/pacientes', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- PORTARIA 344/98 (farmácia — controlados) ---
+    {
+      title: 'Portaria 344/98',
+      module: 'farmacia',
+      items: [
+        { name: 'Livro de Controlados', icon: BookOpen, href: '/farmacia/livro-controlados', show: (f) => f.canManageRequests },
+        { name: 'Notificação de Receita', icon: FileText, href: '/farmacia/notificacao-receita', show: (f) => f.canManageRequests },
+        { name: 'BMPO', icon: BarChart3, href: '/farmacia/bmpo', show: (f) => f.canManageRequests },
+        { name: 'Perdas', icon: PackageMinus, href: '/farmacia/perdas', show: (f) => f.canManageRequests },
+        { name: 'Talidomida', icon: AlertOctagon, href: '/farmacia/talidomida', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- CCIH (farmácia) ---
+    {
+      title: 'CCIH',
+      module: 'farmacia',
+      items: [
+        { name: 'Antimicrobianos', icon: Shield, href: '/farmacia/antimicrobianos', show: (f) => f.canManageRequests },
+        { name: 'Intervenção Farmacêutica', icon: Stethoscope, href: '/farmacia/intervencao-farmaceutica', show: (f) => f.canManageRequests },
+      ],
+    },
+    // --- RELATÓRIOS: unificado, itens filtrados por módulo com `show` inline ---
     {
       title: 'Relatórios',
       module: 'farmacia',
       items: [
-        { name: 'Estoque - Farmácia', icon: Pill, href: '/reports/pharmacy-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Consumo - Farmácia', icon: BarChart3, href: '/reports/pharmacy-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Gestão Consumo - Farmácia', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: (f) => f.isAdmin },
-        { name: 'Farmácia (Multi-Estoque)', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Estoque', icon: Pill, href: '/reports/pharmacy-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Consumo', icon: BarChart3, href: '/reports/pharmacy-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Gestão de Consumo', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: (f) => f.isAdmin },
+        { name: 'Multi-Estoque', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     {
       title: 'Relatórios',
       module: 'almoxarifado',
       items: [
-        { name: 'Estoque - Almoxarifado', icon: Package2, href: '/reports/warehouse-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Consumo - Almoxarifado', icon: BarChart3, href: '/reports/warehouse-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Gestão Consumo - Almoxarifado', icon: FileText, href: '/reports/warehouse-admin-consumption', show: (f) => f.isAdmin },
+        { name: 'Estoque', icon: Package2, href: '/reports/warehouse-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Consumo', icon: BarChart3, href: '/reports/warehouse-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Gestão de Consumo', icon: FileText, href: '/reports/warehouse-admin-consumption', show: (f) => f.isAdmin },
+        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
-    {
-      title: 'Relatórios',
-      module: 'shared',
-      items: [
-        { name: 'Validade de Estoque', icon: CalendarClock, href: '/reports/stock-expiry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Movimentações e Consumo', icon: BarChart3, href: '/reports/movimentacoes', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-      ],
-    },
+    // --- ADMIN + CONFIG (no fim) ---
     {
       title: 'Administração',
       module: 'admin',
@@ -235,7 +243,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       ],
     },
     {
-      title: 'Configurações',
+      title: 'Conta',
       module: 'shared',
       items: [
         { name: 'Meu Perfil', icon: UserCircle, href: '/profile', show: () => true },
