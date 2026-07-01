@@ -128,16 +128,40 @@ export function PharmacyLoanDetail({ printMode = false }: { printMode?: boolean 
         id="loan-print"
         className={`bg-white ${printMode ? '' : 'p-8 rounded-xl shadow-sm border border-gray-100'}`}
       >
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between border-b-2 border-gray-800 pb-3 mb-4">
-          <div className="text-sm font-bold text-gray-800">FESF-SUS</div>
-          <div className="text-center flex-1">
-            <div className="text-lg font-bold text-gray-900">HOSPITAL ESTADUAL COSTA DOS COQUEIROS</div>
-            <div className="text-sm font-semibold text-gray-700">
+        {/* Cabeçalho — logos institucionais + título centralizado */}
+        <div className="grid grid-cols-[80px_1fr_80px] items-center gap-3 border-b-2 border-gray-800 pb-3 mb-4">
+          <div className="flex items-center justify-center h-14">
+            <img
+              src="/assets/logo-fesf.png"
+              alt="FESF-SUS"
+              className="max-h-14 max-w-full object-contain"
+              onError={(e) => {
+                const el = e.currentTarget
+                el.style.display = 'none'
+                if (el.nextElementSibling) (el.nextElementSibling as HTMLElement).style.display = 'block'
+              }}
+            />
+            <span className="hidden text-xs font-bold text-gray-800 text-center leading-tight">FESF-SUS</span>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-gray-900 leading-tight">HOSPITAL ESTADUAL COSTA DOS COQUEIROS</div>
+            <div className="text-sm font-semibold text-gray-700 mt-1">
               FORMULÁRIO DE SAÍDA DE MATERIAL — {LOAN_SCOPE_LABELS[loan.scope]}
             </div>
           </div>
-          <div className="text-sm font-bold text-gray-800">GOVERNO BAHIA</div>
+          <div className="flex items-center justify-center h-14">
+            <img
+              src="/assets/logo-bahia.png"
+              alt="Governo do Estado da Bahia"
+              className="max-h-14 max-w-full object-contain"
+              onError={(e) => {
+                const el = e.currentTarget
+                el.style.display = 'none'
+                if (el.nextElementSibling) (el.nextElementSibling as HTMLElement).style.display = 'block'
+              }}
+            />
+            <span className="hidden text-xs font-bold text-gray-800 text-center leading-tight">GOVERNO BAHIA</span>
+          </div>
         </div>
 
         {/* Origem/Destino */}
@@ -299,11 +323,13 @@ function DirectionSection({
             return (
               <tr key={it.id} className="border-b border-gray-800">
                 <td className="p-1 border-r border-gray-800">
+                  {/* Badges FARM/ALMOX escondidos no modo impressão (poluíam o
+                      formulário oficial). Ficam só na visualização digital. */}
                   {(it as any).warehouse_item_id && (
-                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">ALMOX</span>
+                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 print:hidden">ALMOX</span>
                   )}
                   {it.pharmacy_item_id && (
-                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">FARM</span>
+                    <span className="text-[9px] mr-1 px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 print:hidden">FARM</span>
                   )}
                   {it.item_description}
                 </td>
