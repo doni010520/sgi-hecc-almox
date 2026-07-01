@@ -21,7 +21,8 @@ import { departmentBelongsToStock } from '@/lib/constants/stock-locations'
 
 interface RequestItem {
   id: string
-  quantity: number
+  quantity: number                // qtd LIBERADA (approved) — a que sera recebida
+  requested_quantity: number      // qtd original solicitada (mostrada como referencia se diferente)
   item_name: string
   item_code: string
   item_unit?: string
@@ -87,6 +88,8 @@ export function ReceiptConfirmation() {
           request_items(
             id,
             quantity,
+            approved_quantity,
+            supplied_quantity,
             pharmacy_item:pharmacy_items(id, name, code, unit),
             warehouse_item:warehouse_items(id, name, code, unit)
           )
@@ -115,9 +118,14 @@ export function ReceiptConfirmation() {
         created_at: req.created_at,
         items: (req.request_items || []).map((ri: any) => {
           const item = ri.pharmacy_item ?? ri.warehouse_item
+          // No recebimento aparece a quantidade LIBERADA (approved) — nao
+          // a original solicitada. Se por algum motivo approved nao foi
+          // preenchido, cai pra supplied ou pra quantity como fallback.
+          const finalQty = ri.approved_quantity ?? ri.supplied_quantity ?? ri.quantity
           return {
             id: ri.id,
-            quantity: ri.quantity,
+            quantity: finalQty,
+            requested_quantity: ri.quantity,
             item_name: item?.name ?? '—',
             item_code: item?.code ?? '—',
             item_unit: item?.unit,
@@ -312,10 +320,17 @@ export function ReceiptConfirmation() {
                         </span>
                       </div>
                       <div className="text-right shrink-0 ml-3">
-                        <span className="text-sm font-semibold text-gray-800">
-                          {item.quantity}
-                          {item.item_unit ? ` ${item.item_unit}` : ''}
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">
+                            {item.quantity}
+                            {item.item_unit ? ` ${item.item_unit}` : ''}
+                          </span>
+                          {item.requested_quantity !== item.quantity && (
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap" title="Quantidade originalmente solicitada">
+                              solic.: {item.requested_quantity}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

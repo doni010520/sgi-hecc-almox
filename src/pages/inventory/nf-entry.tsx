@@ -141,14 +141,24 @@ export function NfEntry({ type }: NfEntryProps) {
   const totalQty = lines.reduce((s, l) => s + (l.quantity || 0), 0)
   const totalValue = lines.reduce((s, l) => s + (l.quantity || 0) * (l.unit_price || 0), 0)
 
+  // Lote e validade sao obrigatorios pra QUALQUER entrada — sem eles,
+  // o controle de FEFO e de vencimento do estoque quebra. Se o produto
+  // legitimamente nao tem lote, o operador pode digitar "S/L" ou similar.
   const canSubmit =
     supplierName.trim() &&
     (!isCompra || (invoiceNumber.trim() && invoiceDate && afmNumber.trim())) &&
-    lines.length > 0 && lines.every((l) => l.quantity > 0)
+    lines.length > 0 &&
+    lines.every((l) => l.quantity > 0 && l.batch_number.trim() && l.expiry_date)
 
   async function handleSubmit() {
     setError(null)
     if (!canSubmit) {
+      // Erro especifico se o problema for lote/validade em alguma linha
+      const missingLotValid = lines.some((l) => l.quantity > 0 && (!l.batch_number.trim() || !l.expiry_date))
+      if (missingLotValid) {
+        setError('Preencha Lote e Validade em TODAS as linhas — obrigatórios pra rastreabilidade e FEFO.')
+        return
+      }
       setError(isCompra
         ? 'Para Compra, preencha NF, data, AFM, fornecedor e ao menos uma linha válida.'
         : 'Informe a origem/fornecedor e ao menos uma linha com quantidade válida.')
@@ -308,9 +318,9 @@ export function NfEntry({ type }: NfEntryProps) {
               <thead>
                 <tr className="text-xs text-gray-400 uppercase border-b">
                   <th className="text-left py-2 pr-2">Item</th>
-                  <th className="text-right py-2 px-2 w-24">Qtd</th>
-                  <th className="text-left py-2 px-2 w-32">Lote</th>
-                  <th className="text-left py-2 px-2 w-36">Validade</th>
+                  <th className="text-right py-2 px-2 w-24">Qtd *</th>
+                  <th className="text-left py-2 px-2 w-32">Lote *</th>
+                  <th className="text-left py-2 px-2 w-36">Validade *</th>
                   <th className="text-right py-2 px-2 w-32">Vlr. Unit.</th>
                   <th className="text-right py-2 px-2 w-28">Total</th>
                   <th className="w-10"></th>
@@ -336,10 +346,20 @@ export function NfEntry({ type }: NfEntryProps) {
                       />
                     </td>
                     <td className="py-2 px-2">
-                      <Input value={l.batch_number} onChange={(e) => updateLine(idx, { batch_number: e.target.value })} placeholder="Lote" className="w-28" />
+                      <Input
+                        value={l.batch_number}
+                        onChange={(e) => updateLine(idx, { batch_number: e.target.value })}
+                        placeholder="Obrigatório"
+                        className={`w-28 ${!l.batch_number.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
+                      />
                     </td>
                     <td className="py-2 px-2">
-                      <Input type="date" value={l.expiry_date} onChange={(e) => updateLine(idx, { expiry_date: e.target.value })} className="w-36" />
+                      <Input
+                        type="date"
+                        value={l.expiry_date}
+                        onChange={(e) => updateLine(idx, { expiry_date: e.target.value })}
+                        className={`w-36 ${!l.expiry_date ? 'border-red-300 focus:border-red-500' : ''}`}
+                      />
                     </td>
                     <td className="py-2 px-2">
                       <div className="w-28 ml-auto"><CurrencyInput value={l.unit_price} onChange={(v) => updateLine(idx, { unit_price: v as number })} /></div>
