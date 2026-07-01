@@ -224,34 +224,38 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
             <Label htmlFor="detail">Detalhe / Observação {reason === 'outro' ? '*' : '(opcional)'}</Label>
             <Input id="detail" value={reasonDetail} onChange={(e) => setReasonDetail(e.target.value)} placeholder="Descreva o motivo" className="mt-1" />
           </div>
-          {needsDestino && (
-            <div className="md:col-span-2">
-              <Label htmlFor="destino">Destino *</Label>
-              <select id="destino" value={destino} onChange={(e) => setDestino(e.target.value)}
-                className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm">
-                <option value="">— Selecione o destino —</option>
-                {destinos.fornecedores.length > 0 && (
-                  <optgroup label="Fornecedores">
-                    {destinos.fornecedores.map((d) => <option key={'f'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
-                  </optgroup>
-                )}
-                {destinos.externas.length > 0 && (
-                  <optgroup label="Unidades externas (parceiros)">
-                    {destinos.externas.map((d) => <option key={'e'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
-                  </optgroup>
-                )}
-                {destinos.setores.length > 0 && (
-                  <optgroup label="Setores (internos)">
-                    {destinos.setores.map((d) => <option key={'s'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
-                  </optgroup>
-                )}
-              </select>
-              <p className="text-xs text-gray-400 mt-1">
-                Não está na lista de parceiros?{' '}
-                <a href="/farmacia/unidades-externas" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Cadastrar unidade externa</a>
-              </p>
-            </div>
-          )}
+          {/* Destino aparece SEMPRE (fornecedores + hospitais parceiros + setores
+              internos). E obrigatorio pra transferencia / devolucao_fornecedor;
+              opcional pros demais motivos (quebra, vencimento etc) — util quando
+              o operador precisa registrar a quem se destinava a saida. */}
+          <div className="md:col-span-2">
+            <Label htmlFor="destino">Destino {needsDestino ? '*' : '(opcional)'}</Label>
+            <select id="destino" value={destino} onChange={(e) => setDestino(e.target.value)}
+              className="mt-1 w-full h-9 rounded-md border border-input px-3 py-1 bg-white text-sm">
+              <option value="">— Selecione o destino —</option>
+              {destinos.fornecedores.length > 0 && (
+                <optgroup label="Fornecedores">
+                  {destinos.fornecedores.map((d) => <option key={'f'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                </optgroup>
+              )}
+              {destinos.externas.length > 0 && (
+                <optgroup label="Hospitais parceiros (unidades externas)">
+                  {destinos.externas.map((d) => <option key={'e'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                </optgroup>
+              )}
+              {destinos.setores.length > 0 && (
+                <optgroup label="Setores (internos)">
+                  {destinos.setores.map((d) => <option key={'s'+d.nome} value={`${d.tipo}|${d.nome}`}>{d.nome}</option>)}
+                </optgroup>
+              )}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Não está na lista?{' '}
+              <a href="/farmacia/unidades-externas" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Cadastrar unidade externa</a>
+              {' · '}
+              <a href="/farmacia/fornecedores" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Cadastrar fornecedor</a>
+            </p>
+          </div>
         </div>
       </div>
 
