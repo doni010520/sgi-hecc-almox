@@ -236,15 +236,15 @@ export function WarehouseItems({ locationId, locationName }: WarehouseItemsProps
                   <PackageMinus className="w-4 h-4 mr-2" />
                   Registrar Saída
                 </Button>
+                <Button
+                  className="bg-primary-500 hover:bg-primary-600 text-white"
+                  onClick={() => setShowAddItemDialog(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Item
+                </Button>
               </>
             )}
-            <Button
-              className="bg-primary-500 hover:bg-primary-600 text-white"
-              onClick={() => setShowAddItemDialog(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Item
-            </Button>
             <AdvancedFilters
               categories={[
                 'Material de Escritório',

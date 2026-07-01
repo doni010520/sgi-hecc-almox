@@ -307,15 +307,15 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
                   <PackageMinus className="w-4 h-4 mr-2" />
                   Registrar Saída
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/farmacia/catalogo')}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Cadastro
+                </Button>
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={() => navigate('/farmacia/catalogo')}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Cadastro
-            </Button>
             <AdvancedFilters
               categories={['Medicamentos', 'Material Hospitalar']}
               onFilterChange={setFilters}

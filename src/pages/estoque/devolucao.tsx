@@ -13,6 +13,7 @@ import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, Cl
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
+import { departmentsService } from '@/lib/services/departments'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { StockLocation } from '@/lib/types/stock'
 const MOTIVO_OPTIONS = [
@@ -114,6 +115,11 @@ export function DevolucaoInterna() {
   // estoque ativo no topo, senao o CAF (comportamento antigo).
   const [locations, setLocations] = useState<StockLocation[]>([])
   const [targetLocationId, setTargetLocationId] = useState<string>('')
+  // Setor de onde o medicamento esta voltando (enfermaria X, UTI, etc).
+  // Selecionavel pelo user — antes so mostrava o setor vinculado, o que
+  // era vazio quando o user era admin sem setor.
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([])
+  const [sourceDepartmentId, setSourceDepartmentId] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -140,6 +146,12 @@ export function DevolucaoInterna() {
           pharmacyLocs.find((l) => l.code === 'CAF')?.id ||
           ''
         setTargetLocationId(initial)
+
+        // Setores (departments) pra o dropdown "DE (setor de origem)"
+        const deps = await departmentsService.getAll().catch(() => [])
+        setDepartments(deps.map((d: any) => ({ id: d.id, name: d.name })))
+        // Se o user tem departamento vinculado, pre-seleciona
+        if (user?.department_id) setSourceDepartmentId(user.department_id)
       } catch (e: any) {
         setError(getErrorMessage(e))
       }
@@ -223,13 +235,15 @@ export function DevolucaoInterna() {
     setLines((prev) => prev.map((l) => (l.item_id === id ? { ...l, quantity: Math.max(1, q) } : l)))
   const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.item_id !== id))
 
+  // Obrigatorios: estoque destino, setor de origem, motivo e itens com qtd.
+  // Prontuario e nome do paciente sao OPCIONAIS — nem toda devolucao vem
+  // de dispensacao paciente-especifica (ex.: sobra de armario de enfermaria).
   const canSubmit =
     !!targetLocationId &&
+    !!sourceDepartmentId &&
     !!user?.id &&
     lines.length > 0 &&
     lines.every((l) => l.quantity > 0) &&
-    patientName.trim().length >= 2 &&
-    prontuario.trim().length >= 1 &&
     motivo !== ''
 
   const handleSubmit = async () => {
@@ -245,11 +259,12 @@ export function DevolucaoInterna() {
         .insert({
           target_location_id: targetLocationId,
           returned_by_user_id: user.id,
-          // department_id vem do usuário logado — de onde a devolução partiu
-          // (ex: setor "Emergência"). Fica exibido no de/para do cabeçalho.
-          department_id: user.department_id ?? null,
-          patient_name: patientName.trim(),
-          patient_prontuario: prontuario.trim(),
+          // Setor de onde o medicamento esta voltando (selecionado no
+          // dropdown do topo do form). Antes vinha do user.department_id
+          // fixo, o que zerava quando o user era admin sem setor vinculado.
+          department_id: sourceDepartmentId,
+          patient_name: patientName.trim() || null,
+          patient_prontuario: prontuario.trim() || null,
           return_reason: motivo,
           observacao: observacao.trim() || null,
           return_status: returnStatus,
@@ -379,10 +394,22 @@ export function DevolucaoInterna() {
           border: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
         }}>
         <div className="flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>De (Setor solicitante)</p>
-          <p className="text-sm font-semibold" style={{ color: txt }}>
-            {user?.department?.name || <span style={{ color: txtMut }}>— setor não vinculado ao usuário —</span>}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: txtMut }}>De (Setor de origem) *</p>
+          <select
+            value={sourceDepartmentId}
+            onChange={(e) => setSourceDepartmentId(e.target.value)}
+            style={{
+              ...inputStyle,
+              padding: '6px 10px',
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            <option value="">— Selecione o setor de origem —</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
         </div>
         <div className="hidden md:block" style={{ color: txtMut }}>➜</div>
         <div className="flex-1">
@@ -446,10 +473,11 @@ export function DevolucaoInterna() {
       {/* ===== ABA NOVA DEVOLUCAO ===== */}
       {activeTab === 'nova' && (
         <div className="p-6 space-y-5" style={glass}>
-          {/* Paciente */}
+          {/* Paciente — opcional (nem toda devolucao vem de dispensacao
+              paciente-especifica). Se souber, informe pra rastreabilidade. */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label style={labelStyle}>Prontuário <span style={{ color: '#ef4444' }}>*</span></label>
+              <label style={labelStyle}>Prontuário <span style={{ color: txtMut, fontWeight: 400 }}>(opcional)</span></label>
               <input
                 value={prontuario}
                 onChange={(e) => setProntuario(e.target.value)}
@@ -458,7 +486,7 @@ export function DevolucaoInterna() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Nome do Paciente <span style={{ color: '#ef4444' }}>*</span></label>
+              <label style={labelStyle}>Nome do Paciente <span style={{ color: txtMut, fontWeight: 400 }}>(opcional)</span></label>
               <input
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
