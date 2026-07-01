@@ -22,6 +22,20 @@ const MESSAGE_PATTERNS: Array<[RegExp, string]> = [
   [/timeout/i, 'O servidor demorou muito para responder. Tente novamente.'],
 ]
 
+// Mensagens vindas do próprio código (não do banco/framework) e que são
+// seguras + úteis pro usuário. Se a mensagem for curta, em português, sem
+// termos técnicos, mostra ela direto em vez do genérico "erro inesperado".
+// Padrões que identificam mensagens técnicas (não devem vazar pro usuário).
+// Cuidado: "error" bate com "Erro" em português case-insensitive — evitar.
+const TECH_PATTERNS = /\bfailed\b|\bexception\b|supabase|postgres|pgrst|\bjwt\b|typeerror|referenceerror|syntaxerror|\bstack\b|\bat \w+\.\w+/i
+
+function isUserFriendly(msg: string): boolean {
+  if (!msg || msg.length > 200) return false
+  if (TECH_PATTERNS.test(msg)) return false
+  // Aceita: começa com maiúscula ou letra latina, termina com '.' ou letra
+  return /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/.test(msg.trim())
+}
+
 export function getErrorMessage(error: unknown): string {
   if (!error) return 'Erro desconhecido. Tente novamente.'
 
@@ -36,6 +50,11 @@ export function getErrorMessage(error: unknown): string {
   for (const [pattern, msg] of MESSAGE_PATTERNS) {
     if (pattern.test(raw)) return msg
   }
+
+  // Mensagens que os próprios services lançam (ex: 'CNPJ inválido.',
+  // 'Nome é obrigatório.', 'Quantidade deve ser maior que zero.') devem
+  // passar direto — engolir com o genérico atrapalha o usuário sem motivo.
+  if (isUserFriendly(raw)) return raw
 
   return 'Ocorreu um erro inesperado. Se o problema persistir, contate o suporte.'
 }
