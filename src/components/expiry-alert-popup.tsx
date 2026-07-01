@@ -36,6 +36,9 @@ const BAND_COLORS: Record<string, { bg: string; text: string; border: string }> 
 }
 
 const NAVIGATE_ROLES = new Set(['pharmacist', 'gestor', 'administrador'])
+// Popup de vencimentos SÓ para gestão. Solicitante/atendente/enfermagem
+// não precisam ser interrompidos com esse alerta.
+const SHOW_ROLES = new Set(['administrador', 'gestor'])
 
 function formatDate(dateStr: string): string {
   try {
@@ -127,6 +130,9 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
   const dividerColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'
 
   useEffect(() => {
+    // Só admin/gestor recebem o popup (SHOW_ROLES). Solicitante/atendente/
+    // enfermagem não são interrompidos com alerta que não é da alçada deles.
+    if (!user?.role || !SHOW_ROLES.has(user.role)) return
     // Skip if this module's session key already shown
     if (sessionStorage.getItem(sessionKey)) return
 
@@ -161,7 +167,7 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
       }
     })()
     return () => { cancelled = true }
-  }, [itemTypeFilter, sessionKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [itemTypeFilter, sessionKey, user?.role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleClose() {
     sessionStorage.setItem(sessionKey, '1')
@@ -174,6 +180,8 @@ export function ExpiryAlertPopup({ onAlertsLoaded }: { onAlertsLoaded?: (count: 
     navigate(activeModule === 'almoxarifado' ? '/inventory/warehouse' : '/estoque/vencimentos')
   }
 
+  // Gate extra: se por algum motivo o role saiu de gestão depois do open, esconde.
+  if (!user?.role || !SHOW_ROLES.has(user.role)) return null
   if (!open || items.length === 0) return null
 
   // Group by color_band in order 1m → 3m → 6m
