@@ -671,13 +671,20 @@ class RequestService {
         }
       }
 
-      // Start a transaction
+      // Approve = pronto pra recebimento. O fluxo antigo tinha uma etapa
+      // "delivered" separada disparada por um botao "Marcar como Entregue".
+      // Foi removida: quando aprovamos, ja registramos como entregue
+      // (delivered_at + delivered_by) — a farmacia solicitante confirma
+      // recebimento (status -> completed) e fecha o pedido.
+      const now = new Date().toISOString()
       const { data: updatedRequest, error: requestError } = await supabase
         .from('requests')
         .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: user.id
+          status: 'delivered',
+          approved_at: now,
+          approved_by: user.id,
+          delivered_at: now,
+          delivered_by: user.id,
         })
         .eq('id', id)
         .select()

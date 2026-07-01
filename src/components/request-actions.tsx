@@ -98,16 +98,16 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
 
   const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
   const canManage = isManager && request?.status === 'pending'
-  const canProcess = isManager && request?.status === 'approved'
-  // Marcação de entrega agora aceita status='approved' também (etapa
-  // "processing" foi removida do fluxo). Mantemos 'processing' como fallback
-  // pra requests históricas que ainda estão nesse estado.
-  const canDeliver = isManager && (request?.status === 'processing' || request?.status === 'approved')
-  // Recebimento pode ser confirmado por QUALQUER usuário logado — quem marca a
-  // saída para entrega e quem confere os itens costumam ser pessoas diferentes.
-  // Quem confirma fica registrado em received_by. Atender (acima) segue restrito.
+  // Fluxo simplificado: aprovar ja registra como entregue. Nao existem mais
+  // botoes "Marcar como Entregue" — a farmacia solicitante confirma
+  // recebimento e o pedido fecha (status='completed').
+  const canDeliver = false
+  const canProcess = false
+  // Recebimento pode ser confirmado por QUALQUER usuário logado — quem aprova
+  // e quem confere os itens costumam ser pessoas diferentes. Quem confirma
+  // fica registrado em received_by. Aprovar (acima) segue restrito.
   const canConfirmReceipt = !!user && request?.status === 'delivered'
-  const canComplete = isManager && request?.status === 'processing'
+  const canComplete = false
   const canCancel = (user?.id === request?.requester_id || isManager) &&
     ['pending', 'approved'].includes(request.status)
 

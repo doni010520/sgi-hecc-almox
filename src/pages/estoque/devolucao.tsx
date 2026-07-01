@@ -8,11 +8,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@/contexts/theme'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
 import { ArrowLeft, Search, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, Clock, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { stockService } from '@/lib/services/stock'
 import { getErrorMessage } from '@/lib/utils/error-messages'
+import type { StockLocation } from '@/lib/types/stock'
 const MOTIVO_OPTIONS = [
   { value: 'melhora_clinica', label: 'Melhora clínica' },
   { value: 'suspensao_medica', label: 'Suspensão médica' },
@@ -64,6 +66,7 @@ export function DevolucaoInterna() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { mode } = useTheme()
+  const { activeStock } = useModule()
 
   const isPharmacy = !!user?.role && PHARMACY_ROLES.has(user.role)
 
@@ -107,7 +110,10 @@ export function DevolucaoInterna() {
   const [lines, setLines] = useState<ReturnLine[]>([])
   const [search, setSearch] = useState('')
   const [items, setItems] = useState<ItemRow[]>([])
-  const [cafLocationId, setCafLocationId] = useState<string>('')
+  // Estoques de farmacia disponiveis como destino da devolucao. Default:
+  // estoque ativo no topo, senao o CAF (comportamento antigo).
+  const [locations, setLocations] = useState<StockLocation[]>([])
+  const [targetLocationId, setTargetLocationId] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -123,8 +129,17 @@ export function DevolucaoInterna() {
     ;(async () => {
       try {
         const locs = await stockService.getLocations()
-        const caf = locs.find((l) => l.code === 'CAF')
-        if (caf) setCafLocationId(caf.id)
+        // Estoques de farmacia validos como destino de devolucao: CAF, SAT_1,
+        // SAT_2, SAT_T (o Almoxarifado central nao entra — devolucao aqui e
+        // do fluxo da farmacia).
+        const pharmacyLocs = locs.filter((l) => l.code === 'CAF' || l.code.startsWith('SAT'))
+        setLocations(pharmacyLocs)
+        // Default: estoque ativo no topo (se de farmacia); senao CAF.
+        const initial =
+          (activeStock && pharmacyLocs.find((l) => l.id === activeStock.id)?.id) ||
+          pharmacyLocs.find((l) => l.code === 'CAF')?.id ||
+          ''
+        setTargetLocationId(initial)
       } catch (e: any) {
         setError(getErrorMessage(e))
       }
@@ -136,7 +151,8 @@ export function DevolucaoInterna() {
         .limit(2000)
       setItems((data || []) as ItemRow[])
     })()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStock?.id])
 
   const loadPendentes = async () => {
     setLoadingPendentes(true)
@@ -208,7 +224,7 @@ export function DevolucaoInterna() {
   const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.item_id !== id))
 
   const canSubmit =
-    !!cafLocationId &&
+    !!targetLocationId &&
     !!user?.id &&
     lines.length > 0 &&
     lines.every((l) => l.quantity > 0) &&
@@ -227,7 +243,7 @@ export function DevolucaoInterna() {
       const { data: ret, error: e1 } = await supabase
         .from('stock_returns')
         .insert({
-          target_location_id: cafLocationId,
+          target_location_id: targetLocationId,
           returned_by_user_id: user.id,
           // department_id vem do usuário logado — de onde a devolução partiu
           // (ex: setor "Emergência"). Fica exibido no de/para do cabeçalho.
@@ -263,7 +279,7 @@ export function DevolucaoInterna() {
             direction: 'in',
             quantity: l.quantity,
             unit_cost: l.unit_cost,
-            target_location_id: cafLocationId,
+            target_location_id: targetLocationId,
             return_id: ret.id,
             performed_by: user.id,
           })
@@ -288,7 +304,7 @@ export function DevolucaoInterna() {
   }
 
   const handleConfirm = async (pendente: PendingReturn) => {
-    if (!user?.id || !cafLocationId) return
+    if (!user?.id || !targetLocationId) return
     setConfirmingSubmit(pendente.id)
     setError('')
     try {
@@ -313,7 +329,7 @@ export function DevolucaoInterna() {
           movement_type: 'DEVOLUCAO_INT',
           direction: 'in',
           quantity: it.quantity,
-          target_location_id: cafLocationId,
+          target_location_id: targetLocationId,
           return_id: pendente.id,
           performed_by: user.id,
         })
@@ -370,8 +386,22 @@ export function DevolucaoInterna() {
         </div>
         <div className="hidden md:block" style={{ color: txtMut }}>➜</div>
         <div className="flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Para (Estoque)</p>
-          <p className="text-sm font-semibold" style={{ color: txt }}>CAF — Central de Abastecimento Farmacêutico</p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: txtMut }}>Para (Estoque) *</p>
+          <select
+            value={targetLocationId}
+            onChange={(e) => setTargetLocationId(e.target.value)}
+            style={{
+              ...inputStyle,
+              padding: '6px 10px',
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            <option value="">— Selecione o estoque de destino —</option>
+            {locations.map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 
