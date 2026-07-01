@@ -14,6 +14,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { RequestType } from './types'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 const steps = [
   { id: 'type', title: 'Tipo de Solicitação', description: 'Escolha o tipo de solicitação que deseja fazer' },
   { id: 'details', title: 'Detalhes', description: 'Informe os detalhes da solicitação' },
@@ -407,7 +408,7 @@ export function NewRequest() {
           Voltar para Solicitações
         </Button>
 
-        <h1 className="text-2xl font-bold text-gray-900">Nova Solicitação</h1>
+        <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Nova Solicitação <ActiveStockBadge /></h1>
         <p className="mt-2 text-gray-500">
           Siga os passos abaixo para criar uma nova solicitação de materiais ou medicamentos.
         </p>

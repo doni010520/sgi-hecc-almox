@@ -15,6 +15,7 @@ import { stockService } from '@/lib/services/stock'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import type { ExpiryColorBand, ExpiringAlertRow, ExpiringToWriteoffRow } from '@/lib/types/stock'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 const RESOLVE_ROLES = new Set(['pharmacist', 'gestor', 'administrador'])
 
 export function VencimentosABaixar() {
@@ -181,7 +182,7 @@ export function VencimentosABaixar() {
     return (
       <div className="max-w-3xl mx-auto p-6">
         <div className="p-6" style={glass}>
-          <h1 className="text-xl font-semibold" style={{ color: txt }}>Sem permissao</h1>
+          <h1 className="inline-flex items-center gap-2 flex-wrap text-xl font-semibold" style={{ color: txt }}>Sem permissao <ActiveStockBadge /></h1>
           <p className="text-sm mt-2" style={{ color: txtSec }}>
             Apenas coordenacao/farmaceutico podem acessar esta pagina.
           </p>

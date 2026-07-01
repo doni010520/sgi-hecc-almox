@@ -9,6 +9,7 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface Patient {
   id: string
   full_name: string
@@ -142,7 +143,7 @@ export function PatientSelect() {
           }}
         ><ArrowLeft size={18} /></button>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: txt }}>Nova Dispensacao</h1>
+          <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Nova Dispensacao <ActiveStockBadge /></h1>
           <p className="text-sm" style={{ color: txtSec }}>Selecione ou cadastre o paciente</p>
         </div>
       </div>

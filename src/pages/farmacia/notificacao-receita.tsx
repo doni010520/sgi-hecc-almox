@@ -23,6 +23,7 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface PatientOption {
   id: string
   full_name: string
@@ -271,7 +272,7 @@ export function NotificacaoReceita() {
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-purple-100"><ClipboardList className="w-6 h-6 text-purple-600" /></div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>Notificação de Receita</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Notificação de Receita <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>Receituário controlado — Portaria 344/98</p>
           </div>
         </div>

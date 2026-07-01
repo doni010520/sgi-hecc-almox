@@ -23,6 +23,7 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface PharmacyItem {
   id: string
   name: string
@@ -270,7 +271,7 @@ export function Perdas() {
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-red-100"><Trash2 className="w-6 h-6 text-red-600" /></div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>Perdas / Inutilização</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Perdas / Inutilização <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>Registro de perdas e inutilização de medicamentos</p>
           </div>
         </div>

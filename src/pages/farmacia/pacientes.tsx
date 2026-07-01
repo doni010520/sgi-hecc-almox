@@ -15,6 +15,7 @@ import { patientsService } from '@/lib/services/farmacia-cadastros'
 import type { Patient, PatientAdmission, DischargeReason } from '@/lib/types/farmacia'
 import { DISCHARGE_REASON_LABEL } from '@/lib/types/farmacia'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface PatientRow extends Patient {
   open_admission_id: string | null
   admission_date: string | null
@@ -172,7 +173,7 @@ export function Pacientes() {
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-blue-100"><Users className="w-6 h-6 text-blue-600" /></div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>Pacientes</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Pacientes <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>Cadastro e gestão de internações</p>
           </div>
         </div>

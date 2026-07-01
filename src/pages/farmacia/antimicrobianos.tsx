@@ -25,6 +25,7 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface PharmacyItem {
   id: string
   name: string
@@ -240,7 +241,7 @@ export function Antimicrobianos() {
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-purple-100"><ShieldAlert className="w-6 h-6 text-purple-600" /></div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>Controle de Antimicrobianos</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Controle de Antimicrobianos <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>Monitoramento e avaliação CCIH</p>
           </div>
         </div>

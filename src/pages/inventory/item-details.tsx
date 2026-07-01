@@ -22,6 +22,7 @@ import { StockConfigDialog } from './components/stock-config-dialog'
 import { EditStockDialog } from '@/components/inventory/edit-stock-dialog'
 import { AddStockDialog } from '@/components/inventory/add-stock-dialog'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface StockEntry {
   id: string
   quantity: number
@@ -211,7 +212,7 @@ export function ItemDetails() {
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{item.name}</h1>
+                <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">{item.name} <ActiveStockBadge /></h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm text-gray-500">{item.code}</span>
                   <span className="text-sm text-gray-500">•</span>

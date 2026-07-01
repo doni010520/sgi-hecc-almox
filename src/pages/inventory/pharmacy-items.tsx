@@ -12,6 +12,7 @@ import { stockService } from '@/lib/services/stock'
 import { supabase } from '@/lib/supabase'
 import type { ItemStockWithLocation } from '@/lib/types/stock'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface LotRow {
   batch_number: string
   expiry_date: string | null
@@ -262,7 +263,7 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
               <Pill className="w-6 h-6 text-blue-600" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{locationName ? `Estoque — ${locationName}` : 'Itens da Farmácia'}</h1>
+              <h1 className="inline-flex items-center gap-2 flex-wrap text-xl sm:text-2xl font-bold text-gray-900">{locationName ? `Estoque — ${locationName}` : 'Itens da Farmácia'} <ActiveStockBadge /></h1>
               <p className="text-sm text-gray-500 mt-1">
                 Gestão avançada do estoque farmacêutico
               </p>

@@ -15,6 +15,7 @@ import { getErrorMessage } from '@/lib/utils/error-messages'
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface TalidomidaNotification {
   id: string
   data_dispensacao: string
@@ -273,7 +274,7 @@ export function Talidomida() {
             <AlertOctagon className="w-6 h-6 text-red-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: txt }}>Controle de Talidomida</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold" style={{ color: txt }}>Controle de Talidomida <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>
               Portaria SVS/MS 344/98 — Anexo IV · Livro de Notificação de Dispensação
             </p>

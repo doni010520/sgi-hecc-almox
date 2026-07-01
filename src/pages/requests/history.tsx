@@ -20,6 +20,7 @@ import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
 import type { Request, RequestType } from '@/lib/services/requests'
 import { formatRequestNumber } from '@/lib/utils/request'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 export function RequestHistory() {
   const navigate = useNavigate()
   const [requests, setRequests] = useState<Request[]>([])
@@ -221,7 +222,7 @@ export function RequestHistory() {
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Histórico</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-2xl font-bold text-gray-900">Histórico <ActiveStockBadge /></h1>
             <p className="text-sm text-gray-500 mt-1">
               Histórico completo de solicitações
             </p>

@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 interface StockItem {
   id: string
   code: string
@@ -210,7 +211,7 @@ export function StockReport({ type }: StockReportProps) {
             <Icon size={20} style={{ color: mode === 'dark' ? '#5ee8b8' : '#059669' }} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: txt }}>{title}</h1>
+            <h1 className="inline-flex items-center gap-2 flex-wrap text-xl font-bold" style={{ color: txt }}>{title} <ActiveStockBadge /></h1>
             <p className="text-sm" style={{ color: txtSec }}>
               {filteredItems.length} de {items.length} itens | Gerado em {format(new Date(), "dd/MM/yyyy 'as' HH:mm")}
             </p>
