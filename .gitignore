@@ -15,6 +15,12 @@ dist-ssr
 # MCP config local (contém tokens, não comitar)
 .mcp.json
 
+# Sessão do Claude Code + Supabase CLI local
+.claude/settings.local.json
+.claude/worktrees/
+.clone/
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
