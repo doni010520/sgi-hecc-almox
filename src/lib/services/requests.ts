@@ -31,6 +31,8 @@ export interface Request {
   notes?: string
   request_number?: string
   requester_id: string
+  source_location_id?: string | null
+  target_location_id?: string | null
   created_at: string
   updated_at: string
   approved_at?: string

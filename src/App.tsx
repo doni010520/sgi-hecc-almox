@@ -69,6 +69,7 @@ import { MovementsReport } from '@/pages/reports/movimentacoes'
 import { PharmacyLoansList } from '@/pages/farmacia/movimentacoes/index'
 import { NewPharmacyLoan } from '@/pages/farmacia/movimentacoes/new'
 import { PharmacyLoanDetail } from '@/pages/farmacia/movimentacoes/detail'
+import { LoansPendencias } from '@/pages/farmacia/movimentacoes/pendencias'
 import { ChangePassword } from '@/pages/change-password'
 import { LivroControlados } from '@/pages/farmacia/livro-controlados'
 import { Talidomida } from '@/pages/farmacia/talidomida'
@@ -590,6 +591,20 @@ export default function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <NewPharmacyLoan scope="pharmacy" />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/farmacia/movimentacoes/pendencias" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <LoansPendencias scope="pharmacy" />
+                  </MainLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/almoxarifado/movimentacoes/pendencias" element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <LoansPendencias scope="warehouse" />
                   </MainLayout>
                 </ProtectedRoute>
               } />

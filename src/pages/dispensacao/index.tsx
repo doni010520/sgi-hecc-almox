@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { pharmacyDispensationService } from '@/lib/services/pharmacy-dispensation'
 import type { PharmacyDispensation } from '@/lib/types/dispensation'
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 
 export function DispensationList() {
   const navigate = useNavigate()
@@ -66,7 +67,9 @@ export function DispensationList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: txt }}>Dispensacoes</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
+            Dispensacoes <ActiveStockBadge />
+          </h1>
           <p className="text-sm mt-1" style={{ color: txtSec }}>
             Registro de medicamentos dispensados por prescricao medica
           </p>

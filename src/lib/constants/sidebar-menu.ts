@@ -143,6 +143,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       items: [
         { name: 'Formulários', icon: ArrowRightLeft, href: '/farmacia/movimentacoes', show: (f) => f.canManageRequests },
         { name: 'Nova Movimentação', icon: ListChecks, href: '/farmacia/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/farmacia/movimentacoes/pendencias', show: (f) => f.canManageRequests },
       ],
     },
     {
@@ -151,6 +152,7 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
       items: [
         { name: 'Formulários', icon: ArrowRightLeft, href: '/almoxarifado/movimentacoes', show: (f) => f.canManageRequests },
         { name: 'Nova Movimentação', icon: ListChecks, href: '/almoxarifado/movimentacoes/new', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: Clock, href: '/almoxarifado/movimentacoes/pendencias', show: (f) => f.canManageRequests },
       ],
     },
     {

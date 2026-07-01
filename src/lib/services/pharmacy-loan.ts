@@ -88,7 +88,9 @@ export interface LoanSummary {
   signature_solicitante_name: string | null
   signature_cedente_name: string | null
   related_loan_id: string | null
-  status: 'completed' | 'cancelled'
+  status: 'pending' | 'completed' | 'cancelled'
+  confirmed_at?: string | null
+  confirmed_by?: string | null
   notes: string | null
   created_by: string
   created_by_name?: string | null
@@ -277,6 +279,10 @@ class PharmacyLoanService {
         signature_cedente_name: data.signature_cedente_name?.trim() || null,
         related_loan_id: data.related_loan_id || null,
         notes: data.notes?.trim() || null,
+        // Fluxo: sai como 'pending' e vai pra tela de PENDÊNCIAS onde
+        // cada item precisa ser confirmado (ou "aprovar todos" de uma vez).
+        // Quando todos os itens confirmados → status vira 'completed'.
+        status: 'pending',
         created_by: authData.user.id,
       })
       .select('id, form_number')
@@ -315,6 +321,80 @@ class PharmacyLoanService {
     return { id: loan.id, form_number: loan.form_number }
   }
 
+  // Lista as movimentações em status='pending' — tela de PENDÊNCIAS.
+  async listPending(scope?: 'pharmacy' | 'warehouse'): Promise<LoanSummary[]> {
+    let q = supabase
+      .from('pharmacy_loans')
+      .select(`id, form_number, scope, origem, destino, form_date, enviando_type, recebendo_type,
+               signature_solicitante_name, signature_cedente_name, related_loan_id,
+               status, notes, created_by, created_at,
+               pharmacy_loan_items(id, quantity, unit_price, confirmed_at)`)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    if (scope) q = q.eq('scope', scope)
+    const { data, error } = await q
+    if (error) { console.error(error); return [] }
+    return (data || []).map((row: any) => ({
+      id: row.id, form_number: row.form_number, scope: row.scope, origem: row.origem,
+      destino: row.destino,
+      contato_origem: row.contato_origem ?? null,
+      contato_destino: row.contato_destino ?? null,
+      form_date: row.form_date,
+      enviando_type: row.enviando_type, recebendo_type: row.recebendo_type,
+      signature_solicitante_name: row.signature_solicitante_name,
+      signature_cedente_name: row.signature_cedente_name,
+      related_loan_id: row.related_loan_id, status: row.status, notes: row.notes,
+      created_by: row.created_by, created_at: row.created_at,
+      enviando_count: (row.pharmacy_loan_items || []).length,
+      enviando_total: (row.pharmacy_loan_items || []).reduce(
+        (acc: number, i: any) => acc + Number(i.quantity || 0) * Number(i.unit_price || 0), 0),
+    }))
+  }
+
+  // Confirma 1 item específico da movimentação. Se todos os itens do loan
+  // ficarem confirmed_at != null, o loan vira 'completed' automaticamente.
+  async confirmItem(loanId: string, itemId: string): Promise<void> {
+    const { data: authData } = await supabase.auth.getUser()
+    if (!authData?.user) throw new Error('Usuário não autenticado')
+
+    const { error } = await supabase
+      .from('pharmacy_loan_items')
+      .update({ confirmed_at: new Date().toISOString(), confirmed_by: authData.user.id })
+      .eq('id', itemId)
+      .eq('loan_id', loanId)
+    if (error) throw new Error(error.message)
+
+    // Se todos os itens confirmados → conclui o loan
+    const { data: pending } = await supabase
+      .from('pharmacy_loan_items')
+      .select('id')
+      .eq('loan_id', loanId)
+      .is('confirmed_at', null)
+    if ((pending || []).length === 0) {
+      await supabase.from('pharmacy_loans').update({
+        status: 'completed',
+        confirmed_at: new Date().toISOString(),
+        confirmed_by: authData.user.id,
+      }).eq('id', loanId)
+    }
+  }
+
+  // Aprova todos os itens do loan de uma vez.
+  async confirmAll(loanId: string): Promise<void> {
+    const { data: authData } = await supabase.auth.getUser()
+    if (!authData?.user) throw new Error('Usuário não autenticado')
+
+    const now = new Date().toISOString()
+    await supabase
+      .from('pharmacy_loan_items')
+      .update({ confirmed_at: now, confirmed_by: authData.user.id })
+      .eq('loan_id', loanId)
+      .is('confirmed_at', null)
+    await supabase.from('pharmacy_loans').update({
+      status: 'completed', confirmed_at: now, confirmed_by: authData.user.id,
+    }).eq('id', loanId)
+  }
+
   async cancel(id: string, reason: string): Promise<void> {
     const { data: authData } = await supabase.auth.getUser()
     if (!authData?.user) throw new Error('Usuário não autenticado')
@@ -331,7 +411,7 @@ class PharmacyLoanService {
         cancellation_reason: reason.trim(),
       })
       .eq('id', id)
-      .eq('status', 'completed')
+      .in('status', ['pending', 'completed']) // pode cancelar pendentes ou concluídas
 
     if (error) {
       console.error('Error cancelling loan:', error)

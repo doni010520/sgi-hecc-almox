@@ -114,7 +114,9 @@ export function RequestProcessing() {
     try {
       setLoading(true)
       const data = await requestService.getAll()
-      setRequests(data.filter(r => r.status === 'processing'))
+      // Fluxo simplificado: mostra as aprovadas (prontas pra entrega) + as
+      // antigas ainda em 'processing' que precisam ser finalizadas.
+      setRequests(data.filter(r => r.status === 'processing' || r.status === 'approved'))
     } catch (error) {
       console.error('Error loading requests:', error)
     } finally {

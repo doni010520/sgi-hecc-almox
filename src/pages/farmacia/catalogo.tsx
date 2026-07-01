@@ -8,6 +8,7 @@ import { itemsService } from '@/lib/services/items'
 import type { Item } from '@/lib/services/items'
 import { AddItemDialog } from '@/components/inventory/add-item-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 import { MEDICATION_CLASS_LABEL } from '@/lib/types/farmacia'
 import type { MedicationClass } from '@/lib/types/farmacia'
 
@@ -114,8 +115,8 @@ export function PharmacyCatalogo() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: txt }}>
-            <BookOpen className="w-6 h-6" /> Catálogo de Medicamentos
+          <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
+            <BookOpen className="w-6 h-6" /> Catálogo de Medicamentos <ActiveStockBadge />
           </h1>
           <p className="text-sm mt-1" style={{ color: txtSec }}>
             Cadastro de itens da farmácia. O estoque é gerenciado nas telas de cada local.

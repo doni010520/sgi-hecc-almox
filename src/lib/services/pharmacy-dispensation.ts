@@ -180,13 +180,18 @@ class PharmacyDispensationService {
     }
   }
 
-  async create(data: CreateDispensationData): Promise<{ id: string; needsApproval?: boolean } | null> {
+  async create(
+    data: CreateDispensationData,
+    opts: { sourceLocationCode?: string } = {},
+  ): Promise<{ id: string; needsApproval?: boolean } | null> {
     try {
       // Criação atômica no banco: a RPC criar_dispensacao insere cabeçalho +
       // itens e, se não precisar de aprovação, já baixa o estoque pelo ledger
-      // (PRESCRICAO out@CAF + lote) numa única transação. needsApproval é
+      // (PRESCRICAO out@<source> + lote) numa única transação. needsApproval é
       // decidido no servidor (MAV / controlado / antimicrobiano).
       // p_tipo: 'prescricao' (paciente+prescritor) ou 'requisicao' (só setor).
+      // p_source_location_code: CAF / SAT_1 / SAT_2 / SAT_T — respeita o
+      // estoque em que o usuário está trabalhando.
       const { data: result, error } = await supabase.rpc('criar_dispensacao', {
         p_tipo: data.tipo,
         p_patient_name: data.patient_name ?? null,
@@ -208,6 +213,7 @@ class PharmacyDispensationService {
         p_sector: data.sector ?? null,
         p_notes: data.notes ?? null,
         p_mav_confirmado: data.mav_confirmado ?? false,
+        p_source_location_code: opts.sourceLocationCode ?? 'CAF',
       })
 
       if (error) throw error

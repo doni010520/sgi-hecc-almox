@@ -15,6 +15,7 @@ import type { Department } from '@/lib/types/departments'
 import type { DispensationType } from '@/lib/types/dispensation'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import { useModule } from '@/contexts/module'
+import { ActiveStockBadge } from '@/components/active-stock-badge'
 
 interface SelectedItem {
   item_id: string
@@ -336,7 +337,10 @@ export function NewDispensation() {
                 expiry_tracking_id: i.expiry_tracking_id,
                 batch_number: i.batch_number, expiry_date: i.expiry_date,
               })),
-            }
+            },
+        // Estoque de origem: se o usuário está em CAF/satélite explícito, respeita.
+        // Caso contrário (nenhum escolhido), CAF é o default no backend.
+        { sourceLocationCode: activeStock?.code }
       )
       const msg = result?.needsApproval
         ? 'Aguardando aprovação do farmacêutico'
@@ -379,11 +383,7 @@ export function NewDispensation() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
             Nova Dispensação {isRequisicao ? '· Requisição' : '· Prescrição'}
-            {activeStock && (
-              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                Estoque: {activeStock.label}
-              </span>
-            )}
+            <ActiveStockBadge />
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             {isRequisicao

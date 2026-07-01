@@ -30,6 +30,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
+  const [showApprovalToast, setShowApprovalToast] = useState(false)
   const [action, setAction] = useState<'approve' | 'reject' | 'cancel' | 'deliver' | 'confirm_receipt' | null>(null)
   const [reason, setReason] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -93,7 +94,10 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
   const canManage = isManager && request?.status === 'pending'
   const canProcess = isManager && request?.status === 'approved'
-  const canDeliver = isManager && request?.status === 'processing'
+  // Marcação de entrega agora aceita status='approved' também (etapa
+  // "processing" foi removida do fluxo). Mantemos 'processing' como fallback
+  // pra requests históricas que ainda estão nesse estado.
+  const canDeliver = isManager && (request?.status === 'processing' || request?.status === 'approved')
   // Recebimento pode ser confirmado por QUALQUER usuário logado — quem marca a
   // saída para entrega e quem confere os itens costumam ser pessoas diferentes.
   // Quem confirma fica registrado em received_by. Atender (acima) segue restrito.
@@ -159,6 +163,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
       switch (action) {
         case 'approve':
           updatedRequest = await requestService.approve(request.id, itemQuantities, reason)
+          setShowApprovalToast(true)
           break
         case 'reject':
           updatedRequest = await requestService.reject(request.id, reason)
@@ -196,18 +201,9 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     }
   }
 
-  const handleProcessing = async () => {
-    try {
-      setLoading(true)
-      const updatedRequest = await requestService.startProcessing(request.id)
-      requestService.clearCache()
-      onUpdate(updatedRequest)
-    } catch (error) {
-      console.error('Error starting processing:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // handleProcessing removido: aprovar → entregue direto agora (sem etapa
+  // "processing"). Mantemos o fluxo antigo apenas via lista de "pending" em
+  // requests/processing.tsx pra requests que já estão em 'processing'.
 
   const handleDeliver = () => {
     setAction('deliver')
@@ -252,6 +248,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                   setLoading(true)
                   const updatedRequest = await requestService.approve(request.id, itemQuantities, '')
                   onUpdate(updatedRequest)
+                  setShowApprovalToast(true)
                 } catch (error) {
                   console.error('Error approving:', error)
                 } finally {
@@ -278,16 +275,17 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
           </>
         )}
 
-        {/* Process Action */}
+        {/* Processing skip — direto pra entrega. Fluxo antigo "approved →
+            processing → delivered" foi encurtado pra "approved → delivered". */}
         {canProcess && (
           <Button
             size="sm"
             className="bg-blue-500 hover:bg-blue-600 text-white"
-            onClick={handleProcessing}
+            onClick={handleDeliver}
             disabled={loading}
           >
             <PlayCircle className="w-4 h-4 mr-2" />
-            Iniciar Processamento
+            Marcar como entregue
           </Button>
         )}
 
@@ -514,6 +512,41 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
               {action === 'reject' && 'Rejeitar'}
               {action === 'cancel' && 'Cancelar'}
               {action === 'confirm_receipt' && 'Confirmar Recebimento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de sucesso após aprovar — atalho pra Confirmar Recebimento */}
+      <Dialog open={showApprovalToast} onOpenChange={setShowApprovalToast}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle2 className="w-6 h-6" /> Solicitação aprovada
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-gray-700 space-y-2">
+            <p>
+              O pedido <strong>#{request?.request_number || request?.id?.slice(0, 8)}</strong> foi
+              aprovado com sucesso e já está pronto pra ser entregue ao setor solicitante.
+            </p>
+            <p className="text-xs text-gray-500">
+              Você pode ir direto pra "Confirmar Recebimento" ou continuar processando outras
+              solicitações.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowApprovalToast(false)}>
+              Continuar processando
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                setShowApprovalToast(false)
+                window.location.href = '/requests/receipt-confirmation'
+              }}
+            >
+              Ir pra Confirmar Recebimento
             </Button>
           </DialogFooter>
         </DialogContent>

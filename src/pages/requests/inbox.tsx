@@ -23,7 +23,7 @@ import { formatRequestNumber } from '@/lib/utils/request'
 
 export function RequestInbox() {
   const navigate = useNavigate()
-  const { activeModule } = useModule()
+  const { activeModule, activeStock } = useModule()
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -85,7 +85,15 @@ export function RequestInbox() {
     const matchesDate = isWithinPeriod(request.created_at, dateRange.startDate, dateRange.endDate)
     const matchesType = request.type === moduleRequestType
 
-    return matchesSearch && matchesTab && matchesDate && matchesType
+    // Filtro por estoque destino: se o operador está trabalhando em um estoque
+    // específico (CAF/SAT_1/SAT_2/SAT_T), só vê solicitações destinadas a ele.
+    // Se target_location_id é null (solicitação antiga sem destino), aceita.
+    const matchesTargetStock =
+      !activeStock ||
+      !request.target_location_id ||
+      request.target_location_id === activeStock.id
+
+    return matchesSearch && matchesTab && matchesDate && matchesType && matchesTargetStock
   })
 
   const renderRequestCard = (request: Request, index: number) => (
