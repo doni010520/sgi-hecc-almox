@@ -17,6 +17,7 @@ import { RequestStatusBadge } from '@/components/request-status-badge'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { useAuth } from '@/contexts/auth'
 import { useModule } from '@/contexts/module'
+import { departmentBelongsToStock } from '@/lib/constants/stock-locations'
 import { PeriodFilterDialog } from '@/components/period-filter-dialog'
 import { isWithinPeriod, getDefaultDateRange } from '@/lib/utils/date'
 import type { Request } from '@/lib/services/requests'
@@ -63,11 +64,15 @@ export function MyRequests() {
     }
   }
 
-  // Se ha estoque ativo (usuario num satelite/CAF), so contabiliza as
-  // requisicoes atendidas por esse estoque — o mesmo criterio usado
-  // pela Inbox e pelo restante do fluxo de estoque.
+  // Se ha estoque ativo, filtra pelo SETOR SOLICITANTE (quem fez o pedido).
+  // O filtro anterior usava source_location_id (estoque que ATENDE), mas
+  // solicitacoes novas nascem com esse campo NULL — so eh preenchido quando
+  // a Inbox aprova. Como resultado, o proprio requerente nunca via a
+  // solicitacao que acabou de criar. Filtro por department (nome do setor
+  // que casa com o estoque ativo) via mesmo helper da tela de Confirmar
+  // Recebimento.
   const scopedRequests = activeStock
-    ? requests.filter(r => r.source_location_id === activeStock.id)
+    ? requests.filter(r => departmentBelongsToStock(r.department, activeStock))
     : requests
 
   const getRequestStats = () => {
