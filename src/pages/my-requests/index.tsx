@@ -64,15 +64,16 @@ export function MyRequests() {
     }
   }
 
-  // Se ha estoque ativo, filtra pelo SETOR SOLICITANTE (quem fez o pedido).
-  // O filtro anterior usava source_location_id (estoque que ATENDE), mas
-  // solicitacoes novas nascem com esse campo NULL — so eh preenchido quando
-  // a Inbox aprova. Como resultado, o proprio requerente nunca via a
-  // solicitacao que acabou de criar. Filtro por department (nome do setor
-  // que casa com o estoque ativo) via mesmo helper da tela de Confirmar
-  // Recebimento.
+  // Se ha estoque ativo, mostra solicitacoes onde ele participa como
+  // SOLICITANTE (fez o pedido) OU DESTINO (vai atender o pedido). Ex: Sat 1
+  // pede pro CAF -> aparece tanto na "Minhas Solicitacoes" da Sat 1 quanto na
+  // do CAF. O filtro anterior era so por solicitante e escondia da farmacia
+  // que precisava atender.
   const scopedRequests = activeStock
-    ? requests.filter(r => departmentBelongsToStock(r.department, activeStock))
+    ? requests.filter(r =>
+        departmentBelongsToStock(r.department, activeStock) ||
+        departmentBelongsToStock(r.destination_department, activeStock)
+      )
     : requests
 
   const getRequestStats = () => {
@@ -223,24 +224,24 @@ export function MyRequests() {
           {request.request_items.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 hover:border-primary-200 transition-colors"
+              className="flex items-start justify-between gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-primary-200 transition-colors"
             >
-              <div>
-                <p className="font-medium text-gray-900">{item.item.name}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900 break-words">{item.item.name}</p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
                     {item.item.code}
                   </span>
                   <span className="text-xs text-gray-500">{item.item.category}</span>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">
+              <div className="text-right flex-shrink-0">
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
                     Qtd: {item.quantity}
                   </span>
                   {item.approved_quantity !== undefined && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
                       (Aprovado: {item.approved_quantity})
                     </span>
                   )}
