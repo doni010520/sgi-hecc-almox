@@ -14,6 +14,7 @@ import type { Patient, Prescriber, PatientAdmission } from '@/lib/types/farmacia
 import type { Department } from '@/lib/types/departments'
 import type { DispensationType } from '@/lib/types/dispensation'
 import { getErrorMessage } from '@/lib/utils/error-messages'
+import { useModule } from '@/contexts/module'
 
 interface SelectedItem {
   item_id: string
@@ -174,11 +175,18 @@ export function NewDispensation() {
     return () => clearTimeout(t)
   }, [prescSearch, selectedPresc])
 
+  // Estoque ativo (CAF ou satélite escolhido no seletor). Se null, assume CAF.
+  const { activeStock } = useModule()
+  const activeStockId = activeStock?.id ?? '42c3b239-c354-4b5b-a2eb-d42b7a9edc10' // fallback CAF
+
   useEffect(() => {
     const t = setTimeout(async () => {
       const q = itemSearch.trim()
       if (!q) { setItemResults([]); return }
       setSearchingItems(true)
+      // Busca meds. current_stock aqui é o AGREGADO (soma de todos locais);
+      // pra o valor CORRETO do estoque ativo, sobrescrevemos abaixo com
+      // item_stocks(activeStockId).
       const { data, error: err } = await supabase
         .from('pharmacy_items')
         .select('id, code, name, unit, current_stock, is_mav, medication_class')
@@ -187,11 +195,26 @@ export function NewDispensation() {
         .order('name')
         .limit(20)
       if (err) console.error(err)
-      setItemResults((data || []) as PharmacyItemRow[])
+      let items = (data || []) as PharmacyItemRow[]
+
+      // Substitui current_stock pelo saldo do local ativo (multi-estoque).
+      if (items.length > 0) {
+        const ids = items.map((i) => i.id)
+        const { data: stocks } = await supabase
+          .from('item_stocks')
+          .select('item_id, quantity')
+          .eq('location_id', activeStockId)
+          .in('item_id', ids)
+        const stockMap = new Map<string, number>()
+        for (const s of stocks || []) stockMap.set(s.item_id, s.quantity)
+        items = items.map((i) => ({ ...i, current_stock: stockMap.get(i.id) ?? 0 }))
+      }
+
+      setItemResults(items)
       setSearchingItems(false)
     }, 200)
     return () => clearTimeout(t)
-  }, [itemSearch])
+  }, [itemSearch, activeStockId])
 
   async function loadLots(itemId: string): Promise<LotRow[]> {
     if (lotsByItem[itemId]) return lotsByItem[itemId]
@@ -353,14 +376,20 @@ export function NewDispensation() {
           }}>
           <ArrowLeft size={18} />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: txt }}>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: txt }}>
             Nova Dispensação {isRequisicao ? '· Requisição' : '· Prescrição'}
+            {activeStock && (
+              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                Estoque: {activeStock.label}
+              </span>
+            )}
           </h1>
           <p className="text-sm" style={{ color: txtSec }}>
             {isRequisicao
               ? 'Atendimento direto a um setor (sem paciente individual)'
               : 'Dispensação de medicamentos por prescrição médica'}
+            {activeStock && ` · saída de ${activeStock.name}`}
           </p>
         </div>
       </div>

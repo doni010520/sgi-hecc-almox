@@ -51,8 +51,10 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showEntryDialog, setShowEntryDialog] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
-  const [hideZeroStock, setHideZeroStock] = useState(true)
-  const [hideNoLot, setHideNoLot] = useState(true)
+  // Filtros começam DESMARCADOS: o usuário vê todos os itens ao abrir a tela
+  // e marca apenas se quiser esconder zerados / sem lote.
+  const [hideZeroStock, setHideZeroStock] = useState(false)
+  const [hideNoLot, setHideNoLot] = useState(false)
   const [showEditItemDialog, setShowEditItemDialog] = useState(false)
   // Modal de lotes do item
   const [lotModalItem, setLotModalItem] = useState<Item | null>(null)
