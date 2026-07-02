@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Plus, Search, Trash2, AlertCircle, ArrowRightLeft } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Trash2, AlertCircle, ArrowRightLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -145,25 +145,9 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
     setActiveSearch(null)
   }
 
-  const addManualRow = (direction: LoanDirection) => {
-    setItems((prev) => [
-      ...prev,
-      {
-        _key: newKey(),
-        direction,
-        pharmacy_item_id: null,
-        warehouse_item_id: null,
-        item_description: '',
-        unit: 'Un',
-        quantity: 1,
-        unit_price: 0,
-        validity_date: null,
-        batch_number: '',
-        codigo_simpas: '',
-        observation: '',
-      },
-    ])
-  }
+  // addManualRow removida — todo item da movimentacao precisa vir do
+  // catalogo (via busca) pra manter integridade referencial. Linhas
+  // manuais geravam registros que nao batiam com o cadastro de items.
 
   const updateRow = (key: string, patch: Partial<RowState>) => {
     setItems((prev) => prev.map((r) => (r._key === key ? { ...r, ...patch } : r)))
@@ -185,17 +169,33 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
     0
   )
 
-  const canSubmit =
-    origem.trim() &&
-    destino.trim() &&
-    items.length > 0 &&
-    (enviandoEnabled || recebendoEnabled) &&
-    items.every((r) => r.item_description.trim() && r.quantity > 0) &&
-    (enviandoEnabled || enviandoRows.length === 0) &&
-    (recebendoEnabled || recebendoRows.length === 0)
+  // Retorna o motivo especifico pelo qual o submit e invalido (ou null se ok).
+  // Antes o form ficava so com o botao "Registrar" desabilitado ou mostrava
+  // "Valor invalido para o campo" sem dizer QUAL, e o operador ficava perdido.
+  const validate = (): string | null => {
+    if (!origem.trim()) return 'Informe a Origem.'
+    if (!destino.trim()) return 'Informe o Destino.'
+    if (!enviandoEnabled && !recebendoEnabled) return 'Marque pelo menos "ENVIANDO" ou "RECEBENDO".'
+    if (items.length === 0) return 'Adicione pelo menos um item (busque pelo nome ou codigo).'
+    const bad = items.find((r) => !r.item_description.trim() || r.quantity <= 0)
+    if (bad) return `Verifique o item "${bad.item_description || '(sem nome)'}" — quantidade obrigatoria.`
+    const semLote = items.find((r) => !r.batch_number || !r.batch_number.trim())
+    if (semLote) return `Lote obrigatorio no item "${semLote.item_description}".`
+    const semValidade = items.find((r) => !r.validity_date)
+    if (semValidade) return `Validade obrigatoria no item "${semValidade.item_description}".`
+    if (enviandoEnabled && enviandoRows.length === 0) return 'Voce marcou ENVIANDO mas nao adicionou nenhum item enviado.'
+    if (recebendoEnabled && recebendoRows.length === 0) return 'Voce marcou RECEBENDO mas nao adicionou nenhum item recebido.'
+    return null
+  }
+
+  const canSubmit = validate() === null
 
   const handleSubmit = async () => {
-    if (!canSubmit) return
+    const err = validate()
+    if (err) {
+      setError(err)
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -355,7 +355,6 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
         setSearchTerm={setSearchTerm}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('enviando', item)}
-        onAddManual={() => addManualRow('enviando')}
         total={totalEnviado}
         loadingCatalog={loadingCatalog}
         scope={scope}
@@ -384,7 +383,6 @@ export function NewPharmacyLoan({ scope }: { scope: LoanScope }) {
         setSearchTerm={setSearchTerm}
         searchResults={filteredCatalog}
         onPick={(item) => addRowFromCatalog('recebendo', item)}
-        onAddManual={() => addManualRow('recebendo')}
         total={totalRecebido}
         loadingCatalog={loadingCatalog}
         scope={scope}
@@ -462,7 +460,6 @@ function DirectionBlock(props: {
   setSearchTerm: (s: string) => void
   searchResults: PharmacyItemLite[]
   onPick: (item: PharmacyItemLite) => void
-  onAddManual: () => void
   total: number
   loadingCatalog: boolean
   scope: LoanScope
@@ -539,16 +536,8 @@ function DirectionBlock(props: {
                 ))}
               </div>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={props.onAddManual}
-              className="text-xs"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Adicionar linha manual (sem vínculo ao cadastro)
-            </Button>
+            {/* "Adicionar linha manual" removida — todo item precisa vir do
+                catalogo (via busca acima) pra manter integridade. */}
           </div>
 
           {/* Linhas */}
@@ -561,13 +550,13 @@ function DirectionBlock(props: {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-2 py-1 text-left font-medium text-gray-600">Item</th>
+                    <th className="px-2 py-1 text-left font-medium text-gray-600 min-w-[240px]">Item</th>
                     <th className="px-2 py-1 text-center font-medium text-gray-600">UF</th>
-                    <th className="px-2 py-1 text-right font-medium text-gray-600">Qtde</th>
+                    <th className="px-2 py-1 text-right font-medium text-gray-600">Qtde *</th>
                     <th className="px-2 py-1 text-right font-medium text-gray-600">R$ Unit.</th>
                     <th className="px-2 py-1 text-right font-medium text-gray-600">R$ Total</th>
-                    <th className="px-2 py-1 text-left font-medium text-gray-600">Validade</th>
-                    <th className="px-2 py-1 text-left font-medium text-gray-600">Lote</th>
+                    <th className="px-2 py-1 text-left font-medium text-gray-600">Validade *</th>
+                    <th className="px-2 py-1 text-left font-medium text-gray-600">Lote *</th>
                     <th className="px-2 py-1 text-left font-medium text-gray-600">Código SIMPAS</th>
                     <th className="px-2 py-1 text-left font-medium text-gray-600">Observação</th>
                     <th className="px-2 py-1"></th>
@@ -584,7 +573,8 @@ function DirectionBlock(props: {
                             onChange={(e) =>
                               props.updateRow(r._key, { item_description: e.target.value })
                             }
-                            className="w-full px-2 py-1 text-xs border border-gray-200 rounded"
+                            className="w-full min-w-[240px] px-2 py-1 text-xs border border-gray-200 rounded"
+                            title={r.item_description}
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -631,7 +621,7 @@ function DirectionBlock(props: {
                             onChange={(e) =>
                               props.updateRow(r._key, { validity_date: e.target.value || null })
                             }
-                            className="w-32 px-1 py-1 text-xs border border-gray-200 rounded"
+                            className={`w-32 px-1 py-1 text-xs border rounded ${!r.validity_date ? 'border-red-300' : 'border-gray-200'}`}
                           />
                         </td>
                         <td className="px-2 py-1">
@@ -640,7 +630,8 @@ function DirectionBlock(props: {
                             onChange={(e) =>
                               props.updateRow(r._key, { batch_number: e.target.value })
                             }
-                            className="w-24 px-1 py-1 text-xs border border-gray-200 rounded"
+                            placeholder="Obrigatório"
+                            className={`w-24 px-1 py-1 text-xs border rounded ${!r.batch_number || !r.batch_number.trim() ? 'border-red-300' : 'border-gray-200'}`}
                           />
                         </td>
                         <td className="px-2 py-1">
