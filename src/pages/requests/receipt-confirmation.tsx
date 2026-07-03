@@ -74,6 +74,9 @@ export function ReceiptConfirmation() {
       // Pedidos entregues aguardando confirmação de recebimento. Quem confirma
       // é o SETOR SOLICITANTE (foi ele que recebeu os itens). A RLS permite
       // delivered → completed pra qualquer user autenticado do setor.
+      // Almoxarifado nao tem confirmacao de recebimento — quando o staff
+      // marca como entregue no almox, o pedido ja vai pra 'completed'. So
+      // pedidos de farmacia com status='delivered' aparecem nesta tela.
       const { data, error } = await supabase
         .from('requests')
         .select(`
@@ -95,6 +98,7 @@ export function ReceiptConfirmation() {
           )
         `)
         .eq('status', 'delivered')
+        .eq('type', 'pharmacy')
         // Recente → antigo (usuário rola até achar; entregas de hoje no topo)
         .order('delivered_at', { ascending: false, nullsFirst: false })
 

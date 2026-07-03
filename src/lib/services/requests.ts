@@ -671,21 +671,31 @@ class RequestService {
         }
       }
 
-      // Approve = pronto pra recebimento. O fluxo antigo tinha uma etapa
-      // "delivered" separada disparada por um botao "Marcar como Entregue".
-      // Foi removida: quando aprovamos, ja registramos como entregue
-      // (delivered_at + delivered_by) — a farmacia solicitante confirma
-      // recebimento (status -> completed) e fecha o pedido.
+      // Aprovar tem dois comportamentos, dependendo do tipo:
+      // - Farmacia: aprovar ja marca como entregue (delivered_at/by = agora).
+      //   Fluxo: pending -> approve -> delivered -> confirm receipt -> completed.
+      //   O solicitante confirma recebimento no fim.
+      // - Almoxarifado: aprovar so seta 'approved'. Staff depois clica
+      //   "Marcar como Entregue" e o pedido vai direto pra 'completed'
+      //   (nao ha confirmacao de recebimento pra almox).
       const now = new Date().toISOString()
+      const isPharmacy = request.type === 'pharmacy'
+      const approvalUpdate = isPharmacy
+        ? {
+            status: 'delivered' as const,
+            approved_at: now,
+            approved_by: user.id,
+            delivered_at: now,
+            delivered_by: user.id,
+          }
+        : {
+            status: 'approved' as const,
+            approved_at: now,
+            approved_by: user.id,
+          }
       const { data: updatedRequest, error: requestError } = await supabase
         .from('requests')
-        .update({
-          status: 'delivered',
-          approved_at: now,
-          approved_by: user.id,
-          delivered_at: now,
-          delivered_by: user.id,
-        })
+        .update(approvalUpdate)
         .eq('id', id)
         .select()
         .single()
@@ -843,11 +853,26 @@ class RequestService {
 
       requestCache.clear()
 
-      const updateData: Record<string, any> = {
-        status: 'delivered',
-        delivered_at: new Date().toISOString(),
-        delivered_by: user.id,
-      }
+      // Diferenca por tipo:
+      // - Almoxarifado: nao ha confirmacao de recebimento — "entregue" fecha
+      //   o pedido direto (status='completed').
+      // - Farmacia: fica 'delivered' pra o solicitante confirmar recebimento.
+      const existing = await this.getById(id)
+      const isPharmacy = existing?.type === 'pharmacy'
+      const now = new Date().toISOString()
+      const updateData: Record<string, any> = isPharmacy
+        ? {
+            status: 'delivered',
+            delivered_at: now,
+            delivered_by: user.id,
+          }
+        : {
+            status: 'completed',
+            delivered_at: now,
+            delivered_by: user.id,
+            completed_at: now,
+            completed_by: user.id,
+          }
 
       if (deliveryNotes) {
         updateData.delivery_notes = sanitizeInput(deliveryNotes)

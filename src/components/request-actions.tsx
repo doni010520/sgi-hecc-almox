@@ -98,15 +98,20 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
 
   const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
   const canManage = isManager && request?.status === 'pending'
-  // Fluxo simplificado: aprovar ja registra como entregue. Nao existem mais
-  // botoes "Marcar como Entregue" — a farmacia solicitante confirma
-  // recebimento e o pedido fecha (status='completed').
-  const canDeliver = false
+  // Fluxo depende do TIPO da solicitacao:
+  // - Farmacia: aprovar ja marca como entregue -> solicitante confirma
+  //   recebimento -> completed. Sem botao "Marcar como Entregue".
+  // - Almoxarifado: aprovar -> approved. Depois staff clica "Marcar como
+  //   Entregue" e o pedido vai direto pra completed (sem confirmacao de
+  //   recebimento — almox nao pede confirmacao).
+  const isPharmacyRequest = request?.type === 'pharmacy'
+  const canDeliver = isManager && !isPharmacyRequest &&
+    (request?.status === 'approved' || request?.status === 'processing')
   const canProcess = false
-  // Recebimento pode ser confirmado por QUALQUER usuário logado — quem aprova
-  // e quem confere os itens costumam ser pessoas diferentes. Quem confirma
-  // fica registrado em received_by. Aprovar (acima) segue restrito.
-  const canConfirmReceipt = !!user && request?.status === 'delivered'
+  // Recebimento SO existe pra farmacia — pode ser confirmado por qualquer
+  // usuario logado (quem aprova e quem confere costumam ser pessoas
+  // diferentes; received_by registra quem confirmou).
+  const canConfirmReceipt = !!user && isPharmacyRequest && request?.status === 'delivered'
   const canComplete = false
   const canCancel = (user?.id === request?.requester_id || isManager) &&
     ['pending', 'approved'].includes(request.status)
@@ -255,10 +260,13 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                 try {
                   setLoading(true)
                   const updatedRequest = await requestService.approve(request.id, itemQuantities, '')
-                  // Abre o modal ANTES de chamar onUpdate — se o parent
-                  // remontar o componente durante o reload, o modal ja tera
-                  // pintado. Reload subsequente e silencioso na pagina.
-                  setShowApprovalToast(true)
+                  // Modal com redirect pra Confirmar Recebimento so pra
+                  // farmacia. Almox nao tem confirmacao de recebimento —
+                  // aprovar so seta 'approved' e o proximo passo (marcar
+                  // como entregue) e do proprio staff sem redirect.
+                  if (isPharmacyRequest) {
+                    setShowApprovalToast(true)
+                  }
                   onUpdate(updatedRequest)
                 } catch (error) {
                   console.error('Error approving:', error)
