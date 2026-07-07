@@ -187,28 +187,32 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Intervenção Farmacêutica', icon: Stethoscope, href: '/farmacia/intervencao-farmaceutica', show: (f) => f.canManageRequests },
       ],
     },
-    // --- RELATÓRIOS: unificado, itens filtrados por módulo com `show` inline ---
+    // --- RELATÓRIOS: dois blocos SEPARADOS por titulo — assim quando o
+    //     usuario ainda nao escolheu modulo (activeModule=null), os dois
+    //     aparecem sem se misturarem (mergeSectionsByTitle so funde blocos
+    //     com o MESMO titulo). Antes ambos eram "Relatorios" e os itens
+    //     de farm+almox viravam uma lista bagunçada.
     {
-      title: 'Relatórios',
+      title: 'Relatórios · Farmácia',
       module: 'farmacia',
       items: [
         { name: 'Estoque', icon: Pill, href: '/reports/pharmacy-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Consumo', icon: BarChart3, href: '/reports/pharmacy-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Gestão de Consumo', icon: FileText, href: '/reports/pharmacy-admin-consumption', show: (f) => f.isAdmin },
         { name: 'Multi-Estoque', icon: BarChart3, href: '/reports/farmacia-multi-estoque', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry?type=pharmacy', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes?type=pharmacy', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     {
-      title: 'Relatórios',
+      title: 'Relatórios · Almoxarifado',
       module: 'almoxarifado',
       items: [
         { name: 'Estoque', icon: Package2, href: '/reports/warehouse-stock', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Consumo', icon: BarChart3, href: '/reports/warehouse-consumption', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Gestão de Consumo', icon: FileText, href: '/reports/warehouse-admin-consumption', show: (f) => f.isAdmin },
-        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
-        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Validade', icon: CalendarClock, href: '/reports/stock-expiry?type=warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Movimentações', icon: BarChart3, href: '/reports/movimentacoes?type=warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
     // --- ADMIN + CONFIG (no fim) ---

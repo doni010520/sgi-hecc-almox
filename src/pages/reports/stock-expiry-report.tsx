@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CalendarClock, Search, AlertTriangle, Filter,
   ChevronDown, ChevronUp, Printer, FileSpreadsheet,
@@ -74,7 +75,15 @@ export function StockExpiryReport() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [expiryFilter, setExpiryFilter] = useState<ExpiryFilter>('all')
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  // typeFilter default vem do ?type= da URL. Assim o link "Relatorios ·
+  // Farmacia > Validade" ja abre filtrado como farmacia; o do Almox como
+  // warehouse. Sem query param, mostra tudo ("all").
+  const [searchParams] = useSearchParams()
+  const initialType = ((): TypeFilter => {
+    const t = searchParams.get('type')
+    return t === 'pharmacy' || t === 'warehouse' ? t : 'all'
+  })()
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>(initialType)
   const [sortField, setSortField] = useState<SortField>('expiry_date')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
 

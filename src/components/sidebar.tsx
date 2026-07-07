@@ -117,6 +117,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   function prefixHref(href: string): string {
     if (!isModuleUser || !activeModule) return href
+    // Suporta hrefs com query string (ex.: "/reports/stock-expiry?type=pharmacy"):
+    // separa path do resto, mapeia so o path e reagrupa com o mesmo query.
+    const qIdx = href.indexOf('?')
+    if (qIdx >= 0) {
+      const path = href.slice(0, qIdx)
+      const rest = href.slice(qIdx)
+      const mapped = PATH_MAP[path]
+      return (mapped ?? path) + rest
+    }
     return PATH_MAP[href] ?? href
   }
 

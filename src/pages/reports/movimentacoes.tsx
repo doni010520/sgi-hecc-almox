@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -80,7 +81,15 @@ export function MovementsReport() {
   const [endDate, setEndDate] = useState(today)
   const [direction, setDirection] = useState<'todas' | Direction>('todas')
   const [subtype, setSubtype] = useState<string>('todos')
-  const [itemType, setItemType] = useState<'todos' | 'pharmacy' | 'warehouse'>('todos')
+  // Aceita ?type=pharmacy|warehouse na URL — links do sidebar
+  // ("Relatorios · Farmacia > Movimentacoes" e "· Almoxarifado > ...")
+  // ja abrem filtrados. Sem query param, mostra tudo.
+  const [searchParams] = useSearchParams()
+  const initialItemType = ((): 'todos' | 'pharmacy' | 'warehouse' => {
+    const t = searchParams.get('type')
+    return t === 'pharmacy' || t === 'warehouse' ? t : 'todos'
+  })()
+  const [itemType, setItemType] = useState<'todos' | 'pharmacy' | 'warehouse'>(initialItemType)
   const [showCancelled, setShowCancelled] = useState(false)
   const [search, setSearch] = useState('')
 
