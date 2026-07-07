@@ -108,10 +108,21 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   const canDeliver = isManager && !isPharmacyRequest &&
     (request?.status === 'approved' || request?.status === 'processing')
   const canProcess = false
-  // Recebimento SO existe pra farmacia — pode ser confirmado por qualquer
-  // usuario logado (quem aprova e quem confere costumam ser pessoas
-  // diferentes; received_by registra quem confirmou).
-  const canConfirmReceipt = !!user && isPharmacyRequest && request?.status === 'delivered'
+  // Recebimento SO existe pra farmacia E so quem SOLICITOU (ou alguem
+  // do mesmo setor solicitante) pode confirmar. Quem atendeu/entregou
+  // NAO ve o botao — senao a mesma pessoa que aprovou tambem "confirma"
+  // o recebimento e o controle vira teatro.
+  // Aceita 2 caminhos: o proprio requester_id OU alguem cujo department
+  // eh o setor solicitante (colega do mesmo setor pode confirmar quando
+  // quem criou saiu do turno).
+  const isRequester = !!user && !!request && user.id === request.requester_id
+  const isFromRequestingSector = !!user?.department_id &&
+    !!request?.department_id &&
+    user.department_id === request.department_id
+  const canConfirmReceipt = !!user &&
+    isPharmacyRequest &&
+    request?.status === 'delivered' &&
+    (isRequester || isFromRequestingSector)
   const canComplete = false
   const canCancel = (user?.id === request?.requester_id || isManager) &&
     ['pending', 'approved'].includes(request.status)
