@@ -55,8 +55,13 @@ const REQUIRES_JUSTIFICATION_CLASSES = new Set(['controlados', 'antimicrobianos'
 
 export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItemsProps) {
   const { user } = useAuth()
-  // Solicitantes não veem nem estoque nem o bloqueio "sem estoque" — só gestores/admins/atendentes
-  const canSeeStock = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
+  // NINGUEM ve estoque na tela de fazer solicitacao — mesmo staff (gestor/
+  // admin/atendente) que muitas vezes cria pedidos pra propria unidade.
+  // Ver saldo antes de pedir vicia a solicitacao (pessoa ajusta o pedido
+  // ao que tem no estoque em vez de pedir o que realmente precisa).
+  // Estoque so aparece na tela de ATENDIMENTO (staff aprovando/despachando).
+  void user
+  const canSeeStock = false
   const [items, setItems] = useState<Item[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedItems, setSelectedItems] = useState<RequestItem[]>(
@@ -155,27 +160,18 @@ export function RequestItems({ type, onSubmit, defaultValues = [] }: RequestItem
     return cls
   }
 
-  // Filter items based on search term, sort items with stock first.
-  // Pra quem NÃO pode ver estoque (solicitante), esconde itens zerados
-  // — não faz sentido oferecer pedir algo que não tem no estoque.
-  // Para farmácia (multi-estoque), current_stock aqui é o agregado; o
-  // solicitante que está no fluxo comum não precisa ver zerados.
+  // Lista sempre TODOS os itens ativos, ordenados por nome — sem qualquer
+  // pista de estoque (nem escondendo zerados, nem ordenando por saldo).
+  // Assim quem pede nao consegue inferir "esse item ficou embaixo, deve ta
+  // sem estoque" ou "aquele sumiu, deve ta zerado". Pedido reflete
+  // necessidade real, nao disponibilidade.
   const filteredItems = items
-    .filter(item => {
-      // Solicitante: esconde zerados permanentemente. Staff mantém tudo.
-      if (!canSeeStock && ((item as any).current_stock || 0) <= 0) return false
-      return searchTerm === '' ||
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
-    })
-    .sort((a, b) => {
-      // Items with stock come first, then 0-stock at the bottom (só staff vê zerados)
-      const aStock = (a as any).current_stock || 0
-      const bStock = (b as any).current_stock || 0
-      if (aStock > 0 && bStock <= 0) return -1
-      if (aStock <= 0 && bStock > 0) return 1
-      return 0
-    })
+    .filter(item =>
+      searchTerm === '' ||
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   const handleAddItem = async (item: Item) => {
     // Colchão Casca de Ovo: permite múltiplas entradas (uma por paciente).
