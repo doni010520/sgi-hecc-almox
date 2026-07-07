@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, PackageMinus, Building2, Search, Plus, Trash2, Loader2, CheckCircle2, AlertCircle,
 } from 'lucide-react'
@@ -64,6 +64,18 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
   const navigate = useNavigate()
   const table = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
   const backTo = type === 'pharmacy' ? '/inventory/pharmacy' : '/inventory/warehouse'
+  // ?loc=<CAF|SAT_1|SAT_2|SAT_T|ALMOX> — a saida eh debitada DESSE estoque.
+  // Sem query param, fallback pro central.
+  const [searchParams] = useSearchParams()
+  const locationCode = searchParams.get('loc') || (type === 'pharmacy' ? 'CAF' : 'ALMOX')
+  const LOC_LABELS: Record<string, string> = {
+    CAF: 'CAF',
+    SAT_1: 'Satélite 1º Andar',
+    SAT_2: 'Satélite 2º Andar',
+    SAT_T: 'Satélite Térreo',
+    ALMOX: 'Almoxarifado',
+  }
+  const locationLabel = LOC_LABELS[locationCode] ?? locationCode
 
   const [reason, setReason] = useState<string>('quebra')
   const [reasonDetail, setReasonDetail] = useState('')
@@ -172,6 +184,7 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
         p_reason: reason,
         p_reason_detail: reasonDetail.trim() || null,
         p_notes: null,
+        p_location_code: locationCode,
         p_destino_tipo: destinoTipo,
         p_destino_nome: destinoNome,
         p_items: lines.map((l) => ({
@@ -366,7 +379,7 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-gray-500 flex items-center gap-1"><Building2 className="w-4 h-4" /> Origem: {type === 'pharmacy' ? 'CAF' : 'Almoxarifado'}</p>
+        <p className="text-sm text-gray-500 flex items-center gap-1"><Building2 className="w-4 h-4" /> Origem: {locationLabel}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate(backTo)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || submitting} className="bg-red-600 hover:bg-red-700 text-white">

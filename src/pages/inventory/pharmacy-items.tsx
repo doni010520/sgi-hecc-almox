@@ -286,35 +286,37 @@ export function PharmacyItems({ locationId: _locationId, locationName }: Pharmac
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
-            {/* Entrada e Saida so aparecem no CAF. Satelites (SAT_1/SAT_2/
-                SAT_T) sao abastecidos exclusivamente via requisicoes/
-                transferencias do CAF — nao aceitam entrada direta nem
-                registro de saida por esta tela. Saidas de satelite ocorrem
-                por dispensacao, devolucao, quebra etc (fluxos proprios). */}
-            {activeStock?.code === 'CAF' && (
+            {/* Entrada e Saida agora aparecem em TODOS os estoques (CAF +
+                satelites) e passam ?loc=<code> pra o form gravar no estoque
+                CORRETO — antes iam sempre pra CAF, gerando erro reportado.
+                O cadastro (catalogo) continua so no CAF, pq e um catalogo
+                unico compartilhado por todos os estoques. */}
+            {activeStock && (
               <>
                 <Button
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={() => navigate('/inventory/pharmacy/nf-entry')}
+                  onClick={() => navigate(`/inventory/pharmacy/nf-entry?loc=${activeStock.code}`)}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Nova Entrada
                 </Button>
                 <Button
                   className="bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => navigate('/inventory/pharmacy/saida-lote')}
+                  onClick={() => navigate(`/inventory/pharmacy/saida-lote?loc=${activeStock.code}`)}
                 >
                   <PackageMinus className="w-4 h-4 mr-2" />
                   Registrar Saída
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/farmacia/catalogo')}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Cadastro
-                </Button>
               </>
+            )}
+            {activeStock?.code === 'CAF' && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/farmacia/catalogo')}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Cadastro
+              </Button>
             )}
             <AdvancedFilters
               categories={['Medicamentos', 'Material Hospitalar']}

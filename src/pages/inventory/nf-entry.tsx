@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, FileText, Building2, Search, Plus, Trash2, Loader2, Package, CheckCircle2, AlertCircle,
 } from 'lucide-react'
@@ -48,6 +48,20 @@ function formatCNPJ(value: string) {
 
 export function NfEntry({ type }: NfEntryProps) {
   const navigate = useNavigate()
+  // ?loc=<CAF|SAT_1|SAT_2|SAT_T|ALMOX> — de qual estoque veio o botao. A
+  // entrada eh gravada NESSE estoque. Sem query param, fallback pro central
+  // (CAF pra farmacia, ALMOX pro almoxarifado) — comportamento antigo.
+  const [searchParams] = useSearchParams()
+  const locationCode = searchParams.get('loc') || (type === 'pharmacy' ? 'CAF' : 'ALMOX')
+  // Rotulo bonito pra mostrar no rodape "Destino: ..."
+  const LOC_LABELS: Record<string, string> = {
+    CAF: 'CAF',
+    SAT_1: 'Satélite 1º Andar',
+    SAT_2: 'Satélite 2º Andar',
+    SAT_T: 'Satélite Térreo',
+    ALMOX: 'Almoxarifado',
+  }
+  const locationLabel = LOC_LABELS[locationCode] ?? locationCode
   const table = type === 'pharmacy' ? 'pharmacy_items' : 'warehouse_items'
   const backTo = type === 'pharmacy' ? '/inventory/pharmacy' : '/inventory/warehouse'
   const today = new Date().toISOString().slice(0, 10)
@@ -174,6 +188,7 @@ export function NfEntry({ type }: NfEntryProps) {
         p_supplier_cnpj: supplierCnpj.trim() || null,
         p_supplier_name: supplierName.trim(),
         p_acquisition_type: entryType,
+        p_location_code: locationCode,
         p_items: lines.map((l) => ({
           item_id: l.item_id,
           quantity: l.quantity,
@@ -392,7 +407,7 @@ export function NfEntry({ type }: NfEntryProps) {
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-gray-500 flex items-center gap-1"><Building2 className="w-4 h-4" /> Destino: {type === 'pharmacy' ? 'CAF' : 'Almoxarifado'}</p>
+        <p className="text-sm text-gray-500 flex items-center gap-1"><Building2 className="w-4 h-4" /> Destino: {locationLabel}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate(backTo)}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">

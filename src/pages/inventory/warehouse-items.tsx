@@ -16,6 +16,7 @@ import { DeleteItemDialog } from '@/components/inventory/delete-item-dialog'
 import { EditItemDialog } from '@/components/inventory/edit-item-dialog'
 import { useAuth } from '@/contexts/auth'
 import { supabase } from '@/lib/supabase'
+import { pharmacyStockById } from '@/lib/constants/stock-locations'
 import type { Item, FilterOptions } from '@/lib/services/items'
 
 interface WarehouseItemsProps {
@@ -216,34 +217,39 @@ export function WarehouseItems({ locationId, locationName }: WarehouseItemsProps
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
-            {/* Entrada e Saida so aparecem no almoxarifado central (sem
-                locationId). Satelites de material (SAT_T) sao abastecidos
-                por requisicao/transferencia do almox central — nao aceitam
-                entrada direta nem saida por esta tela. */}
+            {/* Entrada e Saida aparecem tanto no almox central quanto no
+                SAT_T (satelite de materiais) — cada um grava no seu proprio
+                estoque via ?loc=<code>. "Novo Item" (cadastro) so no almox
+                central, pq e catalogo unico compartilhado. */}
+            {(() => {
+              const locCode = locationId ? pharmacyStockById(locationId)?.code ?? 'ALMOX' : 'ALMOX'
+              return (
+                <>
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => navigate(`/inventory/warehouse/nf-entry?loc=${locCode}`)}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Nova Entrada
+                  </Button>
+                  <Button
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => navigate(`/inventory/warehouse/saida-lote?loc=${locCode}`)}
+                  >
+                    <PackageMinus className="w-4 h-4 mr-2" />
+                    Registrar Saída
+                  </Button>
+                </>
+              )
+            })()}
             {!locationId && (
-              <>
-                <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={() => navigate('/inventory/warehouse/nf-entry')}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Nova Entrada
-                </Button>
-                <Button
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => navigate('/inventory/warehouse/saida-lote')}
-                >
-                  <PackageMinus className="w-4 h-4 mr-2" />
-                  Registrar Saída
-                </Button>
-                <Button
-                  className="bg-primary-500 hover:bg-primary-600 text-white"
-                  onClick={() => setShowAddItemDialog(true)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Item
-                </Button>
-              </>
+              <Button
+                className="bg-primary-500 hover:bg-primary-600 text-white"
+                onClick={() => setShowAddItemDialog(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Item
+              </Button>
             )}
             <AdvancedFilters
               categories={[
