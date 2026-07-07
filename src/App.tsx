@@ -15,6 +15,7 @@ import { PharmacyItems } from '@/pages/inventory/pharmacy-items'
 import { StockLocationItems } from '@/pages/inventory/stock-location-items'
 import { WarehouseItems } from '@/pages/inventory/warehouse-items'
 import { NfEntry } from '@/pages/inventory/nf-entry'
+import { NfEntryWarehouse } from '@/pages/inventory/nf-entry-warehouse'
 import { SaidaBatch } from '@/pages/inventory/saida-batch'
 import { ItemDetails } from '@/pages/inventory/item-details'
 import { RequestDetails } from '@/pages/requests/request-details'
@@ -160,7 +161,7 @@ export default function App() {
               <Route path="/inventory/warehouse/nf-entry" element={
                 <ProtectedRoute>
                   <MainLayout>
-                    <NfEntry type="warehouse" />
+                    <NfEntryWarehouse />
                   </MainLayout>
                 </ProtectedRoute>
               } />
@@ -720,7 +721,7 @@ export default function App() {
               <Route path="/almox" element={<ModuleLayout module="almoxarifado" />}>
                 <Route path="dashboard" element={<Dashboard module="almoxarifado" />} />
                 <Route path="inventory" element={<WarehouseItems />} />
-                <Route path="inventory/nf-entry" element={<NfEntry type="warehouse" />} />
+                <Route path="inventory/nf-entry" element={<NfEntryWarehouse />} />
                 <Route path="inventory/saida-lote" element={<SaidaBatch type="warehouse" />} />
                 <Route path="inventory/:id" element={<ItemDetails />} />
                 <Route path="inventory/:id/edit" element={<ItemDetails />} />
