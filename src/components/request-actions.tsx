@@ -573,6 +573,10 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
 // Confirmar Recebimento no contexto da farmacia solicitante — user
 // pode cancelar durante o countdown se quiser continuar aprovando
 // outras solicitacoes.
+// Overlay simples com div fixa (sem Radix Portal). Radix Dialog em algumas
+// situacoes montava, disparava o countdown de 3s e navegava antes do
+// usuario ver — parecia que "nao aparecia". Aqui: div fixed com z-index
+// muito alto, sem countdown automatico. User controla quando ir embora.
 function ApprovalSuccessDialog({
   open, onOpenChange, requestNumber, departmentName, onGo,
 }: {
@@ -582,44 +586,45 @@ function ApprovalSuccessDialog({
   departmentName?: string
   onGo: () => void
 }) {
-  const [countdown, setCountdown] = useState(3)
-
-  useEffect(() => {
-    if (!open) return
-    setCountdown(3)
-    const t = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(t)
-          onGo()
-          return 0
-        }
-        return c - 1
-      })
-    }, 1000)
-    return () => clearInterval(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
+  if (!open) return null
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-emerald-700">
-            <CheckCircle2 className="w-6 h-6" /> Solicitação aprovada
-          </DialogTitle>
-        </DialogHeader>
-        <div className="text-sm text-gray-700 space-y-2">
-          <p>
-            O pedido <strong>#{requestNumber}</strong> foi aprovado com sucesso.
-          </p>
-          <p>
-            Redirecionando pra <strong>Confirmar Recebimento</strong>
-            {departmentName ? <> — <strong>{departmentName}</strong></> : null} em{' '}
-            <strong>{countdown}s</strong>...
-          </p>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.55)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+      onClick={() => onOpenChange(false)}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'white',
+          borderRadius: 14,
+          maxWidth: 440,
+          width: '100%',
+          padding: 24,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+          border: '2px solid #10b981',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-3" style={{ color: '#047857' }}>
+          <CheckCircle2 className="w-7 h-7" />
+          <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Solicitação aprovada!</h3>
         </div>
-        <DialogFooter className="gap-2">
+        <p style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
+          O pedido <strong>#{requestNumber}</strong> foi aprovado com sucesso.
+        </p>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+          O setor {departmentName ? <><strong>{departmentName}</strong> </> : null}
+          agora vê essa solicitação em <strong>Confirmar Recebimento</strong>.
+        </p>
+        <div className="flex flex-wrap gap-2 justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Continuar aqui
           </Button>
@@ -627,10 +632,10 @@ function ApprovalSuccessDialog({
             className="bg-green-600 hover:bg-green-700 text-white"
             onClick={onGo}
           >
-            Ir agora
+            Ir para Confirmar Recebimento
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   )
 }
