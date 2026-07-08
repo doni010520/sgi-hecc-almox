@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { departmentsService } from '@/lib/services/departments'
 import { useAuth } from '@/contexts/auth'
+import { useModule } from '@/contexts/module'
+import { departmentBelongsToStock } from '@/lib/constants/stock-locations'
 import type { Department } from '@/lib/types/departments'
 
 const detailsSchema = z.object({
@@ -30,6 +32,14 @@ interface RequestDetailsProps {
 
 export function RequestDetails({ onSubmit, defaultValues, requestType }: RequestDetailsProps) {
   const { user } = useAuth()
+  const { activeStock, activeModule } = useModule()
+  // Fluxo novo (farmacia): quando o user tem estoque ativo na farmacia,
+  // o SETOR SOLICITANTE fica travado no setor correspondente a esse
+  // estoque (SAT_1/SAT_2/SAT_T/CAF). O SETOR SOLICITADO vira dropdown
+  // restrito por origem. Fora da farmacia (modulo almox), mantem o
+  // fluxo antigo (dropdown livre pra solicitante, regras antigas pro
+  // solicitado).
+  const isPharmacyFlow = requestType === 'pharmacy' && activeModule === 'farmacia' && !!activeStock
   const [loading, setLoading] = useState(true)
   const [userDepartment, setUserDepartment] = useState<Department | null>(null)
   const [allDepartments, setAllDepartments] = useState<Department[]>([])
@@ -47,9 +57,27 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
     },
   })
 
+  // Pharmacy flow: pre-preenche solicitante (fixo no setor do activeStock)
+  // e — quando o CAF ou SAT_T sao a origem — ja pre-preenche solicitado
+  // no Almoxarifado (que fica fixo tambem, sem dropdown).
+  useEffect(() => {
+    if (!isPharmacyFlow || allDepartments.length === 0 || !activeStock) return
+    const solicitanteDept = allDepartments.find((d) => departmentBelongsToStock(d.name, activeStock))
+    if (solicitanteDept) {
+      setValue('requesting_department', solicitanteDept.id, { shouldValidate: true })
+    }
+    // CAF e SAT_T sempre pedem pra Almox — trava logo
+    if ((activeStock.code === 'CAF' || activeStock.code === 'SAT_T') && warehouseDepartment) {
+      setValue('destination_department', warehouseDepartment.id, { shouldValidate: true })
+    }
+  }, [isPharmacyFlow, activeStock, allDepartments, warehouseDepartment, setValue])
+
   // Trava ou filtra o setor solicitado conforme o setor solicitante selecionado
   const watchedRequestingDept = watch('requesting_department')
   useEffect(() => {
+    // No fluxo pharmacy, o solicitado ja e resolvido pelo useEffect acima
+    // + pela regra inline no JSX. Nao interfere aqui.
+    if (isPharmacyFlow) return
     if (!watchedRequestingDept || requestType === 'warehouse') return
 
     const selected = allDepartments.find(d => d.id === watchedRequestingDept)
@@ -205,26 +233,43 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
           )}
         </div>
 
-        {/* Setor Solicitante — onde o pedido será entregue */}
+        {/* Setor Solicitante — onde o pedido será entregue.
+            Farmacia: fixo no setor correspondente ao estoque ativo (badge).
+            Almox / sem modulo: dropdown livre (SAT_2 tambem liberado). */}
         <div className="space-y-2">
           <Label htmlFor="requesting_department">
             Setor Solicitante
             <span className="ml-1 text-xs font-normal text-gray-500">(Setor onde o pedido será entregue)</span>
           </Label>
-          <select
-            id="requesting_department"
-            {...register('requesting_department')}
-            className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="">Selecione o setor solicitante...</option>
-            {allDepartments
-              .filter(d => !d.name.toLowerCase().includes('satélite 2') && !d.name.toLowerCase().includes('satelite 2'))
-              .map(dept => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
+          {isPharmacyFlow ? (
+            (() => {
+              const dept = allDepartments.find((d) => departmentBelongsToStock(d.name, activeStock!))
+              return (
+                <>
+                  <input type="hidden" {...register('requesting_department')} />
+                  <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-primary-900">{dept?.name ?? activeStock?.name}</p>
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">Seu Estoque</span>
+                    </div>
+                  </div>
+                </>
+              )
+            })()
+          ) : (
+            <select
+              id="requesting_department"
+              {...register('requesting_department')}
+              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="">Selecione o setor solicitante...</option>
+              {allDepartments.map(dept => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          )}
           {errors.requesting_department && (
             <p className="text-sm text-red-500 mt-1">{errors.requesting_department.message}</p>
           )}
@@ -237,6 +282,61 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
             <span className="ml-1 text-xs font-normal text-gray-500">(Setor que fará a entrega do pedido)</span>
           </Label>
           {(() => {
+            // --- Fluxo FARMACIA (activeStock definido) ---
+            // Matriz: CAF -> Almox (fixo); SAT_1 -> [CAF, SAT_2, Almox];
+            //         SAT_2 -> [CAF, SAT_1, Almox]; SAT_T -> Almox (fixo).
+            if (isPharmacyFlow && activeStock) {
+              const code = activeStock.code
+              // Encontra os deptos alvo
+              const findByStockCode = (targetCode: string) => {
+                const stockName: Record<string, string> = {
+                  CAF:   'CAF',
+                  SAT_1: 'Farmácia Satélite 1º Andar',
+                  SAT_2: 'Farmácia Satélite 2º Andar',
+                  SAT_T: 'Farmácia Satélite Térreo',
+                }
+                const target = stockName[targetCode]
+                if (!target) return null
+                if (targetCode === 'CAF') {
+                  return allDepartments.find((d) => d.name.toLowerCase().startsWith('caf')) ?? null
+                }
+                return allDepartments.find((d) => d.name === target) ?? null
+              }
+
+              // CAF e SAT_T sempre pedem pra Almox
+              if ((code === 'CAF' || code === 'SAT_T') && warehouseDepartment) {
+                return (
+                  <>
+                    <input type="hidden" {...register('destination_department')} />
+                    <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-primary-900">{warehouseDepartment.name}</p>
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-primary-100 text-primary-600">Fixo</span>
+                      </div>
+                    </div>
+                  </>
+                )
+              }
+              // SAT_1 -> [CAF, SAT_2, Almox]; SAT_2 -> [CAF, SAT_1, Almox]
+              if (code === 'SAT_1' || code === 'SAT_2') {
+                const outroSat = code === 'SAT_1' ? findByStockCode('SAT_2') : findByStockCode('SAT_1')
+                const options = [cafDepartment, outroSat, warehouseDepartment].filter(Boolean) as Department[]
+                return (
+                  <select
+                    id="destination_department"
+                    {...register('destination_department')}
+                    className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Selecione o setor solicitado...</option>
+                    {options.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                )
+              }
+              // Fallback (nao deveria cair aqui) — libera tudo
+            }
+
             const selectedDept = allDepartments.find(d => d.id === watchedRequestingDept)
             const selectedName = selectedDept?.name.toLowerCase() ?? ''
             const isSatelite1 = selectedName.includes('satélite 1') || selectedName.includes('satelite 1')
