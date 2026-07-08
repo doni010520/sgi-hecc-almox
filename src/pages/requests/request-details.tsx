@@ -19,8 +19,38 @@ import { formatRequestNumber } from '@/lib/utils/request'
 import { getDepartmentName } from '@/lib/constants/departments'
 import { supabase } from '@/lib/supabase'
 
-function ItemRow({ item, canEdit, isAdmin, canSeeStock }: { item: Request['request_items'][0], canEdit: boolean, isAdmin: boolean, canSeeStock: boolean }) {
+interface LotOption { id: string; batch_number: string; expiry_date: string | null; current_quantity: number }
+
+function ItemRow({ item, canEdit, isAdmin, canSeeStock, requestType }: {
+  item: Request['request_items'][0]
+  canEdit: boolean
+  isAdmin: boolean
+  canSeeStock: boolean
+  requestType?: 'pharmacy' | 'warehouse'
+}) {
   const [suppliedQty, setSuppliedQty] = useState<number | ''>(item.supplied_quantity ?? '')
+  // Lote e validade — so pharmacy usa. Ao selecionar lote, validade preenche
+  // automatica via expiry_tracking. Persiste em request_items.expiry_tracking_id.
+  const [expiryTrackingId, setExpiryTrackingId] = useState<string | null>((item as any).expiry_tracking_id ?? null)
+  const [lots, setLots] = useState<LotOption[]>([])
+  const isPharmacy = requestType === 'pharmacy'
+  useEffect(() => {
+    if (!isPharmacy) return
+    // Carrega lotes disponiveis do item (ordem FEFO)
+    ;(async () => {
+      const pharmacyItemId = (item as any).pharmacy_item_id ?? item.item?.id
+      if (!pharmacyItemId) return
+      const { data, error } = await supabase
+        .from('expiry_tracking')
+        .select('id, batch_number, expiry_date, current_quantity')
+        .eq('item_id', pharmacyItemId)
+        .gt('current_quantity', 0)
+        .order('expiry_date', { ascending: true, nullsFirst: false })
+      if (error) { console.error('lots', error); return }
+      setLots((data || []) as LotOption[])
+    })()
+  }, [isPharmacy, item])
+  const selectedLot = lots.find((l) => l.id === expiryTrackingId) || null
   // Observations stored as lines separated by \n
   const [observations, setObservations] = useState<string[]>(() => {
     const raw = item.observation || ''
@@ -73,6 +103,38 @@ function ItemRow({ item, canEdit, isAdmin, canSeeStock }: { item: Request['reque
           <span>{item.supplied_quantity ?? '—'}</span>
         )}
       </td>
+      {isPharmacy && (
+        <>
+          <td className="text-center py-3 px-2">
+            {canEdit ? (
+              <select
+                value={expiryTrackingId ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value || null
+                  setExpiryTrackingId(v)
+                  saveField('expiry_tracking_id', v)
+                }}
+                className="w-full max-w-[220px] h-8 px-2 text-xs border border-gray-300 rounded bg-white mx-auto"
+                style={{ borderColor: expiryTrackingId ? undefined : '#fca5a5' }}
+              >
+                <option value="">{lots.length ? '— Selecione o lote —' : 'Sem lotes'}</option>
+                {lots.map((lo, i) => (
+                  <option key={lo.id} value={lo.id}>
+                    {i === 0 ? '★ ' : ''}Lote {lo.batch_number} · saldo {lo.current_quantity}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-xs">{selectedLot ? `Lote ${selectedLot.batch_number}` : '—'}</span>
+            )}
+          </td>
+          <td className="text-center py-3 px-2 text-xs">
+            {selectedLot?.expiry_date
+              ? new Date(selectedLot.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR')
+              : '—'}
+          </td>
+        </>
+      )}
       <td className="py-3 px-2">
         {observations.length > 0 && (
           <div className="space-y-1 mb-1">
@@ -603,6 +665,15 @@ export function RequestDetails() {
                   <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Saldo</th>
                 )}
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-28">Qtd Fornec.</th>
+                {/* Colunas Lote e Validade so aparecem em solicitacoes de
+                    FARMACIA (o staff informa o lote no atendimento; validade
+                    preenche automatica). Almoxarifado nao usa. */}
+                {request.type === 'pharmacy' && (
+                  <>
+                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-56">Lote</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-28">Validade</th>
+                  </>
+                )}
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-44">Observação</th>
                 <th className="text-center py-3 px-3 font-medium text-gray-600 w-24">Confirmar</th>
               </tr>
@@ -618,6 +689,7 @@ export function RequestDetails() {
                     canEdit={isStaff && statusAllowsEdit}
                     isAdmin={user?.role === 'administrador'}
                     canSeeStock={isStaff}
+                    requestType={request.type}
                   />
                 )
               })}
