@@ -41,6 +41,17 @@ interface ReturnLine {
   unit: string
   quantity: number
   unit_cost: number | null
+  // Lote e validade obrigatorios: o operador escolhe o lote e a validade
+  // preenche automatica (via expiry_tracking) — mesma logica da entrada NF.
+  expiry_tracking_id: string | null
+  batch_number: string | null
+  expiry_date: string | null
+}
+interface LotOption {
+  id: string
+  batch_number: string
+  expiry_date: string | null
+  current_quantity: number
 }
 
 interface PendingReturn {
@@ -109,6 +120,9 @@ export function DevolucaoInterna() {
   const [motivo, setMotivo] = useState<MotivoValue>('')
   const [observacao, setObservacao] = useState('')
   const [lines, setLines] = useState<ReturnLine[]>([])
+  // Mapa item_id -> lotes disponiveis (via expiry_tracking). Carrega on-demand
+  // quando o item eh adicionado a devolucao.
+  const [lotsByItem, setLotsByItem] = useState<Record<string, LotOption[]>>({})
   const [search, setSearch] = useState('')
   const [items, setItems] = useState<ItemRow[]>([])
   // Estoques de farmacia disponiveis como destino da devolucao. Default:
@@ -227,23 +241,53 @@ export function DevolucaoInterna() {
     if (lines.some((l) => l.item_id === i.id)) return
     setLines((prev) => [
       ...prev,
-      { item_id: i.id, item_name: i.name, unit: i.unit, quantity: 1, unit_cost: i.price ?? null },
+      {
+        item_id: i.id, item_name: i.name, unit: i.unit, quantity: 1, unit_cost: i.price ?? null,
+        expiry_tracking_id: null, batch_number: null, expiry_date: null,
+      },
     ])
     setSearch('')
+    // Ja pre-carrega lotes disponiveis desse item pra o dropdown
+    loadLotsFor(i.id)
+  }
+  const loadLotsFor = async (item_id: string) => {
+    if (lotsByItem[item_id]) return
+    const { data, error } = await supabase
+      .from('expiry_tracking')
+      .select('id, batch_number, expiry_date, current_quantity')
+      .eq('item_id', item_id)
+      .gt('current_quantity', 0)
+      .order('expiry_date', { ascending: true, nullsFirst: false })
+    if (error) { console.error('loadLotsFor', error); return }
+    setLotsByItem((prev) => ({ ...prev, [item_id]: (data || []) as LotOption[] }))
   }
   const updateQty = (id: string, q: number) =>
     setLines((prev) => prev.map((l) => (l.item_id === id ? { ...l, quantity: Math.max(1, q) } : l)))
+  const setLotFor = (item_id: string, expiry_tracking_id: string | null) => {
+    setLines((prev) => prev.map((l) => {
+      if (l.item_id !== item_id) return l
+      if (!expiry_tracking_id) return { ...l, expiry_tracking_id: null, batch_number: null, expiry_date: null }
+      const opts = lotsByItem[item_id] || []
+      const lot = opts.find((o) => o.id === expiry_tracking_id)
+      return {
+        ...l,
+        expiry_tracking_id,
+        batch_number: lot?.batch_number ?? null,
+        expiry_date: lot?.expiry_date ?? null,
+      }
+    }))
+  }
   const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.item_id !== id))
 
-  // Obrigatorios: estoque destino, setor de origem, motivo e itens com qtd.
-  // Prontuario e nome do paciente sao OPCIONAIS — nem toda devolucao vem
-  // de dispensacao paciente-especifica (ex.: sobra de armario de enfermaria).
+  // Obrigatorios: estoque destino, setor de origem, motivo, itens com
+  // qtd e (novo) LOTE em cada linha. Prontuario e paciente sao OPCIONAIS
+  // — nem toda devolucao vem de dispensacao paciente-especifica.
   const canSubmit =
     !!targetLocationId &&
     !!sourceDepartmentId &&
     !!user?.id &&
     lines.length > 0 &&
-    lines.every((l) => l.quantity > 0) &&
+    lines.every((l) => l.quantity > 0 && !!l.expiry_tracking_id) &&
     motivo !== ''
 
   const handleSubmit = async () => {
@@ -284,10 +328,14 @@ export function DevolucaoInterna() {
       const { error: e2 } = await supabase.from('stock_return_items').insert(itemRows)
       if (e2) throw new Error('Erro ao inserir itens: ' + e2.message)
 
-      // Farmacia: criar movimentacoes imediatamente
+      // Farmacia: criar movimentacoes imediatamente. IMPORTANTE: precisa
+      // capturar o erro do INSERT — antes ficava silencioso e o trigger
+      // fn_apply_stock_movement nunca era disparado, entao o saldo em
+      // item_stocks nao era atualizado. Bug reportado como "devolucao
+      // nao soma no estoque".
       if (isPharmacy) {
         for (const l of lines) {
-          await supabase.from('stock_movements').insert({
+          const { error: eMov } = await supabase.from('stock_movements').insert({
             item_id: l.item_id,
             item_type: 'pharmacy',
             movement_type: 'DEVOLUCAO_INT',
@@ -297,7 +345,9 @@ export function DevolucaoInterna() {
             target_location_id: targetLocationId,
             return_id: ret.id,
             performed_by: user.id,
+            expiry_tracking_id: l.expiry_tracking_id,
           })
+          if (eMov) throw new Error(`Erro ao gravar movimento de ${l.item_name}: ${eMov.message}`)
         }
       }
 
@@ -414,21 +464,38 @@ export function DevolucaoInterna() {
         <div className="hidden md:block" style={{ color: txtMut }}>➜</div>
         <div className="flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: txtMut }}>Para (Estoque) *</p>
-          <select
-            value={targetLocationId}
-            onChange={(e) => setTargetLocationId(e.target.value)}
-            style={{
-              ...inputStyle,
-              padding: '6px 10px',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            <option value="">— Selecione o estoque de destino —</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
+          {/* Se o operador esta num satelite, o destino da devolucao fica
+              travado no proprio — nao faz sentido devolver pra outro estoque.
+              CAF continua com dropdown (pode ter devolucao "interna" chegando
+              de qualquer setor). */}
+          {activeStock && activeStock.code.startsWith('SAT') ? (
+            <div
+              className="p-3 rounded-lg flex items-center justify-between"
+              style={{
+                background: mode === 'dark' ? 'rgba(45,180,140,0.15)' : 'rgba(45,180,140,0.10)',
+                border: `1px solid ${mode === 'dark' ? 'rgba(45,180,140,0.3)' : 'rgba(45,180,140,0.2)'}`,
+              }}
+            >
+              <span style={{ color: txt, fontWeight: 600, fontSize: 14 }}>{activeStock.name}</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(45,180,140,0.2)', color: '#0d5a3a' }}>Fixo</span>
+            </div>
+          ) : (
+            <select
+              value={targetLocationId}
+              onChange={(e) => setTargetLocationId(e.target.value)}
+              style={{
+                ...inputStyle,
+                padding: '6px 10px',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              <option value="">— Selecione o estoque de destino —</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -589,12 +656,16 @@ export function DevolucaoInterna() {
                     }}
                   >
                     <th className="text-left p-2">Item</th>
-                    <th className="text-right p-2 w-32">Quantidade</th>
+                    <th className="text-right p-2 w-24">Qtd *</th>
+                    <th className="text-left p-2 w-56">Lote *</th>
+                    <th className="text-left p-2 w-32">Validade</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((l) => (
+                  {lines.map((l) => {
+                    const lots = lotsByItem[l.item_id] || []
+                    return (
                     <tr key={l.item_id} style={{ borderTop: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                       <td className="p-2 text-sm" style={{ color: txt }}>
                         {l.item_name}{' '}
@@ -611,6 +682,32 @@ export function DevolucaoInterna() {
                         />
                       </td>
                       <td className="p-2">
+                        {/* Ao escolher o lote, a validade preenche automatica
+                            (via expiry_tracking). FEFO no topo. */}
+                        <select
+                          value={l.expiry_tracking_id ?? ''}
+                          onChange={(e) => setLotFor(l.item_id, e.target.value || null)}
+                          style={{
+                            ...inputStyle,
+                            padding: '4px 8px',
+                            fontSize: 13,
+                            borderColor: l.expiry_tracking_id ? undefined : '#ef4444',
+                          }}
+                        >
+                          <option value="">{lots.length ? '— Selecione o lote —' : 'Sem lotes disponíveis'}</option>
+                          {lots.map((lo, i) => (
+                            <option key={lo.id} value={lo.id}>
+                              {i === 0 ? '★ ' : ''}Lote {lo.batch_number} · saldo {lo.current_quantity}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2 text-sm" style={{ color: l.expiry_date ? txt : txtMut }}>
+                        {l.expiry_date
+                          ? new Date(l.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR')
+                          : '—'}
+                      </td>
+                      <td className="p-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -621,7 +718,8 @@ export function DevolucaoInterna() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
