@@ -86,12 +86,26 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Painel TV', icon: Tv, href: '/tv/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
-    // --- SOLICITAÇÕES: fluxo do solicitante + gestao pra staff. Usuario
-    //     comum ve so os 3 primeiros; staff (canManageRequests) ve todos —
-    //     assim nao precisa procurar em 2 secoes o que precisa aprovar. ---
+    // --- SOLICITAÇÕES: separado por modulo pra permitir divergencia.
+    //     Farmacia usa titulo "Solicitações" e item "Solicitações" (sem
+    //     "Minhas"). Almox mantem "Minhas Solicitações" pra nao quebrar
+    //     o hábito dos usuarios que ja conhecem esse fluxo. ---
     {
       title: 'Solicitações',
-      module: 'shared',
+      module: 'farmacia',
+      items: [
+        { name: 'Solicitações', icon: ClipboardList, href: '/requests', show: () => true },
+        { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: () => true },
+        { name: 'Confirmar Recebimento', icon: PackageCheck, href: '/requests/receipt-confirmation', show: () => true },
+        { name: 'Caixa de Entrada', icon: InboxIcon, href: '/requests/inbox', show: (f) => f.canManageRequests },
+        { name: 'Em Processamento', icon: CheckSquare, href: '/requests/processing', show: (f) => f.canManageRequests },
+        { name: 'Histórico', icon: History, href: '/requests/history', show: (f) => f.canManageRequests },
+        { name: 'Pendências', icon: AlertCircle, href: '/requests/pending', show: (f) => f.canManageRequests },
+      ],
+    },
+    {
+      title: 'Solicitações',
+      module: 'almoxarifado',
       items: [
         { name: 'Minhas Solicitações', icon: ClipboardList, href: '/requests', show: () => true },
         { name: 'Nova Solicitação', icon: ListChecks, href: '/requests/new', show: () => true },
@@ -117,12 +131,21 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Almoxarifado', icon: Package2, href: '/inventory/warehouse', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
       ],
     },
-    // --- OPERAÇÕES: reune tudo que opera sobre o estoque — quebras, devolucoes,
-    //     emprestimos, vencimentos, movimentacoes entre unidades e saida direta.
-    //     Consolidado em uma secao so pra nao ter varias secoes pequenas. ---
+    // --- OPERAÇÕES: separado por modulo. Farmacia NAO ve "Quebras e
+    //     Avarias" (essas passam a ser tratadas por outro fluxo — Perdas).
+    //     Almox mantem tudo, incluindo Quebras/Avarias.
     {
       title: 'Operações',
-      module: 'shared',
+      module: 'farmacia',
+      items: [
+        { name: 'Devoluções', icon: Undo2, href: '/estoque/devolucao', show: () => true },
+        { name: 'Empréstimos', icon: Handshake, href: '/estoque/emprestimos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+        { name: 'Vencimentos', icon: CalendarX, href: '/estoque/vencimentos', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
+      ],
+    },
+    {
+      title: 'Operações',
+      module: 'almoxarifado',
       items: [
         { name: 'Quebras e Avarias', icon: PackageMinus, href: '/estoque/saida-avulsa', show: (f) => f.isManager || f.isAdmin || f.isAtendente },
         { name: 'Devoluções', icon: Undo2, href: '/estoque/devolucao', show: () => true },
