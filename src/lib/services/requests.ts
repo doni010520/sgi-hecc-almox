@@ -717,31 +717,25 @@ class RequestService {
         return acc
       }, {} as Record<string, any>)
 
-      // Update approved quantities for each item
-      const updates = Object.entries(itemQuantities).map(([itemId, approvedQuantity]) => {
+      // Update approved_quantity de cada item. Antes usava .upsert() que
+      // dispara semantica INSERT+UPDATE — e o RLS de INSERT em
+      // request_items exige que o user seja o requester original, o que
+      // faz o approve falhar com HTTP 400 quando quem aprova NAO eh quem
+      // criou a solicitacao. UPDATE simples so passa pela policy
+      // "Managers can update request items" (isso ja permite admin/gestor/
+      // atendente). Nada mais precisa ser preservado — os outros campos
+      // ja existem no banco.
+      for (const [itemId, approvedQuantity] of Object.entries(itemQuantities)) {
         const originalItem = originalItemsMap[itemId]
         if (!originalItem) {
           throw new Error(`Request item ${itemId} not found`)
         }
-
-        return {
-          id: itemId,
-          request_id: id,
-          item_type: originalItem.item_type,
-          quantity: originalItem.quantity, // Preserve original quantity
-          approved_quantity: approvedQuantity,
-          // Preserve other fields if needed
-          pharmacy_item_id: originalItem.pharmacy_item_id,
-          warehouse_item_id: originalItem.warehouse_item_id,
-          status: originalItem.status
-        }
-      })
-
-      const { error: itemsError } = await supabase
-        .from('request_items')
-        .upsert(updates)
-
-      if (itemsError) throw itemsError
+        const { error: itemError } = await supabase
+          .from('request_items')
+          .update({ approved_quantity: approvedQuantity })
+          .eq('id', itemId)
+        if (itemError) throw itemError
+      }
 
       // Add approval comment if provided
       if (comments) {
