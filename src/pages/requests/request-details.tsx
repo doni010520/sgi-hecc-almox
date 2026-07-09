@@ -114,8 +114,11 @@ function ItemRow({ item, canEdit, isAdmin, canSeeStock, requestType }: {
                   setExpiryTrackingId(v)
                   saveField('expiry_tracking_id', v)
                 }}
-                className="w-full max-w-[220px] h-8 px-2 text-xs border border-gray-300 rounded bg-white mx-auto"
-                style={{ borderColor: expiryTrackingId ? undefined : '#fca5a5' }}
+                className={`w-full max-w-[220px] h-8 px-2 text-xs rounded mx-auto ${
+                  expiryTrackingId
+                    ? 'border border-gray-300 bg-white'
+                    : 'border-2 border-red-400 bg-red-50'
+                }`}
               >
                 <option value="">{lots.length ? '— Selecione o lote —' : 'Sem lotes'}</option>
                 {lots.map((lo, i) => (
@@ -670,7 +673,9 @@ export function RequestDetails() {
                     preenche automatica). Almoxarifado nao usa. */}
                 {request.type === 'pharmacy' && (
                   <>
-                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-56">Lote</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-56">
+                      Lote <span className="text-red-500">*</span>
+                    </th>
                     <th className="text-center py-3 px-3 font-medium text-gray-600 w-28">Validade</th>
                   </>
                 )}

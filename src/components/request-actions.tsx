@@ -275,13 +275,13 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                     const ids = (request.request_items || []).map((it) => it.id)
                     const { data: rows, error: eLot } = await supabase
                       .from('request_items')
-                      .select('id, expiry_tracking_id, item:items(name)')
+                      .select('id, expiry_tracking_id, item_name')
                       .in('id', ids)
                     if (eLot) throw eLot
                     const semLote = (rows || []).filter((r: any) => !r.expiry_tracking_id)
                     if (semLote.length > 0) {
-                      const nomes = semLote.map((r: any) => r.item?.name || '(item)').join(', ')
-                      alert(`Selecione o lote antes de aprovar:\n\n${nomes}`)
+                      const nomes = semLote.map((r: any) => r.item_name || '(item)').join('\n• ')
+                      alert(`Selecione o lote antes de aprovar:\n\n• ${nomes}`)
                       setLoading(false)
                       return
                     }
