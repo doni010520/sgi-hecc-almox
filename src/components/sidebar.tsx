@@ -82,7 +82,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
     }
     loadCount()
-    const t = setInterval(loadCount, 15000)
+    // Realtime: WebSocket pra requests. Qualquer INSERT/UPDATE/DELETE
+    // dispara refetch (~1s). Fallback: poll de 60s + visibilitychange/focus
+    // caso o WS caia ou a aba estivesse dormindo.
+    const channel = supabase
+      .channel('sidebar-badge-requests')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, () => {
+        loadCount()
+      })
+      .subscribe()
+    const t = setInterval(loadCount, 60000)
     const onVisible = () => { if (document.visibilityState === 'visible') loadCount() }
     const onFocus = () => loadCount()
     document.addEventListener('visibilitychange', onVisible)
@@ -90,6 +99,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     return () => {
       cancelled = true
       clearInterval(t)
+      supabase.removeChannel(channel)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onFocus)
     }
