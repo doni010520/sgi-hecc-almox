@@ -20,6 +20,7 @@ import { requestService } from '@/lib/services/requests'
 import type { Request } from '@/lib/services/requests'
 import { employeesService } from '@/lib/services/employees'
 import type { Employee } from '@/lib/types/employees'
+import { supabase } from '@/lib/supabase'
 
 interface RequestActionsProps {
   request: Request
@@ -265,6 +266,26 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
               onClick={async () => {
                 try {
                   setLoading(true)
+                  // Farmacia: lote obrigatorio em todos os itens antes de
+                  // aprovar. Estado no ItemRow ja persiste em
+                  // request_items.expiry_tracking_id via saveField, entao
+                  // checamos direto no banco (o parent nao remonta a lista
+                  // enquanto o user escolhe o lote).
+                  if (isPharmacyRequest) {
+                    const ids = (request.request_items || []).map((it) => it.id)
+                    const { data: rows, error: eLot } = await supabase
+                      .from('request_items')
+                      .select('id, expiry_tracking_id, item:items(name)')
+                      .in('id', ids)
+                    if (eLot) throw eLot
+                    const semLote = (rows || []).filter((r: any) => !r.expiry_tracking_id)
+                    if (semLote.length > 0) {
+                      const nomes = semLote.map((r: any) => r.item?.name || '(item)').join(', ')
+                      alert(`Selecione o lote antes de aprovar:\n\n${nomes}`)
+                      setLoading(false)
+                      return
+                    }
+                  }
                   const updatedRequest = await requestService.approve(request.id, itemQuantities, '')
                   // Modal com redirect pra Confirmar Recebimento so pra
                   // farmacia. Almox nao tem confirmacao de recebimento —
@@ -273,6 +294,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
                   if (isPharmacyRequest) {
                     setShowApprovalToast(true)
                   }
+                  requestService.clearCache()
                   onUpdate(updatedRequest)
                 } catch (error) {
                   console.error('Error approving:', error)
