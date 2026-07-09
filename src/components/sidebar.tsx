@@ -43,6 +43,47 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const flags: VisibilityFlags = { isAdmin, isManager, isAtendente, isEnfermagem, canManageRequests }
 
+  // Contador de solicitacoes pendentes para o setor que o user atende
+  // (destination_department). Aparece como badge ao lado de "Solicitações".
+  // Poll de 30s pra pegar novas sem realtime.
+  const [pendingCount, setPendingCount] = useState(0)
+  useEffect(() => {
+    if (!canManageRequests) { setPendingCount(0); return }
+    let cancelled = false
+    const loadCount = async () => {
+      try {
+        let deptId: string | null = null
+        if (activeModule === 'farmacia' && activeStock) {
+          const { data } = await supabase
+            .from('departments')
+            .select('id')
+            .ilike('name', activeStock.code === 'CAF' ? 'CAF%' : activeStock.name)
+            .maybeSingle()
+          deptId = (data as { id?: string } | null)?.id ?? null
+        } else if (activeModule === 'almoxarifado') {
+          const { data } = await supabase
+            .from('departments')
+            .select('id')
+            .eq('name', 'Almoxarifado')
+            .maybeSingle()
+          deptId = (data as { id?: string } | null)?.id ?? null
+        }
+        if (!deptId) { if (!cancelled) setPendingCount(0); return }
+        const { count } = await supabase
+          .from('requests')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .eq('destination_department', deptId)
+        if (!cancelled) setPendingCount(count ?? 0)
+      } catch {
+        if (!cancelled) setPendingCount(0)
+      }
+    }
+    loadCount()
+    const t = setInterval(loadCount, 30000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [canManageRequests, activeModule, activeStock])
+
   const allSections = buildSidebarSections({ pharmacyStock: activeModule === 'farmacia' ? activeStock : null })
 
   const filteredSections = mergeSectionsByTitle(filterSectionsByModule(allSections, activeModule))
@@ -254,6 +295,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         <item.icon className="w-5 h-5" />
                         {item.name}
                       </div>
+                      {item.href === '/requests' && pendingCount > 0 && (
+                        <span
+                          title={`${pendingCount} solicitação(oes) pendente(s)`}
+                          style={{
+                            minWidth: 20, height: 20, padding: '0 6px',
+                            borderRadius: 10, background: '#ef4444', color: '#fff',
+                            fontSize: 11, fontWeight: 700,
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {pendingCount > 99 ? '99+' : pendingCount}
+                        </span>
+                      )}
                     </NavLink>
                     {item.submenu && (
                       <div className="ml-7 mt-1 space-y-1">
