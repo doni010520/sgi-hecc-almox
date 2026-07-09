@@ -66,8 +66,9 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
     if (solicitanteDept) {
       setValue('requesting_department', solicitanteDept.id, { shouldValidate: true })
     }
-    // CAF e SAT_T sempre pedem pra Almox — trava logo
-    if ((activeStock.code === 'CAF' || activeStock.code === 'SAT_T') && warehouseDepartment) {
+    // Apenas SAT_T (materiais) pede pra Almox fixo. CAF e satelites (1/2)
+    // sao dropdown restrito por origem — nao pre-seta destino aqui.
+    if (activeStock.code === 'SAT_T' && warehouseDepartment) {
       setValue('destination_department', warehouseDepartment.id, { shouldValidate: true })
     }
   }, [isPharmacyFlow, activeStock, allDepartments, warehouseDepartment, setValue])
@@ -303,8 +304,8 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
                 return allDepartments.find((d) => d.name === target) ?? null
               }
 
-              // CAF e SAT_T sempre pedem pra Almox
-              if ((code === 'CAF' || code === 'SAT_T') && warehouseDepartment) {
+              // SAT_T (materiais) pede pra Almox — fixo
+              if (code === 'SAT_T' && warehouseDepartment) {
                 return (
                   <>
                     <input type="hidden" {...register('destination_department')} />
@@ -317,10 +318,29 @@ export function RequestDetails({ onSubmit, defaultValues, requestType }: Request
                   </>
                 )
               }
-              // SAT_1 -> [CAF, SAT_2, Almox]; SAT_2 -> [CAF, SAT_1, Almox]
+              // Almoxarifado NAO eh opcao em farmacia — pedido de material
+              // eh feito pela aba almox, nao aqui. Matriz:
+              // CAF  -> [SAT_1, SAT_2]
+              // SAT_1 -> [CAF, SAT_2]
+              // SAT_2 -> [CAF, SAT_1]
+              if (code === 'CAF') {
+                const options = [findByStockCode('SAT_1'), findByStockCode('SAT_2')].filter(Boolean) as Department[]
+                return (
+                  <select
+                    id="destination_department"
+                    {...register('destination_department')}
+                    className="w-full h-10 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Selecione o setor solicitado...</option>
+                    {options.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                )
+              }
               if (code === 'SAT_1' || code === 'SAT_2') {
                 const outroSat = code === 'SAT_1' ? findByStockCode('SAT_2') : findByStockCode('SAT_1')
-                const options = [cafDepartment, outroSat, warehouseDepartment].filter(Boolean) as Department[]
+                const options = [cafDepartment, outroSat].filter(Boolean) as Department[]
                 return (
                   <select
                     id="destination_department"
