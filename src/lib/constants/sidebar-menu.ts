@@ -173,13 +173,15 @@ export function buildSidebarSections(ctx?: { pharmacyStock?: PharmacyStock | nul
         { name: 'Nova Saída Direta', icon: ListChecks, href: '/saida-direta/new', show: (f) => f.canManageRequests },
       ],
     },
-    // --- DISPENSAÇÃO (só satélites de farmácia) ---
+    // --- DISPENSAÇÃO (só satélites de farmácia).
+    //     "Nova Dispensação" removido do menu — a entrada e por
+    //     "Dispensações" (botao "+ Nova" la dentro). Ter duas portas
+    //     confundia e podia gerar dispensacoes em fluxos diferentes.
     {
       title: 'Dispensação',
       module: 'farmacia',
       items: [
         { name: 'Dispensações', icon: Syringe, href: '/dispensacao', show: (f) => isSat && f.canManageRequests },
-        { name: 'Nova Dispensação', icon: ListChecks, href: '/dispensacao/paciente', show: (f) => isSat && f.canManageRequests },
         { name: 'Fila de Aprovação', icon: Clock, href: '/dispensacao/fila-aprovacao', show: (f) => isSat && f.canManageRequests },
         { name: 'Histórico', icon: History, href: '/dispensacao/historico', show: (f) => isSat && f.canManageRequests },
       ],

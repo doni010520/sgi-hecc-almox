@@ -237,17 +237,20 @@ export function NewDispensation() {
     }
     setAddingItem(item.id)
     try {
-      const lots = await loadLots(item.id)
-      const fefo = lots[0]
+      // NAO pre-seleciona FEFO. O operador tem que escolher explicitamente
+      // o lote que esta pegando fisicamente da prateleira — evita saldo sair
+      // do lote errado por default silencioso. available_in_batch comeca com
+      // o estoque total (0 depois quando ele escolhe o lote).
+      await loadLots(item.id)
       setSelectedItems((prev) => [
         ...prev,
         {
           item_id: item.id, name: item.name, code: item.code || '', unit: item.unit || 'UN',
           is_mav: item.is_mav, medication_class: item.medication_class,
-          expiry_tracking_id: fefo?.id ?? null,
-          batch_number: fefo?.batch_number ?? null,
-          expiry_date: fefo?.expiry_date ?? null,
-          available_in_batch: fefo ? fefo.current_quantity : item.current_stock,
+          expiry_tracking_id: null,
+          batch_number: null,
+          expiry_date: null,
+          available_in_batch: item.current_stock,
           item_stock: item.current_stock,
           quantity: 1,
         },
@@ -689,8 +692,12 @@ export function NewDispensation() {
                       background: it.is_mav ? 'rgba(245,158,11,0.08)' : mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
                       border: `1px solid ${it.is_mav ? 'rgba(245,158,11,0.3)' : mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
                     }}>
+                    {/* Nome + Qtd + Lote (obrigatorio) em uma unica linha —
+                        mesmo padrao das outras telas (atendimento,
+                        devolucao). Lote NAO pre-selecionado: operador
+                        escolhe conscientemente pra bater com o fisico. */}
                     <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-[180px]">
                         <p className="text-sm font-medium flex items-center gap-1 flex-wrap" style={{ color: txt }}>
                           <Pill size={13} /> {it.name}
                           {it.is_mav && (
@@ -699,51 +706,43 @@ export function NewDispensation() {
                         </p>
                         <p className="text-xs" style={{ color: txtMut }}>{it.code || 'sem código'}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={1}
-                          max={it.available_in_batch}
-                          value={it.quantity}
-                          onChange={(e) => setQty(idx, parseInt(e.target.value) || 1)}
-                          onWheel={(e) => e.currentTarget.blur()}
-                          style={{ ...inputStyle, width: 80, borderColor: over ? '#dc2626' : (inputStyle.border as string) }}
-                        />
-                        <span className="text-xs" style={{ color: txtMut }}>{it.unit}</span>
-                        <Button
-                          variant="outline" size="sm"
-                          onClick={() => removeItem(idx)}
-                          className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Seletor de lote (FEFO por padrão) */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Lote *</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={it.available_in_batch}
+                        value={it.quantity}
+                        onChange={(e) => setQty(idx, parseInt(e.target.value) || 1)}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        style={{ ...inputStyle, width: 80, borderColor: over ? '#dc2626' : (inputStyle.border as string) }}
+                      />
+                      <span className="text-xs" style={{ color: txtMut }}>{it.unit}</span>
                       <select
                         value={it.expiry_tracking_id ?? ''}
                         onChange={(e) => changeLot(idx, e.target.value)}
+                        title="Lote (obrigatório) — escolha o mesmo do físico"
                         style={{
                           ...inputStyle,
                           width: 'auto',
-                          minWidth: 260,
+                          minWidth: 240,
                           padding: '6px 10px',
-                          background: expiryColor(it.expiry_date),
+                          background: it.expiry_tracking_id ? expiryColor(it.expiry_date) : undefined,
                           borderColor: it.expiry_tracking_id ? undefined : '#ef4444',
                         }}>
-                        {!it.expiry_tracking_id && (
-                          <option value="">
-                            {lots.length === 0 ? 'Sem lote registrado — devolucao/entrada com lote pendente' : '— Selecione o lote —'}
-                          </option>
-                        )}
-                        {lots.map((l, li) => (
+                        <option value="">
+                          {lots.length === 0 ? 'Sem lote registrado' : '— Selecione o lote * —'}
+                        </option>
+                        {lots.map((l) => (
                           <option key={l.id} value={l.id}>
-                            {li === 0 ? '★ FEFO · ' : ''}Lote {l.batch_number} · Val {fmt(l.expiry_date)} · {l.current_quantity} un
+                            Lote {l.batch_number} · Val {fmt(l.expiry_date)} · {l.current_quantity} un
                           </option>
                         ))}
                       </select>
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => removeItem(idx)}
+                        className="text-red-600 border-red-200 hover:bg-red-50 h-8 px-2">
+                        <Trash2 size={14} />
+                      </Button>
                       <span className="text-xs" style={{ color: over ? '#dc2626' : txtMut }}>
                         Disponível: {it.available_in_batch}
                       </span>
