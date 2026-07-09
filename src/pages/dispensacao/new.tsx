@@ -351,16 +351,19 @@ export function NewDispensation() {
     }
   }
 
+  // Dispensacao: LOTE OBRIGATORIO. O operador precisa escolher qual lote esta
+  // saindo pra fechar o rastreio (FEFO nao serve como default silencioso — se
+  // deixar sem lote, o saldo agregado sai sem rastreabilidade).
   const canAdvance: boolean[] = isRequisicao
     ? [
         !!selectedSector,
-        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
+        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch && !!i.expiry_tracking_id),
         true,
       ]
     : [
         !!selectedPatient,
         !!prescriptionDate && !!selectedPresc,
-        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch),
+        selectedItems.length > 0 && selectedItems.every((i) => i.quantity > 0 && i.quantity <= i.available_in_batch && !!i.expiry_tracking_id),
         true,
       ]
 
@@ -718,18 +721,28 @@ export function NewDispensation() {
 
                     {/* Seletor de lote (FEFO por padrão) */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Lote</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: txtMut }}>Lote *</span>
                       <select
                         value={it.expiry_tracking_id ?? ''}
                         onChange={(e) => changeLot(idx, e.target.value)}
-                        style={{ ...inputStyle, width: 'auto', minWidth: 260, padding: '6px 10px', background: expiryColor(it.expiry_date) }}>
-                        {lots.length === 0 && <option value="">Sem lote — estoque agregado ({it.item_stock} {it.unit})</option>}
+                        style={{
+                          ...inputStyle,
+                          width: 'auto',
+                          minWidth: 260,
+                          padding: '6px 10px',
+                          background: expiryColor(it.expiry_date),
+                          borderColor: it.expiry_tracking_id ? undefined : '#ef4444',
+                        }}>
+                        {!it.expiry_tracking_id && (
+                          <option value="">
+                            {lots.length === 0 ? 'Sem lote registrado — devolucao/entrada com lote pendente' : '— Selecione o lote —'}
+                          </option>
+                        )}
                         {lots.map((l, li) => (
                           <option key={l.id} value={l.id}>
                             {li === 0 ? '★ FEFO · ' : ''}Lote {l.batch_number} · Val {fmt(l.expiry_date)} · {l.current_quantity} un
                           </option>
                         ))}
-                        {lots.length > 0 && <option value="">Sem lote — estoque agregado ({it.item_stock} {it.unit})</option>}
                       </select>
                       <span className="text-xs" style={{ color: over ? '#dc2626' : txtMut }}>
                         Disponível: {it.available_in_batch}

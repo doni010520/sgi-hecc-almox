@@ -166,11 +166,23 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
   }
 
   const totalQty = lines.reduce((s, l) => s + (l.quantity || 0), 0)
-  const canSubmit = reason && lines.length > 0 && lines.every((l) => l.quantity > 0) && (!needsDestino || !!destino)
+  // Farmacia: lote OBRIGATORIO em cada linha (rastreio de baixa por lote).
+  // Almox: mantem opcional — muito material sem lote (canetas, papel, etc).
+  const linhasSemLote = type === 'pharmacy' && lines.some((l) => !l.expiry_tracking_id)
+  const canSubmit =
+    reason &&
+    lines.length > 0 &&
+    lines.every((l) => l.quantity > 0) &&
+    (!needsDestino || !!destino) &&
+    !linhasSemLote
 
   async function handleSubmit() {
     setError(null)
     if (!canSubmit) {
+      if (linhasSemLote) {
+        setError('Selecione o lote em todas as linhas — obrigatório pra farmácia.')
+        return
+      }
       setError(needsDestino && !destino
         ? 'Para este motivo, informe o destino.'
         : 'Selecione o motivo e ao menos uma linha com quantidade válida.')
@@ -343,9 +355,11 @@ export function SaidaBatch({ type }: SaidaBatchProps) {
                           <select
                             value={l.expiry_tracking_id ?? ''}
                             onChange={(e) => updateLine(idx, { expiry_tracking_id: e.target.value || null })}
-                            className="w-full h-9 rounded-md border border-input px-2 py-1 bg-white text-xs"
+                            className={`w-full h-9 rounded-md border px-2 py-1 bg-white text-xs ${
+                              l.expiry_tracking_id ? 'border-input' : 'border-red-300'
+                            }`}
                           >
-                            <option value="">Sem lote (estoque agregado)</option>
+                            <option value="">— Selecione o lote —</option>
                             {lots.map((lo, li) => (
                               <option key={lo.id} value={lo.id}>
                                 {li === 0 ? '★ ' : ''}Lote {lo.batch_number} · Val {fmt(lo.expiry_date)} · {lo.current_quantity} un

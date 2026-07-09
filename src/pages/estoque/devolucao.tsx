@@ -41,17 +41,13 @@ interface ReturnLine {
   unit: string
   quantity: number
   unit_cost: number | null
-  // Lote e validade obrigatorios: o operador escolhe o lote e a validade
-  // preenche automatica (via expiry_tracking) — mesma logica da entrada NF.
-  expiry_tracking_id: string | null
-  batch_number: string | null
-  expiry_date: string | null
-}
-interface LotOption {
-  id: string
+  // Lote e validade DIGITADOS pelo operador (nao dropdown): a enfermagem
+  // devolve um lote especifico que veio da dispensacao, e esse lote pode
+  // nem existir mais em expiry_tracking (se foi todo consumido). Ao
+  // salvar: se o lote ja existe pra esse item, soma a current_quantity;
+  // se nao, cria um novo registro em expiry_tracking.
   batch_number: string
-  expiry_date: string | null
-  current_quantity: number
+  expiry_date: string
 }
 
 interface PendingReturn {
@@ -120,9 +116,6 @@ export function DevolucaoInterna() {
   const [motivo, setMotivo] = useState<MotivoValue>('')
   const [observacao, setObservacao] = useState('')
   const [lines, setLines] = useState<ReturnLine[]>([])
-  // Mapa item_id -> lotes disponiveis (via expiry_tracking). Carrega on-demand
-  // quando o item eh adicionado a devolucao.
-  const [lotsByItem, setLotsByItem] = useState<Record<string, LotOption[]>>({})
   const [search, setSearch] = useState('')
   const [items, setItems] = useState<ItemRow[]>([])
   // Estoques de farmacia disponiveis como destino da devolucao. Default:
@@ -243,51 +236,28 @@ export function DevolucaoInterna() {
       ...prev,
       {
         item_id: i.id, item_name: i.name, unit: i.unit, quantity: 1, unit_cost: i.price ?? null,
-        expiry_tracking_id: null, batch_number: null, expiry_date: null,
+        batch_number: '', expiry_date: '',
       },
     ])
     setSearch('')
-    // Ja pre-carrega lotes disponiveis desse item pra o dropdown
-    loadLotsFor(i.id)
-  }
-  const loadLotsFor = async (item_id: string) => {
-    if (lotsByItem[item_id]) return
-    const { data, error } = await supabase
-      .from('expiry_tracking')
-      .select('id, batch_number, expiry_date, current_quantity')
-      .eq('item_id', item_id)
-      .gt('current_quantity', 0)
-      .order('expiry_date', { ascending: true, nullsFirst: false })
-    if (error) { console.error('loadLotsFor', error); return }
-    setLotsByItem((prev) => ({ ...prev, [item_id]: (data || []) as LotOption[] }))
   }
   const updateQty = (id: string, q: number) =>
     setLines((prev) => prev.map((l) => (l.item_id === id ? { ...l, quantity: Math.max(1, q) } : l)))
-  const setLotFor = (item_id: string, expiry_tracking_id: string | null) => {
-    setLines((prev) => prev.map((l) => {
-      if (l.item_id !== item_id) return l
-      if (!expiry_tracking_id) return { ...l, expiry_tracking_id: null, batch_number: null, expiry_date: null }
-      const opts = lotsByItem[item_id] || []
-      const lot = opts.find((o) => o.id === expiry_tracking_id)
-      return {
-        ...l,
-        expiry_tracking_id,
-        batch_number: lot?.batch_number ?? null,
-        expiry_date: lot?.expiry_date ?? null,
-      }
-    }))
-  }
+  const setBatch = (id: string, v: string) =>
+    setLines((prev) => prev.map((l) => (l.item_id === id ? { ...l, batch_number: v } : l)))
+  const setValidade = (id: string, v: string) =>
+    setLines((prev) => prev.map((l) => (l.item_id === id ? { ...l, expiry_date: v } : l)))
   const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.item_id !== id))
 
-  // Obrigatorios: estoque destino, setor de origem, motivo, itens com
-  // qtd e (novo) LOTE em cada linha. Prontuario e paciente sao OPCIONAIS
-  // — nem toda devolucao vem de dispensacao paciente-especifica.
+  // Obrigatorios: estoque destino, setor de origem, motivo, itens com qtd,
+  // LOTE (digitado) e VALIDADE em cada linha. Prontuario e paciente sao
+  // OPCIONAIS — nem toda devolucao vem de dispensacao paciente-especifica.
   const canSubmit =
     !!targetLocationId &&
     !!sourceDepartmentId &&
     !!user?.id &&
     lines.length > 0 &&
-    lines.every((l) => l.quantity > 0 && !!l.expiry_tracking_id) &&
+    lines.every((l) => l.quantity > 0 && !!l.batch_number.trim() && !!l.expiry_date) &&
     motivo !== ''
 
   const handleSubmit = async () => {
@@ -328,13 +298,59 @@ export function DevolucaoInterna() {
       const { error: e2 } = await supabase.from('stock_return_items').insert(itemRows)
       if (e2) throw new Error('Erro ao inserir itens: ' + e2.message)
 
-      // Farmacia: criar movimentacoes imediatamente. IMPORTANTE: precisa
-      // capturar o erro do INSERT — antes ficava silencioso e o trigger
-      // fn_apply_stock_movement nunca era disparado, entao o saldo em
-      // item_stocks nao era atualizado. Bug reportado como "devolucao
-      // nao soma no estoque".
+      // Farmacia: pra cada linha:
+      //   1. Garante o lote em expiry_tracking:
+      //      - Se ja existe (mesmo item_id + batch_number): soma qtd em
+      //        current_quantity (o lote pode ter zerado por consumo total
+      //        e agora volta com estoque). Atualiza validade se veio nova.
+      //      - Se nao existe: cria novo registro.
+      //   2. Cria stock_movement com expiry_tracking_id do lote — o
+      //      trigger fn_apply_stock_movement credita item_stocks e ja
+      //      atualiza tudo.
       if (isPharmacy) {
         for (const l of lines) {
+          const batch = l.batch_number.trim()
+          // 1) Procura lote existente (case-insensitive na comparacao)
+          const { data: existentes, error: eFind } = await supabase
+            .from('expiry_tracking')
+            .select('id, current_quantity')
+            .eq('item_id', l.item_id)
+            .eq('batch_number', batch)
+            .limit(1)
+          if (eFind) throw new Error(`Erro ao verificar lote de ${l.item_name}: ${eFind.message}`)
+
+          let expiryTrackingId: string
+          if (existentes && existentes.length > 0) {
+            // Soma no lote existente
+            const existente = existentes[0]
+            expiryTrackingId = existente.id
+            const { error: eUp } = await supabase
+              .from('expiry_tracking')
+              .update({
+                current_quantity: (existente.current_quantity || 0) + l.quantity,
+                expiry_date: l.expiry_date, // atualiza validade caso venha diferente
+              })
+              .eq('id', expiryTrackingId)
+            if (eUp) throw new Error(`Erro ao somar no lote ${batch}: ${eUp.message}`)
+          } else {
+            // Cria novo lote (o consumido tinha zerado ou nunca existiu)
+            const { data: novo, error: eIns } = await supabase
+              .from('expiry_tracking')
+              .insert({
+                item_id: l.item_id,
+                batch_number: batch,
+                expiry_date: l.expiry_date,
+                initial_quantity: l.quantity,
+                current_quantity: l.quantity,
+                created_by: user.id,
+              })
+              .select('id')
+              .single()
+            if (eIns || !novo) throw new Error(`Erro ao criar lote ${batch}: ${eIns?.message ?? 'sem dados'}`)
+            expiryTrackingId = novo.id
+          }
+
+          // 2) stock_movement — trigger credita item_stocks
           const { error: eMov } = await supabase.from('stock_movements').insert({
             item_id: l.item_id,
             item_type: 'pharmacy',
@@ -345,7 +361,7 @@ export function DevolucaoInterna() {
             target_location_id: targetLocationId,
             return_id: ret.id,
             performed_by: user.id,
-            expiry_tracking_id: l.expiry_tracking_id,
+            expiry_tracking_id: expiryTrackingId,
           })
           if (eMov) throw new Error(`Erro ao gravar movimento de ${l.item_name}: ${eMov.message}`)
         }
@@ -658,14 +674,12 @@ export function DevolucaoInterna() {
                     <th className="text-left p-2">Item</th>
                     <th className="text-right p-2 w-24">Qtd *</th>
                     <th className="text-left p-2 w-56">Lote *</th>
-                    <th className="text-left p-2 w-32">Validade</th>
+                    <th className="text-left p-2 w-40">Validade *</th>
                     <th className="w-12"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((l) => {
-                    const lots = lotsByItem[l.item_id] || []
-                    return (
+                  {lines.map((l) => (
                     <tr key={l.item_id} style={{ borderTop: `1px solid ${mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
                       <td className="p-2 text-sm" style={{ color: txt }}>
                         {l.item_name}{' '}
@@ -682,30 +696,35 @@ export function DevolucaoInterna() {
                         />
                       </td>
                       <td className="p-2">
-                        {/* Ao escolher o lote, a validade preenche automatica
-                            (via expiry_tracking). FEFO no topo. */}
-                        <select
-                          value={l.expiry_tracking_id ?? ''}
-                          onChange={(e) => setLotFor(l.item_id, e.target.value || null)}
+                        {/* Lote DIGITADO livre — a enfermagem devolve o lote
+                            que veio da dispensacao. Ao salvar, o sistema
+                            procura esse lote no expiry_tracking: se existe,
+                            soma quantidade; se nao, cria novo. */}
+                        <input
+                          type="text"
+                          value={l.batch_number}
+                          onChange={(e) => setBatch(l.item_id, e.target.value)}
+                          placeholder="Ex: L010203"
                           style={{
                             ...inputStyle,
                             padding: '4px 8px',
                             fontSize: 13,
-                            borderColor: l.expiry_tracking_id ? undefined : '#ef4444',
+                            borderColor: l.batch_number.trim() ? undefined : '#ef4444',
                           }}
-                        >
-                          <option value="">{lots.length ? '— Selecione o lote —' : 'Sem lotes disponíveis'}</option>
-                          {lots.map((lo, i) => (
-                            <option key={lo.id} value={lo.id}>
-                              {i === 0 ? '★ ' : ''}Lote {lo.batch_number} · saldo {lo.current_quantity}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </td>
-                      <td className="p-2 text-sm" style={{ color: l.expiry_date ? txt : txtMut }}>
-                        {l.expiry_date
-                          ? new Date(l.expiry_date + 'T00:00:00').toLocaleDateString('pt-BR')
-                          : '—'}
+                      <td className="p-2">
+                        <input
+                          type="date"
+                          value={l.expiry_date}
+                          onChange={(e) => setValidade(l.item_id, e.target.value)}
+                          style={{
+                            ...inputStyle,
+                            padding: '4px 8px',
+                            fontSize: 13,
+                            borderColor: l.expiry_date ? undefined : '#ef4444',
+                          }}
+                        />
                       </td>
                       <td className="p-2">
                         <Button
@@ -718,8 +737,7 @@ export function DevolucaoInterna() {
                         </Button>
                       </td>
                     </tr>
-                    )
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
