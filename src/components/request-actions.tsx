@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getErrorMessage } from '@/lib/utils/error-messages'
 import { useAuth } from '@/contexts/auth'
-import { useModule } from '@/contexts/module'
-import { PHARMACY_STOCKS, departmentBelongsToStock } from '@/lib/constants/stock-locations'
 import {
   CheckCircle2, XCircle, PlayCircle,
   CheckSquare, Ban, Loader2, Truck, PackageCheck, Search, User
@@ -31,8 +28,6 @@ interface RequestActionsProps {
 
 export function RequestActions({ request, onUpdate }: RequestActionsProps) {
   const { user } = useAuth()
-  const { setActiveStock } = useModule()
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [showApprovalToast, setShowApprovalToast] = useState(false)
@@ -547,44 +542,31 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de sucesso após aprovar — leva pra Confirmar Recebimento no
-          contexto da FARMACIA SOLICITANTE (o setor que fez o pedido).
-          Autocountdown de 3s pra ir direto; user pode cancelar. */}
+      {/* Modal de sucesso após aprovar — apenas informa que aprovou. NAO
+          leva o staff pra Confirmar Recebimento: quem confirma nao eh
+          quem aprova (essa tela e do setor solicitante). */}
       <ApprovalSuccessDialog
         open={showApprovalToast}
         onOpenChange={setShowApprovalToast}
         requestNumber={request?.request_number ?? request?.id?.slice(0, 8)}
         departmentName={request?.department}
-        onGo={() => {
-          setShowApprovalToast(false)
-          // Descobre o estoque que corresponde ao setor solicitante e troca o
-          // contexto — assim /requests/receipt-confirmation ja abre filtrado
-          // pra farmacia certa e a request aparece imediatamente.
-          const target = PHARMACY_STOCKS.find((s) => departmentBelongsToStock(request?.department, s))
-          if (target) setActiveStock(target)
-          navigate('/requests/receipt-confirmation')
-        }}
       />
     </>
   )
 }
 
-// Dialog de sucesso da aprovacao. Autoredireciona apos 3s pra
-// Confirmar Recebimento no contexto da farmacia solicitante — user
-// pode cancelar durante o countdown se quiser continuar aprovando
-// outras solicitacoes.
-// Overlay simples com div fixa (sem Radix Portal). Radix Dialog em algumas
-// situacoes montava, disparava o countdown de 3s e navegava antes do
-// usuario ver — parecia que "nao aparecia". Aqui: div fixed com z-index
-// muito alto, sem countdown automatico. User controla quando ir embora.
+// Dialog de sucesso da aprovacao/atendimento.
+// IMPORTANTE: quem confirma o recebimento NAO eh quem atende o pedido.
+// O staff que aprovou aqui NUNCA vai para a tela "Confirmar Recebimento"
+// — essa tela e do SETOR SOLICITANTE. Por isso o dialog so informa o
+// sucesso e fecha; nao tem botao/link/redirect pra Confirmar Recebimento.
 function ApprovalSuccessDialog({
-  open, onOpenChange, requestNumber, departmentName, onGo,
+  open, onOpenChange, requestNumber, departmentName,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   requestNumber?: number | string
   departmentName?: string
-  onGo: () => void
 }) {
   if (!open) return null
   return (
@@ -621,18 +603,15 @@ function ApprovalSuccessDialog({
           O pedido <strong>#{requestNumber}</strong> foi aprovado com sucesso.
         </p>
         <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
-          O setor {departmentName ? <><strong>{departmentName}</strong> </> : null}
-          agora vê essa solicitação em <strong>Confirmar Recebimento</strong>.
+          {departmentName ? <>O setor <strong>{departmentName}</strong> </> : 'O setor solicitante '}
+          vai receber e confirmar o recebimento.
         </p>
-        <div className="flex flex-wrap gap-2 justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Continuar aqui
-          </Button>
+        <div className="flex justify-end">
           <Button
             className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={onGo}
+            onClick={() => onOpenChange(false)}
           >
-            Ir para Confirmar Recebimento
+            Fechar
           </Button>
         </div>
       </div>
