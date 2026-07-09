@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           .from('requests')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'pending')
-          .eq('destination_department', deptId)
+          .eq('destination_department_id', deptId)
         if (!cancelled) setPendingCount(count ?? 0)
       } catch {
         if (!cancelled) setPendingCount(0)
