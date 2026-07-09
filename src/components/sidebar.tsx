@@ -45,7 +45,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Contador de solicitacoes pendentes para o setor que o user atende
   // (destination_department). Aparece como badge ao lado de "Solicitações".
-  // Poll de 30s pra pegar novas sem realtime.
+  // Estrategia: poll de 15s + refetch imediato quando a aba fica visivel
+  // (Chrome throttla setInterval em tabs em segundo plano — sem visibility
+  // handler, ao voltar pra aba o badge pode ficar ate 1min desatualizado).
   const [pendingCount, setPendingCount] = useState(0)
   useEffect(() => {
     if (!canManageRequests) { setPendingCount(0); return }
@@ -80,8 +82,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
     }
     loadCount()
-    const t = setInterval(loadCount, 30000)
-    return () => { cancelled = true; clearInterval(t) }
+    const t = setInterval(loadCount, 15000)
+    const onVisible = () => { if (document.visibilityState === 'visible') loadCount() }
+    const onFocus = () => loadCount()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [canManageRequests, activeModule, activeStock])
 
   const allSections = buildSidebarSections({ pharmacyStock: activeModule === 'farmacia' ? activeStock : null })
