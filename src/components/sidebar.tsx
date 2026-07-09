@@ -71,12 +71,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           deptId = (data as { id?: string } | null)?.id ?? null
         }
         if (!deptId) { if (!cancelled) setPendingCount(0); return }
-        const { count } = await supabase
-          .from('requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending')
-          .eq('destination_department_id', deptId)
-        if (!cancelled) setPendingCount(count ?? 0)
+        // RPC (POST) em vez de SELECT (GET): proxies corporativos costumam
+        // cachear GET, e o cliente ficava com contagem antiga por minutos.
+        // POST nao eh cacheavel por default em quase todo proxy.
+        const { data: rpcData } = await supabase
+          .rpc('contar_solicitacoes_pendentes', { p_dept_id: deptId })
+        const count = typeof rpcData === 'number' ? rpcData : Number(rpcData ?? 0)
+        if (!cancelled) setPendingCount(count || 0)
       } catch {
         if (!cancelled) setPendingCount(0)
       }
