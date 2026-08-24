@@ -221,7 +221,7 @@ export function ItemDetails() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente') && (
+            {(user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente' || user?.role === 'pharmacist') && (
               <>
                 <Button 
                   variant="outline" 

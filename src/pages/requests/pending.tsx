@@ -199,7 +199,7 @@ export function RequestPending() {
           </Button>
 
           {/* Show Start Processing button for approved requests */}
-          {request.status === 'approved' && user && (user.role === 'gestor' || user.role === 'administrador' || user.role === 'atendente') && (
+          {request.status === 'approved' && user && (user.role === 'gestor' || user.role === 'administrador' || user.role === 'atendente' || user.role === 'pharmacist') && (
             <Button
               size="sm"
               className="bg-blue-500 hover:bg-blue-600 text-white"

@@ -92,7 +92,7 @@ export function RequestActions({ request, onUpdate }: RequestActionsProps) {
     }
   }, [request])
 
-  const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente'
+  const isManager = user?.role === 'gestor' || user?.role === 'administrador' || user?.role === 'atendente' || user?.role === 'pharmacist'
   const canManage = isManager && request?.status === 'pending'
   // Fluxo depende do TIPO da solicitacao:
   // - Farmacia: aprovar ja marca como entregue -> solicitante confirma
